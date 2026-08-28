@@ -14,6 +14,7 @@ import (
 	"github.com/FullFran/eye/internal/provider/infrastructure/ckan"
 	"github.com/FullFran/eye/internal/provider/infrastructure/datex"
 	"github.com/FullFran/eye/internal/provider/infrastructure/rss"
+	"github.com/FullFran/eye/internal/provider/infrastructure/wfs"
 	source "github.com/FullFran/eye/internal/source/domain"
 )
 
@@ -37,6 +38,9 @@ var builders = map[string]func(source.Source, *httpx.Client) provider.Provider{
 	},
 	"datex2-devices": func(s source.Source, c *httpx.Client) provider.Provider {
 		return datex.NewDevices(s, c)
+	},
+	"wfs-geojson": func(s source.Source, c *httpx.Client) provider.Provider {
+		return wfs.New(s, c)
 	},
 }
 

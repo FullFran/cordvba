@@ -341,6 +341,81 @@ sources:
       The schedule lives at /wp-json/wp/v2/ajde_events, a documented WordPress
       REST collection. That needs its own adapter. Verified 2026-08-28.
 
+  # ── Cordoba spatial data infrastructure (IDE) ─────────────────────────────
+  # https://ide.cordoba.es/geoserver — municipal WFS, 105 layers, no key.
+  # Verified 2026-08-28. The server declares no reuse licence, so every layer
+  # starts held; the adapter works and the question is legal, not technical.
+  - id: cordoba-patios
+    authority: Ayuntamiento de Cordoba (IDE)
+    topic: events
+    url: https://ide.cordoba.es/geoserver/ows
+    format: wfs-geojson
+    license: unspecified
+    access: documented_api
+    automation: review_terms
+    interval: 168h
+    options:
+      layer: idecordoba:patios_21
+      kind: patio
+    notes: >-
+      HOLD REASON IS NOT TECHNICAL. This layer publishes the NAME, TELEPHONE
+      NUMBER and EMAIL ADDRESS of the person responsible for each courtyard —
+      real contact details for private citizens, in an open WFS. eye drops
+      those fields unconditionally at the mapper (see the personalProperties
+      list in internal/provider/infrastructure/geojson), but the Ayuntamiento
+      should be told: publishing them is very unlikely to be deliberate.
+
+      The Patios competition, geolocated. Seven editions are published —
+      patios_2015, patios_2016, patios_2017, patios_18, patios_19, patios_20,
+      patios_21 — plus 75 per-route layers by neighbourhood (Realejo, San
+      Lorenzo, Santiago, Juderia, Alcazar Viejo, Santa Marina, San Basilio,
+      Regina) and the fuera-de-concurso entries.
+
+      Each feature carries an address, an itinerary code and a point. This is
+      the substrate the events domain needs for May: what is where, on which
+      route, in which year.
+
+  - id: cordoba-zonas-verdes
+    authority: Ayuntamiento de Cordoba (IDE)
+    topic: city
+    url: https://ide.cordoba.es/geoserver/ows
+    format: wfs-geojson
+    license: unspecified
+    access: documented_api
+    automation: review_terms
+    interval: 168h
+    options:
+      layer: idecordoba:zonas_verdes
+      kind: green_space
+
+  - id: cordoba-colegios
+    authority: Ayuntamiento de Cordoba (IDE)
+    topic: city
+    url: https://ide.cordoba.es/geoserver/ows
+    format: wfs-geojson
+    license: unspecified
+    access: documented_api
+    automation: review_terms
+    interval: 168h
+    options:
+      layer: idecordoba:colegios
+      kind: school
+
+  - id: cordoba-arbolado
+    authority: Ayuntamiento de Cordoba (IDE)
+    topic: city
+    url: https://ide.cordoba.es/geoserver/ows
+    format: wfs-geojson
+    license: unspecified
+    access: documented_api
+    automation: review_terms
+    interval: 720h
+    options:
+      layer: idecordoba:Arbolado
+      kind: tree
+      count: "20000"
+    notes: Street tree inventory. Large; relevant to heat and shade during the May festivities.
+
   # ── Local press ───────────────────────────────────────────────────────────
   # Newspapers are the source that catches what every official feed missed.
   # eye reads their public syndication feeds, which is what those feeds are for;
