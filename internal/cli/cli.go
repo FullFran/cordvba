@@ -43,6 +43,7 @@ func New() *App {
 	for _, c := range []Command{
 		statusCommand(),
 		daemonCommand(),
+		watchCommand(),
 		newsCommand(),
 		eventsCommand(),
 		civicCommand(),

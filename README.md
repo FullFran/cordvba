@@ -158,6 +158,7 @@ Polled in 505ms · registry: (embedded)
 | `eye sky` | Aircraft currently over the city, live |
 | `eye cameras` | The camera inventory — 1948 DGT plus 32 municipal, positions and metadata |
 | `eye camera` | Show one camera's current frame, with the age of the image |
+| `eye watch` | A live board of the city, refreshing on screen |
 | `eye query` | `--topic --since --text --source --limit`, across everything |
 | `eye sources` | The registry: what eye may read, what it can read, and when each last answered |
 | `eye daemon` | Polls continuously and persists everything — the watching mode |
@@ -200,6 +201,37 @@ exists not to tell.
 There is no video: all 1948 DGT cameras publish a still JPEG and nothing else.
 See [docs/legal/data-ethics.md](./docs/legal/data-ethics.md) for the reuse terms,
 which are narrower for the images than for the metadata.
+
+### The live board
+
+```bash
+eye watch                    # full screen, refreshing
+eye watch --every 30s
+eye watch --offline          # read beside a running eye daemon
+```
+
+```
+E Y E   CÓRDOBA · 28 Aug · 13:53 · tick 7
+
+── LATEST ────────────────────────────────────────────
+ ▸ 30s   adsb.lol           GWOWO
+ ▸ 5m    Diario Cordoba     Sorprendido al volante en Baena…
+ ▸ 15m   El Dia de Cordoba  Manuel Gavira visita la sede…
+ ▸ 18m   Cordopolis         Iván Ania: "Siento la ilusión…"
+ ▸ 30m   Universidad        XI Congreso de la CUEMYC
+ ▸ 30m   IGN                terremoto 28/08/2026 2:01:23
+
+── SOURCES ───────────────────────────────────────────
+  ● 12 answered   · 0 failed   ◐ 16 held
+```
+
+`▸` marks what arrived since you last looked.
+
+**No single source is allowed to take the board.** ADS-B produces a record
+every few seconds and is always the newest thing in the store, so a plain
+newest-first feed is a list of aircraft callsigns with the city pushed off the
+bottom. Every source gets a guaranteed share first; leftover rows are filled in
+time order, because on a quiet night more aircraft beats blank space.
 
 ### Persistence
 

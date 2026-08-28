@@ -2,6 +2,7 @@ package render_test
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -137,5 +138,39 @@ func TestBannerWritesTheSubtitle(t *testing.T) {
 	}
 	if !strings.Contains(out, "CÓRDOBA · 28 Aug 2026") {
 		t.Errorf("banner lost its subtitle:\n%s", out)
+	}
+}
+
+// `eye watch | tee log.txt` must produce something readable, not a stream of
+// cursor moves.
+func TestScreenIsInertForANonTerminal(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	screen := render.NewScreen(&buf)
+
+	screen.Enter()
+	screen.Frame(func(w io.Writer) { _, _ = io.WriteString(w, "board\n") })
+	screen.Separator()
+	screen.Leave()
+
+	out := buf.String()
+	if strings.Contains(out, "\x1b[") {
+		t.Errorf("screen wrote escape sequences to a buffer: %q", out)
+	}
+	if !strings.Contains(out, "board") {
+		t.Errorf("the frame content was lost: %q", out)
+	}
+}
+
+func TestScreenFrameCallsTheDrawFunction(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	var called int
+	render.NewScreen(&buf).Frame(func(io.Writer) { called++ })
+
+	if called != 1 {
+		t.Errorf("draw called %d times, want 1", called)
 	}
 }
