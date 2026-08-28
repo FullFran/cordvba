@@ -138,16 +138,57 @@ sources:
     published_every: 24h
     notes: Static GTFS only; no official GTFS-RT found. Download needs a NAP session, so ingestion is not yet unattended.
 
-  - id: renfe-gtfs-rt
-    authority: RENFE / NAP Transportes
+  # RENFE publishes its own open-data portal at data.renfe.com, which needs no
+  # registration at all. The NAP entry that once made this source look
+  # login-gated was simply the wrong route to it.
+  - id: renfe-positions
+    authority: RENFE
     topic: transport
-    url: https://nap.transportes.gob.es/Files/Detail/897
-    format: gtfs-rt
-    license: free-with-registration
-    access: documented_download
-    automation: review_terms
-    interval: 30s
-    notes: TripUpdates and VehiclePositions are published. Static feed download needs a NAP session.
+    url: https://gtfsrt.renfe.com/vehicle_positions.json
+    format: gtfs-rt-json
+    license: CC-BY-4.0
+    access: documented_api
+    automation: enabled
+    interval: 60s
+    published_every: 20s
+    options:
+      ttl: "24h"
+    notes: >-
+      Live train positions. GTFS-Realtime, published as JSON alongside the
+      protobuf form — which is why eye reads it without adding a protobuf
+      dependency. Verified 2026-08-28: 230 trains, updated every 20 seconds.
+
+      CERCANÍAS ONLY. All three of RENFE's real-time datasets say so
+      explicitly, and Córdoba has no Cercanías network: the nearest live
+      train on this feed was 72 km away, on the Sevilla line. Córdoba is
+      served by AV/LD/MD, for which RENFE publishes the timetable but not
+      real-time. Kept for regional context, not for the city.
+
+  - id: renfe-delays
+    authority: RENFE
+    topic: transport
+    url: https://gtfsrt.renfe.com/trip_updates.json
+    format: gtfs-rt-json
+    license: CC-BY-4.0
+    access: documented_api
+    automation: enabled
+    interval: 60s
+    published_every: 20s
+    notes: >-
+      Delays, cancellations, added services and stations out of service.
+      Punctual trains are dropped by the adapter: reporting every on-time
+      service would bury the late ones, which are the reason to read this.
+
+  - id: renfe-alerts
+    authority: RENFE
+    topic: transport
+    url: https://gtfsrt.renfe.com/alerts.json
+    format: gtfs-rt-json
+    license: CC-BY-4.0
+    access: documented_api
+    automation: enabled
+    interval: 5m
+    notes: "Service alerts. Verified 2026-08-28: 74 active."
 
   # ── Air ───────────────────────────────────────────────────────────────────
   - id: adsb-lol
