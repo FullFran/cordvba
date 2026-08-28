@@ -12,19 +12,44 @@ import (
 	domain "github.com/FullFran/eye/internal/observation/domain"
 )
 
-// MemStore is a concurrency-safe in-memory implementation of both stores.
+// MemStore is a concurrency-safe in-memory implementation of every store port.
 type MemStore struct {
-	mu       sync.RWMutex
-	records  map[string]domain.Record
-	entities map[string]domain.Entity
+	mu        sync.RWMutex
+	records   map[string]domain.Record
+	entities  map[string]domain.Entity
+	snapshots map[string][]domain.Record
 }
 
 // NewMemStore builds an empty store.
 func NewMemStore() *MemStore {
 	return &MemStore{
-		records:  make(map[string]domain.Record),
-		entities: make(map[string]domain.Entity),
+		records:   make(map[string]domain.Record),
+		entities:  make(map[string]domain.Entity),
+		snapshots: make(map[string][]domain.Record),
 	}
+}
+
+// Snapshot returns what a source last reported, and whether eye has ever
+// looked. The two are different: nothing found is not the same as never asked.
+func (s *MemStore) Snapshot(_ context.Context, source string) ([]domain.Record, bool, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	records, known := s.snapshots[source]
+	return records, known, nil
+}
+
+// SaveSnapshot replaces a source's snapshot with what it just reported.
+func (s *MemStore) SaveSnapshot(_ context.Context, source string, records []domain.Record) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Copied, so a caller reusing its slice cannot rewrite what eye will
+	// compare against on the next tick.
+	stored := make([]domain.Record, len(records))
+	copy(stored, records)
+	s.snapshots[source] = stored
+	return nil
 }
 
 // Append stores records, skipping ones already present, and reports how many
@@ -102,3 +127,5 @@ var (
 	_ domain.RecordStore = (*MemStore)(nil)
 	_ domain.EntityStore = (*MemStore)(nil)
 )
+
+var _ domain.SnapshotStore = (*MemStore)(nil)

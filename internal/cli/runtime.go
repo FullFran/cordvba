@@ -125,7 +125,13 @@ func (r *runtime) pollable(topics ...string) ([]provider.Provider, []source.Sour
 // Health is persisted here rather than only in the daemon, so that whichever
 // command last polled a source, `eye sources` can say when it last worked.
 func (r *runtime) collect(ctx context.Context, ps []provider.Provider) []observation.Result {
-	results := observation.NewCollector(r.store, r.store).Collect(ctx, ps)
+	collector := observation.NewCollector(r.store, r.store)
+	// Change detection compares this poll against the previous one. Every
+	// command that polls feeds it, so whichever one ran last, the next knows
+	// what moved.
+	collector.Snapshots = r.store
+
+	results := collector.Collect(ctx, ps)
 	r.saveStates(ctx, results)
 	return results
 }

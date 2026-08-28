@@ -94,3 +94,25 @@ CREATE TABLE IF NOT EXISTS source_state (
     last_error         TEXT NOT NULL DEFAULT '',
     records            INTEGER NOT NULL DEFAULT 0
 );
+
+-- What each source reported on its last successful poll. Changes are measured
+-- against this rather than against the append-only history, which grows without
+-- bound and mixes every poll together.
+--
+-- Derived state: dropping this table costs the next tick's changes and nothing
+-- else. The observations themselves live in `records`.
+CREATE TABLE IF NOT EXISTS snapshots (
+    source     TEXT    NOT NULL,
+    identity   TEXT    NOT NULL,
+    record     TEXT    NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (source, identity)
+);
+
+-- A source with no rows here is not the same as a source eye has never seen:
+-- on a first sighting nothing may be claimed to have appeared, so the fact of
+-- having looked is recorded separately from what was found.
+CREATE TABLE IF NOT EXISTS snapshot_taken (
+    source     TEXT    PRIMARY KEY,
+    updated_at INTEGER NOT NULL
+);

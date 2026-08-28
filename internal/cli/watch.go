@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -132,9 +133,16 @@ func (b *liveBoard) draw(w io.Writer, records []observation.Record, entities int
 
 	t.Banner(w, fmt.Sprintf("CÓRDOBA · %s · tick %d", now.Format("02 Jan · 15:04:05"), tick))
 
-	b.drawFeed(w, records, now)
+	// Changes are observations too, so they come back from the same query.
+	// Showing them in the feed alongside the thing they describe would print
+	// every headline twice, so they get their own board.
+	observations, changes := splitChanges(records)
+
+	b.drawChanges(w, changes, now)
 	_, _ = fmt.Fprintln(w)
-	b.drawTopics(w, records, entities, now)
+	b.drawFeed(w, observations, now)
+	_, _ = fmt.Fprintln(w)
+	b.drawTopics(w, observations, entities, now)
 	_, _ = fmt.Fprintln(w)
 	b.drawSources(w, rt)
 
@@ -170,6 +178,74 @@ func (b *liveBoard) drawFeed(w io.Writer, records []observation.Record, now time
 			t.Dim(t.Pad(age, 5)),
 			t.Label(t.Pad(ellipsis(r.Provenance.Publisher, 18), 18)),
 			ellipsis(r.Title, boardWidth-30))
+	}
+}
+
+// changeRows is how much of the board the change panel may take. It is small
+// on purpose: this is the "what moved" line, not the timeline.
+const changeRows = 4
+
+// splitChanges separates derived change records from the observations they were
+// derived from.
+func splitChanges(records []observation.Record) (observations, changes []observation.Record) {
+	for _, r := range records {
+		if r.Kind == observation.ChangeKindRecord {
+			changes = append(changes, r)
+			continue
+		}
+		observations = append(observations, r)
+	}
+	return observations, changes
+}
+
+// drawChanges renders what moved since eye last looked.
+//
+// This is the panel that makes the board worth watching rather than reading:
+// everything else says what is there, and this says what is different.
+func (b *liveBoard) drawChanges(w io.Writer, changes []observation.Record, now time.Time) {
+	t := b.theme
+	_, _ = fmt.Fprintln(w, t.Section("what moved", boardWidth))
+
+	if len(changes) == 0 {
+		_, _ = fmt.Fprintln(w, t.Dim("  nothing has moved"))
+		return
+	}
+
+	observation.SortRecordsNewestFirst(changes)
+	shown := observation.ApplyLimit(changes, changeRows)
+
+	for _, r := range shown {
+		var c observation.Change
+		if err := json.Unmarshal(r.Payload, &c); err != nil {
+			continue
+		}
+
+		mark, label := t.Live("+"), "new"
+		switch c.Kind {
+		case observation.ChangeUpdated:
+			mark, label = t.Warn("~"), "changed"
+		case observation.ChangeDisappeared:
+			mark, label = t.Alert("-"), "gone"
+		}
+
+		_, _ = fmt.Fprintf(w, " %s %s %s %s\n",
+			mark,
+			t.Dim(t.Pad(ageOf(r.ObservedAt, now.UTC()), 5)),
+			t.Label(t.Pad(label, 8)),
+			ellipsis(r.Title, boardWidth-24))
+
+		// One field, the first, so the panel stays a summary. `eye changes`
+		// is where the whole diff lives.
+		if len(c.Fields) > 0 {
+			f := c.Fields[0]
+			_, _ = fmt.Fprintf(w, "   %s\n",
+				t.Dim(fmt.Sprintf("%s %s → %s", f.Field,
+					ellipsis(orDash(f.From), 24), ellipsis(orDash(f.To), 24))))
+		}
+	}
+
+	if len(changes) > len(shown) {
+		_, _ = fmt.Fprintf(w, "   %s\n", t.Dim(fmt.Sprintf("… %d more · eye changes", len(changes)-len(shown))))
 	}
 }
 

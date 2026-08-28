@@ -21,6 +21,10 @@ type Collector struct {
 	records  domain.RecordStore
 	entities domain.EntityStore
 
+	// Snapshots enables change detection. It is optional: without it eye
+	// still collects, it just cannot say what moved since last time.
+	Snapshots domain.SnapshotStore
+
 	// Concurrency bounds parallel polls. Zero means DefaultConcurrency.
 	Concurrency int
 	// Now is injectable so tests do not depend on the wall clock.
@@ -106,6 +110,8 @@ func (c *Collector) collectOne(ctx context.Context, p provider.Provider) Result 
 		return res
 	}
 
+	c.detectChanges(ctx, info.ID, records, now)
+
 	// An inventory provider also refreshes the entity store.
 	if ep, ok := p.(provider.EntityProvider); ok {
 		if entities, err := ep.Entities(ctx); err == nil {
@@ -118,4 +124,39 @@ func (c *Collector) collectOne(ctx context.Context, p provider.Provider) Result 
 	res.Health.LastSuccess = c.Now()
 	res.Health.Records = len(records)
 	return res
+}
+
+// detectChanges compares this poll against the previous one and stores what
+// moved.
+//
+// It runs only after a SUCCESSFUL poll, which is what makes a disappearance
+// trustworthy: a record missing from a source that answered is a record the
+// source no longer reports, while a record missing because the poll failed is
+// nothing at all. A failed poll returns before reaching here and leaves the
+// previous snapshot untouched, so the next success compares against the last
+// state eye actually saw.
+//
+// Failures here are deliberately silent in the Result. The command the user
+// asked for was "collect", and losing this tick's changes must not turn a
+// successful poll into a reported failure.
+func (c *Collector) detectChanges(ctx context.Context, sourceID string, records []domain.Record, now time.Time) {
+	if c.Snapshots == nil {
+		return
+	}
+
+	previous, known, err := c.Snapshots.Snapshot(ctx, sourceID)
+	if err != nil {
+		return
+	}
+
+	// A first sighting has nothing to compare against, so nothing may be
+	// claimed to have appeared. The snapshot is still taken, so the next
+	// poll has a baseline.
+	if known {
+		if changes := domain.DetectChanges(previous, records, now, true); len(changes) > 0 {
+			_, _ = c.records.Append(ctx, changes)
+		}
+	}
+
+	_ = c.Snapshots.SaveSnapshot(ctx, sourceID, records)
 }

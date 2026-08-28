@@ -386,3 +386,47 @@ func TestPersonalSourceRecordsAreNeverServed(t *testing.T) {
 		t.Errorf("count = %v, want it to match what was actually served", body["count"])
 	}
 }
+
+// A change derived from a personal source is still that source's data: it
+// carries its title, its provenance and its publisher. Deriving something from
+// a record eye may not redistribute does not launder it.
+func TestChangesFromAPersonalSourceAreNeverServed(t *testing.T) {
+	t.Parallel()
+
+	change := record("Tren con retraso", "transport")
+	change.Source = "adif-live"
+	change.Kind = observation.ChangeKindRecord
+	change.Payload = []byte(`{"kind":"updated","record_id":"adif-live:1","identity":"x"}`)
+
+	store := &fakeStore{records: []observation.Record{record("public", "press"), change}}
+
+	sources := []source.Source{
+		{
+			ID: "diario-cordoba", Authority: "Diario Cordoba", Topic: "press",
+			URL: "https://example.org/rss", Format: "rss", License: "unspecified",
+			Access: source.AccessDocumentedAPI, Automation: source.AutomationEnabled,
+			Interval: time.Minute,
+		},
+		{
+			ID: "adif-live", Authority: "ADIF", Topic: "transport",
+			URL: "https://example.org/live", Format: "json", License: "undocumented",
+			Access: source.AccessUndocumentedPersonal, Automation: source.AutomationEnabled,
+			Interval: time.Minute, Notes: "Operator's own undocumented source.",
+		},
+	}
+
+	srv := httptest.NewServer(api.New(store, sources, logging.Discard()).Handler())
+	defer srv.Close()
+
+	status, body := get(t, srv, "/v1/records")
+	if status != http.StatusOK {
+		t.Fatalf("status = %d", status)
+	}
+
+	records, _ := body["records"].([]any)
+	for _, r := range records {
+		if entry, _ := r.(map[string]any); entry["source"] == "adif-live" {
+			t.Fatal("a change derived from a personal source was served")
+		}
+	}
+}

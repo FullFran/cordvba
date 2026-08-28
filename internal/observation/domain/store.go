@@ -25,6 +25,22 @@ type EntityStore interface {
 	Entities(ctx context.Context, f Filter) ([]Entity, error)
 }
 
+// SnapshotStore holds what each source reported on its last SUCCESSFUL poll.
+//
+// Changes are measured against this rather than against the append-only
+// history, which grows without bound and mixes every poll together. The
+// snapshot is derived state: losing it costs the next tick's changes and
+// nothing else.
+type SnapshotStore interface {
+	// Snapshot returns what a source last reported. known is false when eye
+	// has never held a snapshot for it, which is different from a source
+	// that reported nothing: on a first sighting there is nothing to compare
+	// against, so nothing may be claimed to have appeared.
+	Snapshot(ctx context.Context, source string) (records []Record, known bool, err error)
+	// SaveSnapshot replaces a source's snapshot with what it just reported.
+	SaveSnapshot(ctx context.Context, source string, records []Record) error
+}
+
 // Filter selects a slice of what eye knows, in space, time and subject.
 type Filter struct {
 	Topics  []string
