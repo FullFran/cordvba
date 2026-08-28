@@ -104,8 +104,16 @@ sources:
       dataset: camaras-de-trafico
       kind: camera
     notes: >-
-      Traffic camera INVENTORY as entities: 32 points in WGS84. The dataset
-      publishes CSV, GeoJSON and a PDF map, and no media endpoint of any kind.
+      Traffic camera INVENTORY as entities: 32 points in WGS84, with `name`
+      and coordinates and nothing else.
+
+      Audited 2026-08-28: the municipality publishes NO camera image, by any
+      route. The same 32 points appear twice in the catalog (here and as a
+      layer of `movilidad-cartografia`), both with only a `name` property.
+      The mobility portal at movilidad.cordoba.es has no camera viewer, and a
+      search of all 145 municipal datasets finds nothing with an image, video
+      or webcam. The only public camera frames for Cordoba are DGT's, three of
+      which sit within 40 km on the A-4.
 
   - id: aucorsa-gtfs
     authority: AUCORSA / NAP Transportes
