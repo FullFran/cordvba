@@ -229,12 +229,32 @@ func TestCameraListsMatches(t *testing.T) {
 	}
 }
 
-func TestCameraRequiresAQuery(t *testing.T) {
+// With no inventory there is nothing to browse, and the error must say how to
+// get one rather than how to phrase a search.
+func TestCameraWithNoInventorySaysHowToFillIt(t *testing.T) {
 	t.Parallel()
 
 	registry := setup(t)
 	code, _, stderr := runCmd(t, registry, "camera")
 
+	if code != 1 {
+		t.Errorf("exit = %d, want 1", code)
+	}
+	if !strings.Contains(stderr, "eye daemon --once") {
+		t.Errorf("stderr = %q, want it to say how to fill the inventory", stderr)
+	}
+}
+
+// Piped into a script with no search term, eye cannot browse and must say so.
+func TestCameraNonInteractiveWithoutAQuery(t *testing.T) {
+	t.Parallel()
+
+	srv, _ := cameraPortal(t)
+	registry := writeCameraRegistry(t, srv.URL)
+	dataDir := t.TempDir()
+	runCmdIn(t, registry, dataDir, "daemon", "--once") //nolint:dogsled // primes the store
+
+	code, _, stderr := runCmdIn(t, registry, dataDir, "camera")
 	if code != 1 {
 		t.Errorf("exit = %d, want 1", code)
 	}

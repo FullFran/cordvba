@@ -53,6 +53,7 @@ func cameraCommand() Command {
 				open      = fs.Bool("open", false, "show the frame in the system image viewer instead of the terminal")
 				window    = fs.Bool("window", false, "open a graphical terminal outside tmux and draw the frame there")
 				hold      = fs.Bool("hold", false, "wait for a keypress before exiting (used by --window)")
+				pick      = fs.Bool("pick", false, "browse and choose a camera interactively")
 			)
 			positional, err := parseInterspersed(fs, args)
 			if err != nil {
@@ -60,9 +61,6 @@ func cameraCommand() Command {
 			}
 
 			query := strings.TrimSpace(strings.Join(positional, " "))
-			if query == "" && *nearest == "" {
-				return errors.New("say which camera: eye camera <road, province or id>, or --near lat,lon")
-			}
 
 			rt, err := newRuntime(runtimeOptions{registry: *registryP, dataDir: *dataDir})
 			if err != nil {
@@ -75,12 +73,31 @@ func cameraCommand() Command {
 				return err
 			}
 			if len(cams) == 0 {
-				return fmt.Errorf("no camera matches %q — run `eye daemon --once` first, or try a road like A-4", query)
+				if query == "" {
+					return errors.New("no cameras in the inventory — run `eye daemon --once` first")
+				}
+				return fmt.Errorf("no camera matches %q — try a road like A-4, or run `eye camera` with no arguments to browse", query)
 			}
 
-			return showCamera(ctx, cams, query, showOptions{
-				list: *list, window: *window, open: *open, hold: *hold, width: *width,
-			}, stdout, stderr)
+			opts := showOptions{list: *list, window: *window, open: *open, hold: *hold, width: *width}
+
+			// With no search and no coordinates, browse rather than
+			// guess. Picking one of 1980 cameras from memory is not a
+			// reasonable thing to ask of anybody.
+			if *pick || (query == "" && *nearest == "" && !opts.list) {
+				if !*pick && !isInteractive() {
+					return errors.New("say which camera: eye camera <road, province or id>, --near lat,lon, or run it in a terminal to browse")
+				}
+
+				centre := cordobaCentre
+				chosen, pickErr := pickCamera(cams, centre, os.Stdin, stdout)
+				if pickErr != nil {
+					return pickErr
+				}
+				cams, opts.list = []observation.Entity{chosen}, false
+			}
+
+			return showCamera(ctx, cams, query, opts, stdout, stderr)
 		},
 	}
 }
