@@ -141,6 +141,32 @@ sources:
   # RENFE publishes its own open-data portal at data.renfe.com, which needs no
   # registration at all. The NAP entry that once made this source look
   # login-gated was simply the wrong route to it.
+  - id: cordoba-bus
+    authority: Ayuntamiento de Cordoba / AUCORSA
+    topic: transport
+    url: https://datosabiertos.cordoba.es/ckan
+    format: ckan-geojson
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 168h
+    options:
+      dataset: movilidad-cartografia
+      resource: Bus
+      kind: bus
+    notes: >-
+      City bus stops and route geometry, from the municipal cartography
+      dataset. 118 features, mixing stop points that carry a name and a
+      direction with the line geometry of the routes — which is why the kind
+      is "bus" rather than "bus_stop".
+
+      The name field holds rendered HTML ("ACERA DE GUERRITA<br><br>DIRECCIÓN:
+      CENTRO CIUDAD"), stripped by the shared mapper.
+
+      Stops and routes only. AUCORSA publishes no timetable and no real-time
+      arrivals as open data; its app reads an undocumented backend at
+      lightapi.aucorsa.es, which is a separate decision under ADR-0008.
+
   - id: renfe-cordoba-departures
     authority: RENFE
     topic: transport

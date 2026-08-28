@@ -9,7 +9,9 @@ package geojson
 import (
 	"encoding/json"
 	"fmt"
+	"html"
 	"math"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -231,6 +233,22 @@ func (f Feature) rawGeometry() json.RawMessage {
 // isNullIsland reports the 0,0 coordinate that missing data decays into.
 func isNullIsland(p observation.Point) bool { return p.Lat == 0 && p.Lon == 0 }
 
+// markup matches the HTML that municipal exports embed in what should be a
+// plain label. Córdoba's bus layer stores "ACERA DE GUERRITA<br><br>DIRECCIÓN:
+// CENTRO CIUDAD" in its name field, which is a rendered popup rather than a
+// name.
+var markup = regexp.MustCompile(`(?i)<[^>]*>`)
+
+// whitespace collapses the runs that stripping and tab-padding leave behind.
+var whitespace = regexp.MustCompile(`\s+`)
+
+// cleanLabel turns a publisher's display string into a plain one.
+func cleanLabel(s string) string {
+	s = markup.ReplaceAllString(s, " ")
+	s = html.UnescapeString(s)
+	return strings.TrimSpace(whitespace.ReplaceAllString(s, " "))
+}
+
 // Title picks a human label out of whatever the publisher called the field.
 func Title(props map[string]any, fallback string) string {
 	for _, key := range titleKeys {
@@ -243,8 +261,10 @@ func Title(props map[string]any, fallback string) string {
 			if personalProperties[strings.ToLower(strings.TrimSpace(name))] {
 				continue
 			}
-			if s, ok := value.(string); ok && strings.TrimSpace(s) != "" {
-				return strings.TrimSpace(s)
+			if s, ok := value.(string); ok {
+				if label := cleanLabel(s); label != "" {
+					return label
+				}
 			}
 		}
 	}

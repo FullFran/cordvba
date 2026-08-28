@@ -164,12 +164,24 @@ func TestGeoJSONEntities(t *testing.T) {
 		t.Fatalf("Entities() = %v", err)
 	}
 
-	// One valid point; a LineString and an out-of-range point are dropped.
-	if len(entities) != 1 {
-		t.Fatalf("entities = %d, want 1", len(entities))
+	// The point and the LineString both map; only the out-of-range point is
+	// dropped. Half the municipal layers are polygons or lines, and refusing
+	// them would silently discard what the publisher actually published.
+	if len(entities) != 2 {
+		t.Fatalf("entities = %d, want the point and the line", len(entities))
 	}
 
-	e := entities[0]
+	var line, e observation.Entity
+	for _, ent := range entities {
+		if len(ent.Geometry) > 0 {
+			line = ent
+			continue
+		}
+		e = ent
+	}
+	if len(line.Geometry) == 0 {
+		t.Error("the LineString was mapped without keeping its shape")
+	}
 	if e.Kind != "camera" {
 		t.Errorf("kind = %q", e.Kind)
 	}

@@ -218,3 +218,74 @@ func TestParseRejectsNonJSON(t *testing.T) {
 		t.Fatal("Parse() on XML = nil error")
 	}
 }
+
+// Municipal exports store a rendered popup where a name belongs. Córdoba's bus
+// layer holds "ACERA DE GUERRITA<br><br>DIRECCIÓN: CENTRO CIUDAD", tabs and
+// all, and a label with markup in it is not a label.
+func TestTitleStripsEmbeddedMarkup(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct{ name, in, want string }{
+		{
+			name: "br tags and tabs",
+			in:   "ACERA  DE GUERRITA\t\t\t   <br><br>DIRECCIÓN: CENTRO CIUDAD\t\t",
+			want: "ACERA DE GUERRITA DIRECCIÓN: CENTRO CIUDAD",
+		},
+		{
+			name: "html entities",
+			in:   "Pla&ccedil;a &amp; Mercado",
+			want: "Plaça & Mercado",
+		},
+		{
+			name: "already clean",
+			in:   "Campus Universitario de Rabanales",
+			want: "Campus Universitario de Rabanales",
+		},
+		{
+			name: "markup only falls through to the fallback",
+			in:   "<br><br>",
+			want: "fallback",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := geojson.Title(map[string]any{"name": tc.in}, "fallback"); got != tc.want {
+				t.Errorf("Title() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// A layer mixing stop points with route geometry must yield both, not silently
+// drop half of what the municipality published.
+func TestLineStringsBecomeEntitiesToo(t *testing.T) {
+	t.Parallel()
+
+	fc, err := geojson.Parse([]byte(`{"type":"FeatureCollection","features":[
+		{"type":"Feature","id":"stop","geometry":{"type":"Point","coordinates":[-4.7794,37.8882]},
+		 "properties":{"name":"ACERA DE GUERRITA<br>DIRECCIÓN: CENTRO"}},
+		{"type":"Feature","id":"route","geometry":{"type":"LineString","coordinates":[[-4.78,37.88],[-4.77,37.89]]},
+		 "properties":{"name":"Línea 3"}}
+	]}`))
+	if err != nil {
+		t.Fatalf("Parse() = %v", err)
+	}
+
+	entities := fc.Entities(opts("bus"))
+	if len(entities) != 2 {
+		t.Fatalf("entities = %d, want both the stop and the route", len(entities))
+	}
+
+	byTitle := map[string]bool{}
+	for _, e := range entities {
+		byTitle[e.Title] = len(e.Geometry) > 0
+	}
+	if hasGeom, ok := byTitle["ACERA DE GUERRITA DIRECCIÓN: CENTRO"]; !ok || hasGeom {
+		t.Error("the stop is missing, or stored a redundant geometry")
+	}
+	if hasGeom, ok := byTitle["Línea 3"]; !ok || !hasGeom {
+		t.Error("the route is missing, or its shape was dropped")
+	}
+}

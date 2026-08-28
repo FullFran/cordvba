@@ -107,10 +107,19 @@ func parseCKANTime(s string) time.Time {
 	return time.Time{}
 }
 
-// resourceByFormat returns the first resource matching a format, case-insensitively.
-func resourceByFormat(p pkg, format string) (resource, bool) {
+// resourceByFormatAndName returns the resource matching a format and, when a
+// name is given, whose name contains it.
+//
+// An empty name keeps the old behaviour of taking the first match, which is
+// right for a dataset that publishes one layer.
+func resourceByFormatAndName(p pkg, format, name string) (resource, bool) {
+	needle := strings.ToLower(strings.TrimSpace(name))
+
 	for _, r := range p.Resources {
-		if strings.EqualFold(r.Format, format) {
+		if !strings.EqualFold(r.Format, format) {
+			continue
+		}
+		if needle == "" || strings.Contains(strings.ToLower(r.Name), needle) {
 			return r, true
 		}
 	}
