@@ -61,6 +61,16 @@ type Source struct {
 	URL       string `json:"url"`
 	License   string `json:"license"`
 
+	// Format selects the adapter. It is the registry, not the code, that
+	// decides which parser a source gets, so adding a feed of a format eye
+	// already speaks is a configuration change.
+	Format string `json:"format"`
+
+	// Options carries adapter-specific settings, such as a CKAN dataset id
+	// or a viewport radius. Keeping them here means a new source of a known
+	// format needs no new Go code.
+	Options map[string]string `json:"options,omitempty"`
+
 	Access     Access           `json:"access"`
 	Automation AutomationStatus `json:"automation"`
 
@@ -87,10 +97,20 @@ func (s Source) Validate() error {
 		return errors.Join(ErrInvalidSource, errors.New("empty url"))
 	case s.License == "":
 		return errors.Join(ErrInvalidSource, errors.New("empty license: use \"unspecified\" when the catalog declares none"))
+	case s.Format == "":
+		return errors.Join(ErrInvalidSource, errors.New("empty format: the registry selects the adapter"))
 	case s.Automation.Pollable() && s.Interval <= 0:
 		return errors.Join(ErrInvalidSource, errors.New("enabled source needs a positive interval"))
 	case s.Automation.Pollable() && s.Access == AccessUndocumentedBackend:
 		return errors.Join(ErrInvalidSource, errors.New("undocumented backends are never pollable"))
 	}
 	return nil
+}
+
+// Option returns an adapter setting, or the fallback when it is unset.
+func (s Source) Option(key, fallback string) string {
+	if v, ok := s.Options[key]; ok && v != "" {
+		return v
+	}
+	return fallback
 }
