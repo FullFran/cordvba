@@ -178,12 +178,17 @@ internal/
   cli/                      commands, argument parsing, output rendering
   config/                   configuration; the only place os.Getenv is called
   httpx/                    the shared outbound client: timeouts, size caps,
-                            conditional requests, Retry-After, charset decoding
+                            conditional requests, Retry-After, charset decoding,
+                            and recording every payload into the raw cache
+  logging/                  log/slog setup; text on a terminal, JSON otherwise
+  scheduler/                the polling loop, and the policy it runs on:
+                            jitter, backoff, circuit breaker, host concurrency
   version/                  build identity, injected via -ldflags
   observation/              THE CORE — what eye knows and how it knows it
     domain/                 Record, Entity, Provenance, Point, BBox, Filter, ports
     application/            the collector: poll providers, store what comes back
-    infrastructure/         MemStore today; the SQLite adapter lands with the daemon
+    infrastructure/         SQLite store (WAL, CGO-free), content-addressed
+                            raw cache, and an in-memory store for tests
   source/                   the registry: which feeds we may read, and on what terms
     domain/                 Source, Access, AutomationStatus
     infrastructure/         YAML registry loader
@@ -199,9 +204,20 @@ docs/                       these documents
 testdata/                   recorded source fixtures, so tests never hit the network
 ```
 
-Packages that the roadmap calls for but that do not exist yet — `scheduler/`,
-`fusion/`, `event/` — are created by the epic that fills them. An empty package
-is a promise, and the tree should only contain code.
+Packages that the roadmap calls for but that do not exist yet — `fusion/`,
+`event/` — are created by the epic that fills them. An empty package is a
+promise, and the tree should only contain code.
+
+## The scheduler, and why its policy is a separate file
+
+`scheduler/policy.go` holds backoff, jitter and the circuit breaker as pure
+functions of state. `scheduler/scheduler.go` holds the loop that uses them.
+
+That split is deliberate. The interesting behaviour — does a failing source
+back off, does a tripped breaker stop calling it, does a recovery clear the
+count — is exhaustively testable without a single sleep. The loop itself takes
+an injectable clock, so even its tests run in microseconds rather than in the
+hours the intervals describe.
 
 ## Two gates, not one
 

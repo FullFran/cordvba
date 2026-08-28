@@ -56,11 +56,50 @@ The short version: `internal/<domain>/domain` holds types and knows nothing
 about the outside world, `application` holds use cases, `infrastructure` holds
 everything that talks to a network, a disk or a terminal.
 
+## Running it continuously
+
+`eye daemon` polls every live source on its own interval and persists what it
+returns. It does one immediate pass on startup — an operator should have the
+full picture within a second, not after a random stagger — then hands over to
+the scheduler.
+
+```bash
+eye daemon                    # until interrupted
+eye daemon --once             # one pass and exit
+eye daemon --prune-every 30m  # how often retention is enforced
+```
+
+As a user service, if you would rather not supervise it yourself:
+
+```ini
+# ~/.config/systemd/user/eye.service
+[Unit]
+Description=eye — a live model of Cordoba
+After=network-online.target
+
+[Service]
+ExecStart=%h/.local/bin/eye daemon
+Restart=on-failure
+RestartSec=30
+Environment=EYE_LOG_LEVEL=info
+
+[Install]
+WantedBy=default.target
+```
+
+```bash
+systemctl --user enable --now eye.service
+journalctl --user -u eye -f
+```
+
+Logs are JSON when stderr is not a terminal, which is what `journalctl` wants.
+On a terminal they are plain text.
+
 ## Configuration
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `EYE_DATA_DIR` | `$XDG_DATA_HOME/eye`, else `~/.local/share/eye` | Store and raw cache location |
+| `EYE_DATA_DIR` | `$XDG_DATA_HOME/eye`, else `~/.local/share/eye` | Store and raw cache location; `--data-dir` overrides it per command |
 | `EYE_CONFIG_DIR` | `$XDG_CONFIG_HOME/eye`, else `~/.config/eye` | `sources.yaml`, `rules.yaml` |
 | `EYE_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
 | `AEMET_API_KEY` | — | Required by the AEMET provider |
@@ -103,3 +142,11 @@ go test -race -cover ./...
 Never write a test that performs a live HTTP request. Public services are not
 our test fixtures, and a test suite that fails because AEMET is having a bad
 morning teaches you nothing.
+
+Nor may a test write into the operator's real store. Every command that opens
+the store takes `--data-dir`, and the test helpers point it at `t.TempDir()`.
+A suite that pollutes `~/.local/share/eye` only reveals itself as surprising
+rows in somebody's `eye status`.
+
+Time is injected, not slept through. The scheduler takes a `Clock`, so its
+tests exercise hours of behaviour in microseconds.

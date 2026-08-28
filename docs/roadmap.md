@@ -70,13 +70,14 @@ Everything else plugs into this.
 - [x] Source health tracking, reported per source
 - [x] The collector: bounded-concurrency polling that isolates failures
 - [x] `eye status` rendering source health, including held sources
-- [ ] Scheduler loop: jitter, exponential backoff, circuit breaker, per-host
-      concurrency limits
-- [ ] SQLite store (WAL, CGO-free) behind the domain port
-- [ ] Raw cache: gzipped payloads addressed by SHA-256
-- [ ] Structured logging with `log/slog`
+- [x] Scheduler loop: jitter, exponential backoff, circuit breaker, per-host
+      concurrency limits, bounded startup stagger
+- [x] SQLite store (WAL, CGO-free) behind the domain port, with retention
+- [x] Raw cache: gzipped payloads addressed by SHA-256, integrity-checked on read
+- [x] Structured logging with `log/slog`
+- [x] `eye daemon`, and `--offline` for querying without touching the network
 
-*Estimate: 28–40 h · roughly half delivered in v0.1*
+**E1 is complete.** *Estimate was 28–40 h.*
 
 ### E2 · Road and city
 
@@ -184,16 +185,22 @@ is announced.
 
 *Estimate: 32–48 h*
 
-## Where v0.1 landed
+## Where the project stands
 
 Eight sources answer live in under a second: three Córdoba newspapers, the BOE,
 the UCO events feed, the municipal open-data catalog, the municipal camera
 inventory, and live aircraft. Sixteen more are declared and held, five are
 permitted but await an adapter, and `eye sources` tells the three apart.
 
-What is deliberately absent from v0.1: persistence (the store is in-process, so
-each command polls live), the scheduler loop, and the fusion engine. Those are
-the next three slices, in that order.
+**v0.1** delivered the sources and the commands. **E1 closed after it**:
+observations now persist in SQLite, every payload is kept as evidence, the
+scheduler runs them on their own intervals with backoff and a circuit breaker,
+and `eye daemon` keeps the picture current.
+
+The next slice is the one the whole design exists for. With persistence in
+place, eye can finally compare what a source says today against what it said
+yesterday — which is what turns a set of feeds into change detection, and what
+E5 (events) and E6 (fusion) are both built on.
 
 ## Order of magnitude
 

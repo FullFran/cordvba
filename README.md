@@ -14,7 +14,7 @@ space and time, and shipped as one Go binary with no mandatory services.
 [![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![CGO](https://img.shields.io/badge/CGO-disabled-2da44e)](./docs/adr/0003-sqlite-without-cgo.md)
 [![SQLite](https://img.shields.io/badge/SQLite-WAL-003B57?logo=sqlite&logoColor=white)](https://sqlite.org)
-[![Dependencies](https://img.shields.io/badge/direct%20deps-budgeted-533483)](./docs/adr/0004-dependency-budget.md)
+[![Dependencies](https://img.shields.io/badge/direct%20deps-2-533483)](./docs/adr/0004-dependency-budget.md)
 [![golangci-lint](https://img.shields.io/badge/golangci--lint-clean-yellow)](https://golangci-lint.run)
 
 <br/>
@@ -86,10 +86,15 @@ hours; every inference carries `quality: inferred` and a disclaimer. See
 One binary, several modes. HTTP is one adapter among several, never the centre.
 
 ```
-eye status / query / events / radar   →  answer from the local store
-eye daemon                            →  run the scheduler
-eye serve                             →  REST + SSE, opt-in
+eye status / query / news / events    →  answer from the local store
+eye daemon                            →  run the scheduler continuously
+eye serve                             →  REST + SSE, opt-in (not yet built)
 ```
+
+The scheduler applies jitter so twenty sources never fire on the same second,
+exponential backoff when one fails, and a circuit breaker that stops calling a
+source that is consistently down. Per-host concurrency is capped, because
+several Córdoba feeds share a publisher and the courtesy belongs to the host.
 
 ```
 public source → registry gate → adapter → raw cache (sha256)
@@ -147,6 +152,7 @@ Polled in 505ms · registry: (embedded)
 | `eye cameras` | The 32 municipal traffic cameras — positions only |
 | `eye query` | `--topic --since --text --source --limit`, across everything |
 | `eye sources` | The registry: what eye may read, and what it can read |
+| `eye daemon` | Polls continuously and persists everything — the watching mode |
 
 Every command takes `--json`, and the JSON keeps the full provenance: publisher,
 licence, source URL, and both timestamps so the source latency stays visible.
@@ -156,6 +162,33 @@ eye news --since 6h --json | jq '.[] | {title, publisher, source_latency_seconds
 eye query --topic press,events --text patio
 eye sky --json | jq '.[].payload.callsign'
 ```
+
+### Persistence
+
+Everything eye collects is stored in SQLite at `~/.local/share/eye/eye.db`, and
+every payload is kept byte-for-byte in a content-addressed cache alongside it.
+That is what makes `Provenance.RawHash` mean something: any answer can be
+replayed from the exact bytes it came from.
+
+```bash
+eye daemon                      # poll continuously, persist, enforce retention
+eye daemon --once               # one pass — what a systemd timer would call
+eye news --offline              # answer from the store, zero network
+```
+
+Records are append-only and keyed by a stable id, so a second pass over
+unchanged feeds stores nothing:
+
+```
+$ eye daemon --once
+8 sources polled · 387 records new · 0 expired records pruned
+
+$ eye daemon --once
+8 sources polled · 0 records new · 0 expired records pruned
+```
+
+Aircraft positions carry an expiry and are deleted when it passes. Retention is
+a `DELETE` that runs, not a paragraph in a document.
 
 ### Development
 
