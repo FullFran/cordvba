@@ -39,6 +39,8 @@ linters:
       # appear in code and fixtures. They are not English misspellings.
       ignore-rules:
         - accidentes
+        - responsable
+        - propietario
         - denominacion
         - descripcion
         - nombre
