@@ -56,7 +56,7 @@ func TestBuildPollableAppliesBothGates(t *testing.T) {
 		src("held-and-unreadable", "wms", source.AutomationManualLink),
 	}
 
-	built, skipped := providers.BuildPollable(list, httpx.New())
+	built, skipped := providers.BuildPollable(list, httpx.New(), providers.Options{})
 
 	if len(built) != 1 || built[0].Info().ID != "readable-and-permitted" {
 		t.Fatalf("built = %v, want only the readable and permitted source", ids(built))
@@ -84,4 +84,67 @@ func ids[T interface{ Info() source.Source }](items []T) []string {
 		out = append(out, i.Info().ID)
 	}
 	return out
+}
+
+// An undocumented personal source needs the machine's consent as well as the
+// registry's. A registry is committed to a repository; a machine flag is not,
+// which is what keeps "I read this on my laptop" from becoming "eye reads this
+// for everyone who clones it".
+func TestBuildPollableGatesPersonalSourcesOnTheMachineToo(t *testing.T) {
+	t.Parallel()
+
+	personal := src("adif-live", "rss", source.AutomationEnabled)
+	personal.Access = source.AccessUndocumentedPersonal
+	personal.Notes = "Undocumented endpoint the operator reads for themselves."
+
+	list := []source.Source{
+		src("documented", "rss", source.AutomationEnabled),
+		personal,
+	}
+
+	built, skipped := providers.BuildPollable(list, httpx.New(), providers.Options{})
+	if len(built) != 1 || built[0].Info().ID != "documented" {
+		t.Errorf("without the opt-in, built = %v", ids(built))
+	}
+	if len(skipped) != 1 || skipped[0].ID != "adif-live" {
+		t.Errorf("the personal source was not reported as skipped: %v", skipped)
+	}
+
+	built, _ = providers.BuildPollable(list, httpx.New(), providers.Options{AllowPersonal: true})
+	if len(built) != 2 {
+		t.Errorf("with the opt-in, built = %v, want both", ids(built))
+	}
+}
+
+// A source nobody can explain is one nobody can review.
+func TestPersonalSourceMustExplainItself(t *testing.T) {
+	t.Parallel()
+
+	s := src("adif-live", "rss", source.AutomationEnabled)
+	s.Access = source.AccessUndocumentedPersonal
+
+	if err := s.Validate(); err == nil {
+		t.Fatal("a personal source with no notes was accepted")
+	}
+
+	s.Notes = "Undocumented endpoint the operator reads for themselves."
+	if err := s.Validate(); err != nil {
+		t.Fatalf("a documented personal source was rejected: %v", err)
+	}
+}
+
+// eye must never serve onward what it was not entitled to redistribute.
+func TestPersonalSourcesAreNotRedistributable(t *testing.T) {
+	t.Parallel()
+
+	ordinary := src("boe", "rss", source.AutomationEnabled)
+	if !ordinary.Redistributable() {
+		t.Error("an ordinary source is not redistributable")
+	}
+
+	personal := ordinary
+	personal.Access = source.AccessUndocumentedPersonal
+	if personal.Redistributable() {
+		t.Error("a personal source is redistributable")
+	}
 }

@@ -339,3 +339,50 @@ func indexOf(haystack, needle string) int {
 	}
 	return -1
 }
+
+// eye must never serve onward what it was not entitled to redistribute. The
+// filter lives in one place because a rule spread across handlers is one that
+// gets forgotten in the next one.
+func TestPersonalSourceRecordsAreNeverServed(t *testing.T) {
+	t.Parallel()
+
+	personal := record("secret", "transport")
+	personal.Source = "adif-live"
+
+	store := &fakeStore{records: []observation.Record{record("public", "press"), personal}}
+
+	sources := []source.Source{
+		{
+			ID: "diario-cordoba", Authority: "Diario Cordoba", Topic: "press",
+			URL: "https://example.org/rss", Format: "rss", License: "unspecified",
+			Access: source.AccessDocumentedAPI, Automation: source.AutomationEnabled,
+			Interval: time.Minute,
+		},
+		{
+			ID: "adif-live", Authority: "ADIF", Topic: "transport",
+			URL: "https://example.org/live", Format: "json", License: "undocumented",
+			Access: source.AccessUndocumentedPersonal, Automation: source.AutomationEnabled,
+			Interval: time.Minute, Notes: "Operator's own undocumented source.",
+		},
+	}
+
+	srv := httptest.NewServer(api.New(store, sources, logging.Discard()).Handler())
+	defer srv.Close()
+
+	status, body := get(t, srv, "/v1/records")
+	if status != http.StatusOK {
+		t.Fatalf("status = %d", status)
+	}
+
+	records, _ := body["records"].([]any)
+	if len(records) != 1 {
+		t.Fatalf("served %d records, want only the redistributable one", len(records))
+	}
+	first, _ := records[0].(map[string]any)
+	if first["source"] == "adif-live" {
+		t.Error("a personal source's record was served")
+	}
+	if body["count"] != float64(1) {
+		t.Errorf("count = %v, want it to match what was actually served", body["count"])
+	}
+}

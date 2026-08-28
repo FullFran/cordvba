@@ -46,6 +46,14 @@ type Server struct {
 	sources []source.Source
 	log     *slog.Logger
 	started time.Time
+
+	// nonRedistributable is the set of source ids whose records eye must not
+	// serve to anyone else: undocumented personal sources, and anything read
+	// under terms that permit personal use only.
+	//
+	// Filtering here rather than trusting every future handler is the point.
+	// A rule that lives in one place cannot be forgotten in the next one.
+	nonRedistributable map[string]bool
 }
 
 // New builds a server over a store and the registry.
@@ -53,7 +61,33 @@ func New(store Store, sources []source.Source, log *slog.Logger) *Server {
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Server{store: store, sources: sources, log: log, started: time.Now().UTC()}
+	blocked := map[string]bool{}
+	for _, src := range sources {
+		if !src.Redistributable() {
+			blocked[src.ID] = true
+		}
+	}
+
+	return &Server{
+		store: store, sources: sources, log: log,
+		started: time.Now().UTC(), nonRedistributable: blocked,
+	}
+}
+
+// redistributable drops records from sources eye may not serve onward.
+func (s *Server) redistributable(records []observation.Record) []observation.Record {
+	if len(s.nonRedistributable) == 0 {
+		return records
+	}
+
+	out := make([]observation.Record, 0, len(records))
+	for _, r := range records {
+		if s.nonRedistributable[r.Source] {
+			continue
+		}
+		out = append(out, r)
+	}
+	return out
 }
 
 // Handler returns the routed handler.
@@ -137,6 +171,7 @@ func (s *Server) handleRecords(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	records = s.redistributable(records)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"count":   len(records),
 		"records": records,

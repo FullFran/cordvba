@@ -77,13 +77,22 @@ func Build(src source.Source, client *httpx.Client) (provider.Provider, error) {
 	return build(src, client), nil
 }
 
+// Options control which sources may be built.
+type Options struct {
+	// AllowPersonal enables sources marked undocumented_personal. The
+	// registry alone cannot turn these on; the operator's machine must say
+	// so too.
+	AllowPersonal bool
+}
+
 // BuildPollable returns adapters for every source the registry permits polling
 // and this build can read.
 //
-// Both filters matter and they are different. A source can be permitted and
-// unreadable (no adapter yet), or readable and not permitted (licence
-// unresolved). Only the intersection is fetched.
-func BuildPollable(sources []source.Source, client *httpx.Client) ([]provider.Provider, []source.Source) {
+// Three filters, and they are different questions. A source can be permitted
+// and unreadable (no adapter yet), readable and not permitted (licence
+// unresolved), or both and still held back because it is an undocumented
+// personal source and this machine has not opted in.
+func BuildPollable(sources []source.Source, client *httpx.Client, opts Options) ([]provider.Provider, []source.Source) {
 	var (
 		providers []provider.Provider
 		skipped   []source.Source
@@ -91,6 +100,10 @@ func BuildPollable(sources []source.Source, client *httpx.Client) ([]provider.Pr
 
 	for _, src := range sources {
 		if !src.Automation.Pollable() {
+			continue
+		}
+		if src.Access.Personal() && !opts.AllowPersonal {
+			skipped = append(skipped, src)
 			continue
 		}
 		p, err := Build(src, client)

@@ -33,6 +33,13 @@ type Config struct {
 	AEMETAPIKey string
 	// FIRMSMapKey is empty when the NASA FIRMS provider is unavailable.
 	FIRMSMapKey string
+
+	// AllowPersonalSources enables sources marked undocumented_personal.
+	//
+	// The registry saying "enabled" is not enough for these on purpose. They
+	// are the operator's own decision about their own machine, so the machine
+	// has to say so too: EYE_ALLOW_PERSONAL_SOURCES=1.
+	AllowPersonalSources bool
 }
 
 // validLogLevels is the accepted set for EYE_LOG_LEVEL.
@@ -48,6 +55,8 @@ func Load() (Config, error) {
 		LogLevel:    strings.ToLower(envOr("EYE_LOG_LEVEL", "info")),
 		AEMETAPIKey: os.Getenv("AEMET_API_KEY"),
 		FIRMSMapKey: os.Getenv("FIRMS_MAP_KEY"),
+
+		AllowPersonalSources: truthy(os.Getenv("EYE_ALLOW_PERSONAL_SOURCES")),
 	}
 
 	if !validLogLevels[cfg.LogLevel] {
@@ -82,6 +91,16 @@ func resolveDir(override, xdgVar, homeRelative string) string {
 		return filepath.Join(homeRelative, "eye")
 	}
 	return filepath.Join(home, homeRelative, "eye")
+}
+
+// truthy reads the forms people actually type for a boolean environment flag.
+func truthy(v string) bool {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "1", "true", "yes", "y", "on":
+		return true
+	default:
+		return false
+	}
 }
 
 // envOr returns the environment value or a fallback when it is unset or empty.

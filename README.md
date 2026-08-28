@@ -268,9 +268,12 @@ Three integration paths, in order of how much you want to be tied to eye:
 | **JSON** | every command takes `--json`; pipe it anywhere |
 | **SQL** | the store is a plain SQLite file at `~/.local/share/eye/eye.db` — open it read-only and query it |
 
-Two things the API will not do. It **binds to loopback unless you pass
-`--public`**, because eye reads sources whose licences in several cases permit
-personal use only. And it **never serves camera images**, for the same reason.
+Three things the API will not do. It **binds to loopback unless you pass
+`--public`**. It **never serves camera images**. And it **never serves records
+from a source marked `undocumented_personal`** — see
+[ADR-0008](./docs/adr/0008-undocumented-personal-sources.md), which lets you
+read undocumented endpoints for yourself while keeping eye from redistributing
+what it was not entitled to.
 
 ### Persistence
 

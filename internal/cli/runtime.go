@@ -114,7 +114,9 @@ func (r *runtime) pollable(topics ...string) ([]provider.Provider, []source.Sour
 	if len(topics) > 0 {
 		selected = filterByTopic(r.sources, topics)
 	}
-	return providers.BuildPollable(selected, r.client)
+	return providers.BuildPollable(selected, r.client, providers.Options{
+		AllowPersonal: r.cfg.AllowPersonalSources,
+	})
 }
 
 // collect polls the given adapters into the runtime store and records what

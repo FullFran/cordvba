@@ -27,6 +27,19 @@ const (
 	// AccessUndocumentedBackend is an internal endpoint discovered behind a
 	// public viewer. eye never automates these.
 	AccessUndocumentedBackend Access = "undocumented_backend"
+	// AccessUndocumentedPersonal is an undocumented endpoint the operator has
+	// decided to read for their own personal use.
+	//
+	// It exists because "undocumented" and "forbidden" are not the same
+	// thing: an endpoint a public site calls to render public information is
+	// a reasonable thing for a person to read for themselves. What it is not
+	// is a contract. It can change without notice, it can be rate-limited,
+	// and nobody else running eye can reproduce a result that depends on it.
+	//
+	// So it is gated twice over. The registry must say so AND the operator
+	// must opt in at runtime, it is never redistributed by eye serve, and it
+	// is labelled as what it is everywhere it appears.
+	AccessUndocumentedPersonal Access = "undocumented_personal"
 )
 
 // AutomationStatus is the gate that decides whether the scheduler may poll a
@@ -52,6 +65,20 @@ const (
 // Only an explicit "enabled" passes; every other state, including an unknown
 // one, fails closed.
 func (a AutomationStatus) Pollable() bool { return a == AutomationEnabled }
+
+// Personal reports whether a source is an operator's own undocumented one.
+//
+// These carry two consequences everywhere they are used: they need a runtime
+// opt-in beyond the registry, and eye must never redistribute what they return.
+func (a Access) Personal() bool { return a == AccessUndocumentedPersonal }
+
+// Redistributable reports whether eye may serve this source's records to
+// somebody else.
+//
+// Undocumented personal sources are not. Neither is anything eye reads under
+// terms that permit personal use only — the registry records those as their own
+// licence, and this is the code path that keeps `eye serve` honest about it.
+func (s Source) Redistributable() bool { return !s.Access.Personal() }
 
 // Source is one entry of the registry in configs/sources.yaml.
 type Source struct {
@@ -103,6 +130,10 @@ func (s Source) Validate() error {
 		return errors.Join(ErrInvalidSource, errors.New("enabled source needs a positive interval"))
 	case s.Automation.Pollable() && s.Access == AccessUndocumentedBackend:
 		return errors.Join(ErrInvalidSource, errors.New("undocumented backends are never pollable"))
+	case s.Access.Personal() && s.Notes == "":
+		// An undocumented source has to say what it is and why it is here.
+		// A registry entry nobody can explain is one nobody can review.
+		return errors.Join(ErrInvalidSource, errors.New("an undocumented_personal source must carry notes explaining what it is"))
 	}
 	return nil
 }

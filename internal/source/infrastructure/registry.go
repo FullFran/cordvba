@@ -45,10 +45,11 @@ type yamlRegistry struct {
 // rather than a silently unrecognised value.
 var (
 	knownAccess = map[domain.Access]bool{
-		domain.AccessDocumentedAPI:       true,
-		domain.AccessDocumentedDownload:  true,
-		domain.AccessPublicHTML:          true,
-		domain.AccessUndocumentedBackend: true,
+		domain.AccessDocumentedAPI:        true,
+		domain.AccessDocumentedDownload:   true,
+		domain.AccessPublicHTML:           true,
+		domain.AccessUndocumentedBackend:  true,
+		domain.AccessUndocumentedPersonal: true,
 	}
 	knownAutomation = map[domain.AutomationStatus]bool{
 		domain.AutomationEnabled:     true,
