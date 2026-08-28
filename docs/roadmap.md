@@ -62,26 +62,30 @@ different people.
 
 ### E1 · Core — the spine
 
-Everything else plugs into this. Nothing here talks to the network.
+Everything else plugs into this.
 
-- Source registry loader and validation from `configs/sources.yaml`
-- Scheduler: jitter, exponential backoff, circuit breaker, `Retry-After`,
-  ETag / `If-Modified-Since`, per-host concurrency limits
-- Source health tracking and staleness
-- SQLite store (WAL, CGO-free) behind the domain port
-- Raw cache: gzipped payloads addressed by SHA-256
-- Structured logging with `log/slog`
-- `eye status` rendering source health, including held sources
+- [x] Source registry loader and validation from `configs/sources.yaml`
+- [x] Shared HTTP client: timeouts, body caps, conditional requests,
+      `Retry-After`, charset decoding
+- [x] Source health tracking, reported per source
+- [x] The collector: bounded-concurrency polling that isolates failures
+- [x] `eye status` rendering source health, including held sources
+- [ ] Scheduler loop: jitter, exponential backoff, circuit breaker, per-host
+      concurrency limits
+- [ ] SQLite store (WAL, CGO-free) behind the domain port
+- [ ] Raw cache: gzipped payloads addressed by SHA-256
+- [ ] Structured logging with `log/slog`
 
-*Estimate: 28–40 h*
+*Estimate: 28–40 h · roughly half delivered in v0.1*
 
 ### E2 · Road and city
 
-- Generic DATEX II 3.7 reader, driven by the published XSD
-- DGT incident provider
-- DGT camera **inventory** provider — positions and metadata only
-- Generic CKAN provider, reusable for any municipality
-- Córdoba CKAN camera and mobility assets
+- [x] Generic CKAN provider, reusable for any municipality
+- [x] Córdoba CKAN camera inventory (32 cameras) and catalog change detection
+- [ ] Resolve DGT access: `nap.dgt.es` answers `403` to automated clients
+- [ ] Generic DATEX II 3.7 reader, driven by the published XSD
+- [ ] DGT incident provider
+- [ ] DGT camera **inventory** provider — positions and metadata only
 
 *Estimate: 24–36 h*
 
@@ -99,8 +103,8 @@ Everything else plugs into this. Nothing here talks to the network.
 
 ### E4 · Movement
 
-- adsb.lol provider with a configurable viewport
-- OpenSky provider with OAuth2 — held on licence review for non-personal use
+- [x] adsb.lol provider with a configurable viewport and per-record expiry
+- [ ] OpenSky provider with OAuth2 — held on licence review for non-personal use
 - Generic GTFS parser (static)
 - Generic GTFS-RT parser (protobuf)
 - RENFE provider: TripUpdates + VehiclePositions
@@ -120,9 +124,10 @@ The second axis of the project. Not a calendar: a tracker.
 - Observation model: one canonical event, many source observations, confidence
   rising with independent agreement
 - Change detection producing `EVENT_CHANGE` diffs
-- Providers: UCO (ICS — the easiest and the one to build first), Agenda Única,
-  Turismo de Córdoba, IMAE
-- `eye events`, `eye event <query>`, `eye events --new|--changed|--cancelled`
+- [x] UCO events provider (its RSS feed, where `pubDate` is the event start)
+- [x] `eye events`, sorted by start time
+- [ ] Agenda Única, Turismo de Córdoba, IMAE — pending a licence answer
+- [ ] `eye event <query>`, `eye events --new|--changed|--cancelled`
 
 *Estimate: 30–45 h*
 
@@ -139,8 +144,10 @@ The second axis of the project. Not a calendar: a tracker.
 
 ### E7 · Interface
 
-- `eye status` — the city in one screen
-- `eye query --bbox --since --topic`
+- [x] `eye status` — the city in one screen
+- [x] `eye query --topic --since --text --source`, and `--json` everywhere
+- [x] `eye news`, `eye civic`, `eye sky`, `eye cameras`, `eye sources`
+- [ ] `eye query --bbox`
 - `eye radar` — the next 72 hours
 - `eye tonight`, `eye whatsup`
 - Bubble Tea TUI with source health, timeline and filters
@@ -156,7 +163,8 @@ The unglamorous half, and where the early signals live. A large event leaves a
 public trace — a contract, an authorisation, a road closure — months before it
 is announced.
 
-- BOE OpenData API and RSS
+- [x] BOE RSS (served as ISO-8859-1, decoded before parsing)
+- [ ] BOE OpenData API for the full document text
 - BOP Córdoba
 - PLACSP public procurement
 - Diputación de Córdoba CKAN
@@ -175,6 +183,17 @@ is announced.
 - Privacy and licence documentation kept in step with the registry
 
 *Estimate: 32–48 h*
+
+## Where v0.1 landed
+
+Eight sources answer live in under a second: three Córdoba newspapers, the BOE,
+the UCO events feed, the municipal open-data catalog, the municipal camera
+inventory, and live aircraft. Sixteen more are declared and held, five are
+permitted but await an adapter, and `eye sources` tells the three apart.
+
+What is deliberately absent from v0.1: persistence (the store is in-process, so
+each command polls live), the scheduler loop, and the fusion engine. Those are
+the next three slices, in that order.
 
 ## Order of magnitude
 

@@ -105,33 +105,87 @@ Full diagrams in [docs/architecture/overview.md](./docs/architecture/overview.md
 
 ## Quick start
 
-Requirements: Go 1.25+. That is the whole list.
+Requirements: Go 1.25+. That is the whole list — no database, no Docker, no
+services. The source registry is compiled into the binary, so it works the
+moment it finishes building.
 
 ```bash
 git clone https://github.com/FullFran/eye.git
-cd eye
+cd eye && make build
 
-make build
-./bin/eye help
+./bin/eye status
 ```
 
+```
+CÓRDOBA · 28 Aug 2026 03:52
+
+  air        1 observation     newest 2s
+  city       50 observations   newest 8d
+  civic      137 observations  newest 27h
+  events     20 observations   newest 0s
+  press      218 observations  newest 44m
+  transport  1 observation     newest 0s
+  inventory  32 assets mapped
+
+Sources
+  8 answered
+  16 held: reuse terms unresolved or no documented interface
+  5 awaiting an adapter in this build
+
+Polled in 505ms · registry: (embedded)
+```
+
+### What works today
+
+| Command | What it does |
+|---|---|
+| `eye status` | Polls every live source and reports the state of the city |
+| `eye news` | The Córdoba press: Diario Córdoba, Cordópolis, El Día de Córdoba |
+| `eye events` | What is scheduled, from the UCO events feed |
+| `eye civic` | BOE publications and municipal open-data catalog changes |
+| `eye sky` | Aircraft currently over the city, live |
+| `eye cameras` | The 32 municipal traffic cameras — positions only |
+| `eye query` | `--topic --since --text --source --limit`, across everything |
+| `eye sources` | The registry: what eye may read, and what it can read |
+
+Every command takes `--json`, and the JSON keeps the full provenance: publisher,
+licence, source URL, and both timestamps so the source latency stays visible.
+
 ```bash
-make ci-local   # fmt + vet + lint + test + build
+eye news --since 6h --json | jq '.[] | {title, publisher, source_latency_seconds}'
+eye query --topic press,events --text patio
+eye sky --json | jq '.[].payload.callsign'
+```
+
+### Development
+
+```bash
+make ci-local   # fmt + vet + lint + test + build — must pass before any PR
 make test       # go test -race -cover ./...
 make help       # every target
 ```
 
 ## Sources
 
-25 sources declared in [`configs/sources.yaml`](./configs/sources.yaml), across
-transport, air, weather, fire, hydrology, air quality, events and civic
-documents — DGT, AEMET, NASA FIRMS, CKAN Córdoba, RENFE, AUCORSA, SAIH
-Guadalquivir, MITECO, IGN, INFOCA, adsb.lol, UCO, Agenda Única, IMAE, BOE, BOP,
-PLACSP and more.
+29 sources declared in [`configs/sources.yaml`](./configs/sources.yaml), across
+transport, air, weather, fire, hydrology, air quality, local press, events and
+civic documents.
 
-Each one declares its authority, licence, access kind and automation gate.
-Sources whose reuse terms are unresolved are held, on purpose, and shown as
-held. See [docs/legal/data-ethics.md](./docs/legal/data-ethics.md).
+**Live now (8):** Diario Córdoba, Cordópolis, El Día de Córdoba, BOE, UCO
+events, the municipal CKAN catalog, the municipal camera inventory, adsb.lol.
+
+**Held (16):** DGT DATEX II, RENFE, AUCORSA, SAIH Guadalquivir, INFOCA, IGN,
+Agenda Única, Turismo de Córdoba, IMAE, BOP, PLACSP, OpenSky, e-distribución.
+Held means the reuse terms are unresolved, there is no documented machine
+interface, or — for the three DGT feeds — the portal answers `403` to automated
+clients. That is a fact recorded in the registry, not a bug to work around.
+
+**Awaiting an adapter (5):** AEMET, NASA FIRMS, MITECO ICA, the Diputación CKAN.
+Permitted, readable in principle, not yet written.
+
+Those are three different states and `eye sources` reports all three. See
+[docs/legal/data-ethics.md](./docs/legal/data-ethics.md) for why a held source
+is a normal outcome rather than a failure.
 
 ## Documentation
 

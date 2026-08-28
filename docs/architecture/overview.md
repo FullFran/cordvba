@@ -175,33 +175,56 @@ adapted from an HTTP service to a CLI.
 ```
 cmd/eye/                    composition root — the only main package
 internal/
-  cli/                      argument parsing, output rendering, command registry
-  config/                   configuration loading; the only place os.Getenv is called
+  cli/                      commands, argument parsing, output rendering
+  config/                   configuration; the only place os.Getenv is called
+  httpx/                    the shared outbound client: timeouts, size caps,
+                            conditional requests, Retry-After, charset decoding
   version/                  build identity, injected via -ldflags
   observation/              THE CORE — what eye knows and how it knows it
-    domain/                 Record, Entity, Provenance, Point, BBox, Severity, Quality
-    application/            ingest and query use cases
-    infrastructure/         SQLite store, raw cache
+    domain/                 Record, Entity, Provenance, Point, BBox, Filter, ports
+    application/            the collector: poll providers, store what comes back
+    infrastructure/         MemStore today; the SQLite adapter lands with the daemon
   source/                   the registry: which feeds we may read, and on what terms
     domain/                 Source, Access, AutomationStatus
-    application/            registry loading and health tracking
-    infrastructure/         YAML registry reader
+    infrastructure/         YAML registry loader
   provider/                 adapters for external sources
-    domain/                 Provider, StreamingProvider, EntityProvider, Health (ports)
-    infrastructure/         one package per source: dgt/, aemet/, firms/, ckan/, …
-  event/                    the Córdoba agenda domain
-    domain/                 Event, EventStatus, fingerprint
-    application/            dedupe, change tracking
-    infrastructure/         agenda adapters
-  scheduler/                jitter, backoff, circuit breaker, per-host concurrency
-  fusion/                   spatio-temporal rule engine
-  testutil/                 shared test helpers, never imported by production code
+    domain/                 Provider, StreamingProvider, EntityProvider, Health
+    infrastructure/         factory (format → adapter), plus one package per format:
+                            rss/, ckan/, adsblol/
 configs/
+  embed.go                  compiles the registry into the binary
   sources.yaml              the source registry — the legal contract of the project
   rules.yaml                correlation rules
 docs/                       these documents
 testdata/                   recorded source fixtures, so tests never hit the network
 ```
+
+Packages that the roadmap calls for but that do not exist yet — `scheduler/`,
+`fusion/`, `event/` — are created by the epic that fills them. An empty package
+is a promise, and the tree should only contain code.
+
+## Two gates, not one
+
+A source is fetched only when it passes both:
+
+```mermaid
+flowchart LR
+    SRC["Registry entry"] --> G1{{"May we?<br/>automation == enabled"}}
+    G1 -->|no| HELD["Held.<br/>Shown as held."]
+    G1 -->|yes| G2{{"Can we?<br/>an adapter exists for the format"}}
+    G2 -->|no| WAIT["Awaiting an adapter.<br/>Shown as such."]
+    G2 -->|yes| POLL["Polled"]
+
+    style G1 fill:#e94560,stroke:#1a1a2e,color:#fff
+    style G2 fill:#0984e3,stroke:#74b9ff,color:#fff
+    style HELD fill:#533483,stroke:#1a1a2e,color:#fff
+    style WAIT fill:#2d3436,stroke:#636e72,color:#eaeaea
+    style POLL fill:#00b894,stroke:#55efc4,color:#0b2b22
+```
+
+They fail for different reasons and are reported separately. Collapsing them
+into "source unavailable" would hide the difference between a licence question
+and an unwritten parser.
 
 ## Why not the two-binary gateway
 

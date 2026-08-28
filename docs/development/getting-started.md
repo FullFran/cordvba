@@ -14,15 +14,25 @@ git clone https://github.com/FullFran/eye.git
 cd eye
 
 make build          # → bin/eye
-./bin/eye version
+./bin/eye status    # polls every live source and reports the city
 ./bin/eye help
 ```
 
 Or run straight from source:
 
 ```bash
-make run ARGS="status"
+make run ARGS="news --limit 10"
 ```
+
+The source registry is compiled into the binary, so `eye` works immediately
+after building with nothing else installed. It is resolved in this order:
+
+1. `--registry <path>`, when given
+2. `$EYE_CONFIG_DIR/sources.yaml` (default `~/.config/eye/sources.yaml`)
+3. `./configs/sources.yaml`, which is what you get inside a checkout
+4. the copy compiled into the binary
+
+`eye sources` prints which one was used.
 
 ## The commands you will use daily
 
