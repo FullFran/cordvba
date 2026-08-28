@@ -21,3 +21,9 @@
 
 # Lockfiles — generated.
 go.sum text eol=lf
+
+# Recorded source fixtures are evidence, not source code. They must be stored
+# byte-for-byte as the publisher served them: normalizing line endings would
+# change the payload a test asserts against, and with it the SHA-256 that
+# provenance records.
+testdata/** -text
