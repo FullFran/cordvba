@@ -159,6 +159,7 @@ Polled in 505ms · registry: (embedded)
 | `eye cameras` | The camera inventory — 1948 DGT plus 32 municipal, positions and metadata |
 | `eye camera` | Show one camera's current frame, with the age of the image |
 | `eye watch` | A live board of the city, refreshing on screen |
+| `eye serve` | HTTP API, so other programs read the same records |
 | `eye query` | `--topic --since --text --source --limit`, across everything |
 | `eye sources` | The registry: what eye may read, what it can read, and when each last answered |
 | `eye daemon` | Polls continuously and persists everything — the watching mode |
@@ -232,6 +233,44 @@ every few seconds and is always the newest thing in the store, so a plain
 newest-first feed is a list of aircraft callsigns with the city pushed off the
 bottom. Every source gets a guaranteed share first; leftover rows are filled in
 time order, because on a quiet night more aircraft beats blank space.
+
+### Feeding other programs
+
+eye is a gateway: providers are written once, and anything that speaks HTTP,
+JSON or SQL reads the same normalized records with the same provenance
+attached.
+
+```bash
+eye serve                      # http://127.0.0.1:8787
+eye serve --addr 0.0.0.0:8787 --public
+```
+
+```
+GET /v1/records   topic, source, kind, since, until, bbox, near, radius_km, text, limit
+GET /v1/entities  kind, source, topic, near, radius_km, text, limit
+GET /v1/sources   the registry — including what is held, and why
+GET /health
+```
+
+```bash
+curl 'localhost:8787/v1/records?topic=press&since=2h&text=feria'
+curl 'localhost:8787/v1/entities?kind=camera&near=37.8882,-4.7794&radius_km=15'
+```
+
+`since` takes an RFC 3339 timestamp or a duration like `2h`, because a script
+has one and a person has the other.
+
+Three integration paths, in order of how much you want to be tied to eye:
+
+| | |
+|---|---|
+| **HTTP** | `eye serve`, above |
+| **JSON** | every command takes `--json`; pipe it anywhere |
+| **SQL** | the store is a plain SQLite file at `~/.local/share/eye/eye.db` — open it read-only and query it |
+
+Two things the API will not do. It **binds to loopback unless you pass
+`--public`**, because eye reads sources whose licences in several cases permit
+personal use only. And it **never serves camera images**, for the same reason.
 
 ### Persistence
 
