@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS records (
     quality     TEXT    NOT NULL,
 
     entity_id   TEXT,
+    local_key   TEXT,
     dedupe_key  TEXT,
     payload     TEXT,
 

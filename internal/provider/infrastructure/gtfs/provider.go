@@ -168,7 +168,9 @@ func (p *Provider) departureRecord(d Departure, prov observation.Provenance) (ob
 		ValidFrom: &when,
 		Title:     title,
 		Severity:  observation.SeverityNone, Confidence: 1,
-		Quality:   observation.QualityOfficial,
+		Quality: observation.QualityOfficial,
+		// A departure is a stop and a trip. Its time is what moves.
+		LocalKey:  fmt.Sprintf("%s:%s", d.Stop.ID, d.TripID),
 		DedupeKey: fmt.Sprintf("%s:%s:%s", d.Stop.ID, d.TripID, when.Format("20060102T1504")),
 		Payload:   payload, Provenance: prov,
 	}

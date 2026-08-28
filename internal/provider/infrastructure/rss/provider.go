@@ -96,7 +96,11 @@ func (p *Provider) toRecord(item Item, fetchedAt time.Time, rawHash string) (obs
 		Severity:    observation.SeverityInfo,
 		Confidence:  1, // The publisher said it; that much is certain.
 		Quality:     observation.QualityOfficial,
-		DedupeKey:   dedupe,
+		// The link is the article. Its title and description are what a
+		// newsroom edits after publishing, so identity taken from those
+		// would report an edit as a different story.
+		LocalKey:  link,
+		DedupeKey: dedupe,
 		Provenance: observation.Provenance{
 			Publisher: p.src.Authority,
 			SourceURL: firstNonEmpty(link, p.src.URL),

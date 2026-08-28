@@ -263,12 +263,18 @@ sources:
     automation: enabled
     interval: 60s
     published_every: 20s
+    sampled_kinds: [vehicle_position]
     options:
       ttl: "24h"
     notes: >-
       Live train positions. GTFS-Realtime, published as JSON alongside the
       protobuf form — which is why eye reads it without adding a protobuf
       dependency. Verified 2026-08-28: 230 trains, updated every 20 seconds.
+
+      sampled_kinds: a train position is a sample, not a statement. Every
+      train moves between polls, so diffing them reports the reading back as
+      news. Trip delays from the same publisher are statements and stay
+      watched.
 
       CERCANÍAS ONLY. All three of RENFE's real-time datasets say so
       explicitly, and Córdoba has no Cercanías network: the nearest live
@@ -312,6 +318,7 @@ sources:
     access: documented_api
     automation: enabled
     interval: 15s
+    sampled_kinds: [aircraft_position]
     options:
       lat: "37.8882"
       lon: "-4.7794"
@@ -320,6 +327,12 @@ sources:
     notes: >-
       Best ergonomics for a local viewport. Positions carry ExpiresAt: movement
       data is short-lived by design.
+
+      sampled_kinds: an aircraft position is a sample of a moving signal, not
+      a statement about a persistent thing. It is different every time by
+      definition, so eye does not run change detection over it — every aircraft
+      would report a position change on every poll and bury everything else.
+      `eye sky` is where the positions are read.
 
   - id: opensky
     authority: OpenSky Network

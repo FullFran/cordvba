@@ -10,6 +10,7 @@ import (
 
 	domain "github.com/FullFran/eye/internal/observation/domain"
 	provider "github.com/FullFran/eye/internal/provider/domain"
+	source "github.com/FullFran/eye/internal/source/domain"
 )
 
 // DefaultConcurrency bounds how many sources are polled at once. Public
@@ -110,7 +111,7 @@ func (c *Collector) collectOne(ctx context.Context, p provider.Provider) Result 
 		return res
 	}
 
-	c.detectChanges(ctx, info.ID, records, now)
+	c.detectChanges(ctx, info, records, now)
 
 	// An inventory provider also refreshes the entity store.
 	if ep, ok := p.(provider.EntityProvider); ok {
@@ -139,24 +140,49 @@ func (c *Collector) collectOne(ctx context.Context, p provider.Provider) Result 
 // Failures here are deliberately silent in the Result. The command the user
 // asked for was "collect", and losing this tick's changes must not turn a
 // successful poll into a reported failure.
-func (c *Collector) detectChanges(ctx context.Context, sourceID string, records []domain.Record, now time.Time) {
+func (c *Collector) detectChanges(ctx context.Context, info source.Source, records []domain.Record, now time.Time) {
 	if c.Snapshots == nil {
 		return
 	}
 
-	previous, known, err := c.Snapshots.Snapshot(ctx, sourceID)
+	previous, known, err := c.Snapshots.Snapshot(ctx, info.ID)
 	if err != nil {
 		return
 	}
+
+	// Samples are dropped before both the comparison and the snapshot: a
+	// position is different every time by definition, so diffing two of them
+	// reports the reading back as news and buries everything else.
+	watched := watchable(info, records)
 
 	// A first sighting has nothing to compare against, so nothing may be
 	// claimed to have appeared. The snapshot is still taken, so the next
 	// poll has a baseline.
 	if known {
-		if changes := domain.DetectChanges(previous, records, now, true); len(changes) > 0 {
+		if changes := domain.DetectChanges(previous, watched, now, true); len(changes) > 0 {
 			_, _ = c.records.Append(ctx, changes)
 		}
 	}
 
-	_ = c.Snapshots.SaveSnapshot(ctx, sourceID, records)
+	_ = c.Snapshots.SaveSnapshot(ctx, info.ID, watched)
+}
+
+// watchable drops the records whose kind this source publishes as samples.
+//
+// Per kind rather than per source because one feed does both: RENFE's real-time
+// feed carries train positions, which are samples, alongside trip delays, which
+// are exactly what somebody wants to be told about.
+func watchable(info source.Source, records []domain.Record) []domain.Record {
+	if len(info.SampledKinds) == 0 {
+		return records
+	}
+
+	out := make([]domain.Record, 0, len(records))
+	for _, r := range records {
+		if info.SamplesKind(r.Kind) {
+			continue
+		}
+		out = append(out, r)
+	}
+	return out
 }

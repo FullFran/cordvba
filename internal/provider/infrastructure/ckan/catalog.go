@@ -71,6 +71,7 @@ func (p *CatalogProvider) Poll(ctx context.Context) ([]observation.Record, error
 			Severity:    observation.SeverityInfo,
 			Confidence:  1,
 			Quality:     observation.QualityOfficial,
+			LocalKey:    ds.Name,
 			DedupeKey:   p.src.ID + ":" + ds.Name + ":" + ds.MetadataModified,
 			Payload:     payload,
 			Provenance: observation.Provenance{

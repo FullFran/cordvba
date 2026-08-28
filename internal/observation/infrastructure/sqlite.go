@@ -55,6 +55,11 @@ func OpenSQLite(path string) (*SQLiteStore, error) {
 		return nil, fmt.Errorf("%w: apply schema: %w", ErrStore, err)
 	}
 
+	if err := migrate(db); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+
 	return &SQLiteStore{db: db, path: path}, nil
 }
 
@@ -84,9 +89,9 @@ func (s *SQLiteStore) Append(ctx context.Context, records []domain.Record) (int,
 			lat, lon, geometry,
 			title, description,
 			severity, confidence, quality,
-			entity_id, dedupe_key, payload,
+			entity_id, local_key, dedupe_key, payload,
 			publisher, source_url, license, raw_hash
-		) VALUES (?,?,?,?, ?,?,?,?,?, ?,?,?, ?,?, ?,?,?, ?,?,?, ?,?,?,?)`)
+		) VALUES (?,?,?,?, ?,?,?,?,?, ?,?,?, ?,?, ?,?,?, ?,?,?,?, ?,?,?,?)`)
 	if err != nil {
 		return 0, fmt.Errorf("%w: prepare: %w", ErrStore, err)
 	}
@@ -103,7 +108,7 @@ func (s *SQLiteStore) Append(ctx context.Context, records []domain.Record) (int,
 			lat, lon, nullableJSON(r.Geometry),
 			r.Title, r.Description,
 			int(r.Severity), r.Confidence, string(r.Quality),
-			nullableString(r.EntityID), nullEmpty(r.DedupeKey), nullableJSON(r.Payload),
+			nullableString(r.EntityID), nullEmpty(r.LocalKey), nullEmpty(r.DedupeKey), nullableJSON(r.Payload),
 			r.Provenance.Publisher, r.Provenance.SourceURL, r.Provenance.License, r.Provenance.RawHash,
 		)
 		if err != nil {
@@ -135,7 +140,7 @@ func (s *SQLiteStore) Query(ctx context.Context, f domain.Filter) ([]domain.Reco
 			lat, lon, geometry,
 			title, description,
 			severity, confidence, quality,
-			entity_id, dedupe_key, payload,
+			entity_id, local_key, dedupe_key, payload,
 			publisher, source_url, license, raw_hash
 		FROM records` + where + ` ORDER BY observed_at DESC`
 
@@ -437,4 +442,71 @@ func timeFromNull(v sql.NullInt64) time.Time {
 // quoteIdentifierList renders a placeholder list for an IN clause.
 func placeholders(n int) string {
 	return strings.TrimSuffix(strings.Repeat("?,", n), ",")
+}
+
+// addedColumns are columns that arrived after the first release. The schema
+// creates tables with IF NOT EXISTS, which does nothing for a table that
+// already exists, so a store created by an older eye needs them added.
+//
+// Additive only, and each one nullable. eye never rewrites history in place,
+// and a migration that could destroy a column is a migration that eventually
+// will.
+var addedColumns = []struct{ table, column, definition string }{
+	{"records", "local_key", "TEXT"},
+}
+
+// migrate brings an existing store up to the current schema.
+func migrate(db *sql.DB) error {
+	ctx := context.Background()
+
+	for _, c := range addedColumns {
+		has, err := hasColumn(ctx, db, c.table, c.column)
+		if err != nil {
+			return err
+		}
+		if has {
+			continue
+		}
+		stmt := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", c.table, c.column, c.definition)
+		if _, err := db.ExecContext(ctx, stmt); err != nil { // #nosec G202 -- table, column and type are package literals, never input
+			return fmt.Errorf("%w: add %s.%s: %w", ErrStore, c.table, c.column, err)
+		}
+	}
+	return nil
+}
+
+// hasColumn reports whether a table already carries a column.
+func hasColumn(ctx context.Context, db *sql.DB, table, column string) (bool, error) {
+	rows, err := db.QueryContext(ctx, fmt.Sprintf("PRAGMA table_info(%s)", table)) // #nosec G202 -- table name is a package literal
+	if err != nil {
+		return false, fmt.Errorf("%w: inspect %s: %w", ErrStore, table, err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	for rows.Next() {
+		var (
+			cid          int
+			name, ctype  string
+			notNull, pk  int
+			defaultValue sql.NullString
+		)
+		if err := rows.Scan(&cid, &name, &ctype, &notNull, &defaultValue, &pk); err != nil {
+			return false, fmt.Errorf("%w: inspect %s: %w", ErrStore, table, err)
+		}
+		if name == column {
+			return true, nil
+		}
+	}
+	return false, rows.Err()
+}
+
+// DropColumnForTest removes a column so a test can imitate a store written by
+// an older eye. It exists only for that: nothing in eye drops columns, because
+// a migration that can destroy one eventually will.
+func (s *SQLiteStore) DropColumnForTest(ctx context.Context, table, column string) error {
+	stmt := fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s", table, column) // #nosec G202 -- test-only helper over package literals
+	if _, err := s.db.ExecContext(ctx, stmt); err != nil {
+		return fmt.Errorf("%w: drop %s.%s: %w", ErrStore, table, column, err)
+	}
+	return nil
 }

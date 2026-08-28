@@ -146,13 +146,13 @@ func renderWhere(clauses []string) string {
 // scanRecord materializes one row.
 func scanRecord(s scanner) (domain.Record, error) {
 	var (
-		r                                   domain.Record
-		validFrom, validUntil, expiresAt    sql.NullInt64
-		lat, lon                            sql.NullFloat64
-		geometry, entityID, dedupe, payload sql.NullString
-		observedAt, fetchedAt               int64
-		severity                            int
-		quality                             string
+		r                                             domain.Record
+		validFrom, validUntil, expiresAt              sql.NullInt64
+		lat, lon                                      sql.NullFloat64
+		geometry, entityID, localKey, dedupe, payload sql.NullString
+		observedAt, fetchedAt                         int64
+		severity                                      int
+		quality                                       string
 	)
 
 	if err := s.Scan(
@@ -161,7 +161,7 @@ func scanRecord(s scanner) (domain.Record, error) {
 		&lat, &lon, &geometry,
 		&r.Title, &r.Description,
 		&severity, &r.Confidence, &quality,
-		&entityID, &dedupe, &payload,
+		&entityID, &localKey, &dedupe, &payload,
 		&r.Provenance.Publisher, &r.Provenance.SourceURL, &r.Provenance.License, &r.Provenance.RawHash,
 	); err != nil {
 		return domain.Record{}, fmt.Errorf("%w: scan record: %w", ErrStore, err)
@@ -186,6 +186,9 @@ func scanRecord(s scanner) (domain.Record, error) {
 	if entityID.Valid {
 		id := entityID.String
 		r.EntityID = &id
+	}
+	if localKey.Valid {
+		r.LocalKey = localKey.String
 	}
 	if dedupe.Valid {
 		r.DedupeKey = dedupe.String
