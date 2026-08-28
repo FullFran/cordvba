@@ -141,6 +141,32 @@ sources:
   # RENFE publishes its own open-data portal at data.renfe.com, which needs no
   # registration at all. The NAP entry that once made this source look
   # login-gated was simply the wrong route to it.
+  - id: renfe-cordoba-departures
+    authority: RENFE
+    topic: transport
+    url: https://ssl.renfe.com/gtransit/Fichero_AV_LD/google_transit.zip
+    format: gtfs
+    license: CC-BY-4.0
+    access: documented_api
+    automation: enabled
+    interval: 6h
+    published_every: 24h
+    options:
+      kind: station
+      stops: "50500,50417,50413,50501,50502,50504,37704"
+    notes: >-
+      Published departures from Córdoba's seven stations, including the C-1:
+      Córdoba-Julio Anguita (50500), Campus Universitario de Rabanales
+      (50417), Alcolea de Córdoba, El Higuerón, Villarrubia de Córdoba,
+      Posadas and Villanueva de Córdoba.
+
+      These stops live in the AV/LD/MD feed, not in RENFE's Cercanías one,
+      which despite its name contains no Córdoba stop at all.
+
+      Timetable, not real time. RENFE's GTFS-Realtime feeds cover other
+      núcleos: a check of every stop id in trip_updates found none of
+      Córdoba's (verified 2026-08-28).
+
   - id: renfe-positions
     authority: RENFE
     topic: transport

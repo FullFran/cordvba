@@ -13,6 +13,7 @@ import (
 	"github.com/FullFran/eye/internal/provider/infrastructure/adsblol"
 	"github.com/FullFran/eye/internal/provider/infrastructure/ckan"
 	"github.com/FullFran/eye/internal/provider/infrastructure/datex"
+	"github.com/FullFran/eye/internal/provider/infrastructure/gtfs"
 	"github.com/FullFran/eye/internal/provider/infrastructure/gtfsrt"
 	"github.com/FullFran/eye/internal/provider/infrastructure/rss"
 	"github.com/FullFran/eye/internal/provider/infrastructure/wfs"
@@ -45,6 +46,9 @@ var builders = map[string]func(source.Source, *httpx.Client) provider.Provider{
 	},
 	"gtfs-rt-json": func(s source.Source, c *httpx.Client) provider.Provider {
 		return gtfsrt.New(s, c)
+	},
+	"gtfs": func(s source.Source, c *httpx.Client) provider.Provider {
+		return gtfs.New(s, c)
 	},
 }
 
