@@ -141,6 +141,47 @@ sources:
   # RENFE publishes its own open-data portal at data.renfe.com, which needs no
   # registration at all. The NAP entry that once made this source look
   # login-gated was simply the wrong route to it.
+  - id: aucorsa-arrivals
+    authority: AUCORSA
+    topic: transport
+    url: https://lightapi.aucorsa.es/wp-json/aucorsa/v1
+    format: aucorsa-arrivals
+    license: unspecified
+    access: undocumented_personal
+    automation: enabled
+    interval: 60s
+    options:
+      stops: "116,456,239,88,808"
+      token_page: https://aucorsa.es/
+    notes: >-
+      Arrival estimates from AUCORSA's own REST namespace, which the operator
+      publishes no documentation for. Two routes are read and no others:
+      /estimations/stop for the next buses, and /autocompletion/stop to
+      resolve a stop by name. UNDOCUMENTED_PERSONAL under ADR-0008:
+      the registry alone cannot enable it, the machine must set
+      EYE_ALLOW_PERSONAL_SOURCES, and its records never leave that machine
+      through eye serve.
+
+      The endpoint declines without the CSRF token that AUCORSA's public pages
+      print for every visitor — verified 2026-08-28 that a browser and a plain
+      HTTP GET of the same page receive the identical value, so it carries no
+      account and identifies nobody. eye reads it from that page, caches it for
+      six hours, and re-reads it when the endpoint declines.
+
+      It answers 200 with the body "-1" when it refuses, so a status code is
+      not enough to tell whether a poll worked.
+
+      Estimates are recorded as quality=preliminary: they are the operator's
+      own prediction, not a measurement.
+
+      stops are the numbers printed on the pole, which is what the endpoint
+      expects. The operator's own web pages carry a second, unrelated number
+      (a page identifier); configuring that one returns no arrivals and no
+      error. Use `eye bus <name>` to look a stop up by name instead of
+      guessing. The five here are central: Ronda Tejares (Cruz Conde),
+      Claudio Marcelo (Tendillas), Paseo Victoria, Gran Capitan and Campus
+      Rabanales.
+
   - id: aucorsa-lines
     authority: AUCORSA
     topic: transport
