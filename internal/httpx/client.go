@@ -31,11 +31,18 @@ const (
 	DefaultUserAgent = "eye/0.1 (+https://github.com/FullFran/eye)"
 )
 
+// Recorder stores a raw payload and returns its content hash. The raw cache
+// implements it.
+type Recorder interface {
+	Put(body []byte) (string, error)
+}
+
 // Client wraps net/http with the policies every eye request needs.
 type Client struct {
 	http      *http.Client
 	userAgent string
 	maxBytes  int64
+	recorder  Recorder
 }
 
 // Option customises a Client.
@@ -60,6 +67,15 @@ func WithUserAgent(ua string) Option {
 // WithHTTPClient injects an underlying client, mainly for tests.
 func WithHTTPClient(h *http.Client) Option {
 	return func(c *Client) { c.http = h }
+}
+
+// WithRecorder stores every successful payload as evidence.
+//
+// Recording here rather than in each provider means the bytes kept are exactly
+// the bytes parsed, and the hash the cache files them under is the same
+// SHA-256 the provider writes into Provenance.RawHash.
+func WithRecorder(r Recorder) Option {
+	return func(c *Client) { c.recorder = r }
 }
 
 // New builds a Client. The zero-option form is the one providers should use.
@@ -94,6 +110,9 @@ type Response struct {
 	FetchedAt time.Time
 	// RetryAfter is the publisher's own instruction on when to come back.
 	RetryAfter time.Duration
+	// RecordError is set when the payload could not be written to the raw
+	// cache. The response itself is still usable.
+	RecordError error
 }
 
 // Get fetches a URL, sending conditional headers when validators are supplied.
@@ -150,6 +169,15 @@ func (c *Client) Get(ctx context.Context, url string, v Validators) (*Response, 
 		return out, fmt.Errorf("read %s: %w", url, err)
 	}
 	out.Body = body
+
+	if c.recorder != nil {
+		// A cache failure must not fail the poll: losing the evidence
+		// copy is worse than not having it, but losing the observation
+		// too is worse still.
+		if _, err := c.recorder.Put(body); err != nil {
+			out.RecordError = err
+		}
+	}
 
 	return out, nil
 }

@@ -162,3 +162,63 @@ func TestRetryAfterHTTPDate(t *testing.T) {
 		t.Errorf("RetryAfter = %v, want roughly 90s", resp.RetryAfter)
 	}
 }
+
+// recordingSpy captures what the client hands to the raw cache.
+type recordingSpy struct {
+	bodies [][]byte
+	err    error
+}
+
+func (r *recordingSpy) Put(body []byte) (string, error) {
+	r.bodies = append(r.bodies, append([]byte(nil), body...))
+	return "hash", r.err
+}
+
+func TestGetRecordsThePayload(t *testing.T) {
+	t.Parallel()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("<rss>evidence</rss>"))
+	}))
+	defer srv.Close()
+
+	spy := &recordingSpy{}
+	resp, err := httpx.New(httpx.WithRecorder(spy)).Get(context.Background(), srv.URL, httpx.Validators{})
+	if err != nil {
+		t.Fatalf("Get() = %v", err)
+	}
+
+	if len(spy.bodies) != 1 {
+		t.Fatalf("recorder saw %d payloads, want 1", len(spy.bodies))
+	}
+	// The bytes recorded must be the bytes parsed, or the evidence chain
+	// points at something the code never read.
+	if string(spy.bodies[0]) != string(resp.Body) {
+		t.Errorf("recorded %q, parsed %q", spy.bodies[0], resp.Body)
+	}
+	if resp.RecordError != nil {
+		t.Errorf("RecordError = %v", resp.RecordError)
+	}
+}
+
+// Losing the evidence copy is bad. Losing the observation as well is worse.
+func TestGetSurvivesARecorderFailure(t *testing.T) {
+	t.Parallel()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("payload"))
+	}))
+	defer srv.Close()
+
+	spy := &recordingSpy{err: errors.New("disk full")}
+	resp, err := httpx.New(httpx.WithRecorder(spy)).Get(context.Background(), srv.URL, httpx.Validators{})
+	if err != nil {
+		t.Fatalf("Get() = %v, want the response despite the cache failure", err)
+	}
+	if string(resp.Body) != "payload" {
+		t.Errorf("body = %q", resp.Body)
+	}
+	if resp.RecordError == nil {
+		t.Error("RecordError is nil; the cache failure was swallowed silently")
+	}
+}
