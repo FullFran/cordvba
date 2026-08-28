@@ -141,6 +141,25 @@ sources:
   # RENFE publishes its own open-data portal at data.renfe.com, which needs no
   # registration at all. The NAP entry that once made this source look
   # login-gated was simply the wrong route to it.
+  - id: aucorsa-lines
+    authority: AUCORSA
+    topic: transport
+    url: https://aucorsa.es
+    format: aucorsa-lines
+    license: unspecified
+    access: public_html
+    automation: enabled
+    interval: 168h
+    notes: >-
+      City bus lines, stops and service hours, read from the operator's own
+      public line pages. AUCORSA publishes no GTFS and no open-data feed, but
+      each page at /linea/{code}/ is server-rendered and carries every stop
+      with its id and name plus the first and last service per day type.
+
+      Ordinary public HTML, fetched the way a browser fetches it. The pages
+      carry no coordinates; the municipal cartography layer does, and matching
+      the two is its own piece of work rather than a guess.
+
   - id: cordoba-bus
     authority: Ayuntamiento de Cordoba / AUCORSA
     topic: transport

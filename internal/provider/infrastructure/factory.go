@@ -11,6 +11,7 @@ import (
 	"github.com/FullFran/eye/internal/httpx"
 	provider "github.com/FullFran/eye/internal/provider/domain"
 	"github.com/FullFran/eye/internal/provider/infrastructure/adsblol"
+	"github.com/FullFran/eye/internal/provider/infrastructure/aucorsa"
 	"github.com/FullFran/eye/internal/provider/infrastructure/ckan"
 	"github.com/FullFran/eye/internal/provider/infrastructure/datex"
 	"github.com/FullFran/eye/internal/provider/infrastructure/gtfs"
@@ -49,6 +50,9 @@ var builders = map[string]func(source.Source, *httpx.Client) provider.Provider{
 	},
 	"gtfs": func(s source.Source, c *httpx.Client) provider.Provider {
 		return gtfs.New(s, c)
+	},
+	"aucorsa-lines": func(s source.Source, c *httpx.Client) provider.Provider {
+		return aucorsa.New(s, c)
 	},
 }
 
