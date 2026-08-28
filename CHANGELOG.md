@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.0](https://github.com/FullFran/eye/compare/v0.2.0...v0.3.0) (2026-08-28)
+
+
+### Features
+
+* **cli:** browse and choose a camera interactively ([116d8d7](https://github.com/FullFran/eye/commit/116d8d7a1e5260cb7977779c633fea496f45718e))
+* **cli:** show camera frames with the age of the image ([c0a9758](https://github.com/FullFran/eye/commit/c0a97580d6ad6e76410a3bcec94a79965c90ab42))
+* **source:** connect IGN seismicity, IMAE and public procurement ([3d1c532](https://github.com/FullFran/eye/commit/3d1c532e9bfa96a5eab1d0cac9eb73db37f1074e))
+
+
+### Documentation
+
+* correct the camera findings and record why there is no stream ([fa9d099](https://github.com/FullFran/eye/commit/fa9d09934a6c79058232184fd743ea38e8788628))
+* **source:** record that Cordoba publishes no camera image ([d7015f1](https://github.com/FullFran/eye/commit/d7015f11bd03e1fa8db12929102e33bff3cd2b1d))
+
 ## [0.2.0](https://github.com/FullFran/eye/compare/v0.1.0...v0.2.0) (2026-08-28)
 
 
