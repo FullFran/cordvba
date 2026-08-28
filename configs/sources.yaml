@@ -1,0 +1,311 @@
+# eye — source registry
+#
+# This file is the legal and operational contract of the project. Nothing is
+# fetched that is not declared here, and nothing is fetched automatically
+# unless `automation: enabled`.
+#
+# access:
+#   documented_api        published machine-readable contract (CKAN, DATEX II, GTFS-RT, REST)
+#   documented_download   published file resource with stable terms
+#   public_html           public page, no documented reuse contract
+#   undocumented_backend  internal endpoint behind a public viewer — never automated
+#
+# automation:
+#   enabled        the scheduler may poll it
+#   review_terms   valuable, but reuse terms are unclear — held out until a human resolves it
+#   manual_link    eye links to the viewer and ingests nothing
+#   disabled       never fetched automatically
+#
+# interval        eye's engineering poll interval (our decision)
+# published_every the refresh cadence the publisher declares (their decision)
+#
+# Polling faster than `published_every` buys nothing but rate limits.
+
+sources:
+  # ── Transport · roads ─────────────────────────────────────────────────────
+  - id: dgt-incidents
+    authority: Direccion General de Trafico
+    topic: transport
+    url: https://nap.dgt.es/es/dataset/incidencias-dgt-datex2-v3-7
+    format: datex2-3.7-xml
+    license: CC-BY-4.0
+    access: documented_api
+    automation: enabled
+    interval: 60s
+    notes: Backbone of the road picture. Parse against the published XSD, never assume the shape is frozen.
+
+  - id: dgt-cameras
+    authority: Direccion General de Trafico
+    topic: transport
+    url: https://nap.dgt.es/en/dataset/camaras-dgt-datex2-v3-7
+    format: datex2-3.7-xml
+    license: CC-BY-4.0
+    access: documented_api
+    automation: enabled
+    interval: 1h
+    published_every: 1h
+    notes: >-
+      Camera INVENTORY only: id, position, road metadata. The official dataset
+      documents no JPEG, HLS or RTSP endpoint. eye maps cameras; it does not
+      stream them.
+
+  - id: dgt-vms
+    authority: Direccion General de Trafico
+    topic: transport
+    url: https://nap.dgt.es/es/dataset/paneles-dgt-tiempo-real-datex2-v3-7
+    format: datex2-3.7-xml
+    license: CC-BY-4.0
+    access: documented_api
+    automation: enabled
+    interval: 60s
+
+  # ── Transport · city ──────────────────────────────────────────────────────
+  - id: cordoba-ckan
+    authority: Ayuntamiento de Cordoba
+    topic: city
+    url: https://datosabiertos.cordoba.es/ckan/
+    format: ckan-api
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 12h
+    notes: >-
+      Generic CKAN adapter. Many datasets declare no licence; store that as
+      "unspecified" and surface it, do not assume permission.
+
+  - id: aucorsa-gtfs
+    authority: AUCORSA / NAP Transportes
+    topic: transport
+    url: https://nap.transportes.gob.es/Files/Detail/1375
+    format: gtfs
+    license: free-with-registration
+    access: documented_download
+    automation: review_terms
+    interval: 24h
+    published_every: 24h
+    notes: Static GTFS only; no official GTFS-RT found. Download needs a NAP session, so ingestion is not yet unattended.
+
+  - id: renfe-gtfs-rt
+    authority: RENFE / NAP Transportes
+    topic: transport
+    url: https://nap.transportes.gob.es/Files/Detail/897
+    format: gtfs-rt
+    license: free-with-registration
+    access: documented_download
+    automation: review_terms
+    interval: 30s
+    notes: TripUpdates and VehiclePositions are published. Static feed download needs a NAP session.
+
+  # ── Air ───────────────────────────────────────────────────────────────────
+  - id: adsb-lol
+    authority: adsb.lol
+    topic: air
+    url: https://api.adsb.lol/docs
+    format: rest-json
+    license: check-terms-before-redistribution
+    access: documented_api
+    automation: enabled
+    interval: 15s
+    notes: Best ergonomics for a local viewport. Raw positions expire fast by design.
+
+  - id: opensky
+    authority: OpenSky Network
+    topic: air
+    url: https://opensky-network.org/api/states/all
+    format: rest-json
+    license: non-commercial-review-required
+    access: documented_api
+    automation: review_terms
+    interval: 20s
+    notes: >-
+      OpenSky distinguishes personal from commercial use. Resolve the licence
+      before this runs anywhere but a personal machine.
+
+  # ── Environment ───────────────────────────────────────────────────────────
+  - id: aemet-warnings
+    authority: AEMET
+    topic: weather
+    url: https://opendata.aemet.es/
+    format: rest-json-two-step
+    license: reuse-with-attribution
+    access: documented_api
+    automation: enabled
+    interval: 5m
+    notes: Two-step API — the first response returns metadata plus a `datos` URL to fetch.
+
+  - id: aemet-observation
+    authority: AEMET
+    topic: weather
+    url: https://opendata.aemet.es/
+    format: rest-json-two-step
+    license: reuse-with-attribution
+    access: documented_api
+    automation: enabled
+    interval: 10m
+
+  - id: nasa-firms
+    authority: NASA FIRMS
+    topic: fire
+    url: https://firms.modaps.eosdis.nasa.gov/api/area/
+    format: rest-csv
+    license: nasa-open-data
+    access: documented_api
+    automation: enabled
+    interval: 10m
+    notes: >-
+      Latency is orbital, not network. Polling faster changes nothing. The FIRMS
+      `confidence` field is product metadata and must not be copied into
+      Record.Confidence.
+
+  - id: infoca-risk
+    authority: Junta de Andalucia / REDIAM
+    topic: fire
+    url: https://www.juntadeandalucia.es/medioambiente/mapwms/REDIAM_Indice_Riesgo_Incendios_Diario
+    format: wms
+    license: check-layer-metadata
+    access: documented_api
+    automation: review_terms
+    interval: 3h
+    published_every: 24h
+
+  - id: infoca-active
+    authority: Junta de Andalucia
+    topic: fire
+    url: https://www.juntadeandalucia.es/organismos/ema/areas/incendios-forestales/
+    format: web-viewer
+    license: unspecified
+    access: public_html
+    automation: manual_link
+    notes: Real-time viewer with no documented machine interface. eye links to it and ingests nothing.
+
+  - id: saih-guadalquivir
+    authority: Confederacion Hidrografica del Guadalquivir
+    topic: hydrology
+    url: https://www.chguadalquivir.es/saih/
+    format: web
+    license: unspecified
+    access: public_html
+    automation: review_terms
+    interval: 5m
+    notes: >-
+      High value, fragile integration. The publisher states its automatic
+      readings are NOT cross-checked; that warning must reach the UI as
+      quality=preliminary.
+
+  - id: miteco-ica
+    authority: MITECO
+    topic: air_quality
+    url: https://catalogo.datosabiertos.miteco.gob.es/
+    format: csv-dcat
+    license: check-distribution
+    access: documented_api
+    automation: enabled
+    interval: 20m
+    published_every: 1h
+
+  - id: ign-seismic
+    authority: Instituto Geografico Nacional
+    topic: geophysics
+    url: https://www.ign.es/web/sis-catalogo-terremotos
+    format: catalog-download
+    license: official-cite-ign
+    access: documented_download
+    automation: review_terms
+    interval: 2m
+
+  - id: edistribucion-outages
+    authority: e-distribucion
+    topic: energy
+    url: https://www.edistribucion.com/es/servicios/cortes-averias.html
+    format: web-map
+    license: unspecified
+    access: undocumented_backend
+    automation: manual_link
+    notes: Public map, private backend. Never scraped.
+
+  # ── Events ────────────────────────────────────────────────────────────────
+  - id: uco-events
+    authority: Universidad de Cordoba
+    topic: events
+    url: https://eventos.uco.es/
+    format: ics
+    license: check-terms
+    access: documented_api
+    automation: enabled
+    interval: 6h
+    notes: Publishes ICS, RSS and KML explicitly. The easiest event source to ingest correctly.
+
+  - id: agenda-unica
+    authority: Ayuntamiento de Cordoba
+    topic: events
+    url: https://agendaunica.cordoba.es/
+    format: html
+    license: unspecified
+    access: public_html
+    automation: review_terms
+    interval: 6h
+    notes: Broadest municipal coverage. Needs a licence answer before unattended ingestion.
+
+  - id: turismo-cordoba
+    authority: Turismo de Cordoba
+    topic: events
+    url: https://www.turismodecordoba.org/agenda
+    format: html
+    license: unspecified
+    access: public_html
+    automation: review_terms
+    interval: 12h
+
+  - id: imae-teatro
+    authority: IMAE / Teatro Cordoba
+    topic: events
+    url: https://teatrocordoba.es/
+    format: html
+    license: unspecified
+    access: public_html
+    automation: review_terms
+    interval: 12h
+    notes: Venue, date, time, genre and often price. The best signal for EVENT_CHANGE detection.
+
+  # ── Civic documents ───────────────────────────────────────────────────────
+  - id: boe
+    authority: Agencia Estatal BOE
+    topic: civic
+    url: https://www.boe.es/datosabiertos/api/api.php
+    format: rest-xml
+    license: aebo-reuse-terms
+    access: documented_api
+    automation: enabled
+    interval: 1h
+
+  - id: bop-cordoba
+    authority: Diputacion de Cordoba
+    topic: civic
+    url: https://bop.dipucordoba.es/
+    format: html
+    license: bop-legal-notice
+    access: public_html
+    automation: review_terms
+    interval: 1h
+    notes: Early signal for road closures, works and municipal authorisations.
+
+  - id: placsp
+    authority: Ministerio de Hacienda
+    topic: civic
+    url: https://contrataciondelestado.es/
+    format: open-data-bulk
+    license: open-data
+    access: documented_api
+    automation: review_terms
+    interval: 6h
+    notes: Public procurement is how a large event leaves a trace months before it is announced.
+
+  - id: dipucordoba-ckan
+    authority: Diputacion de Cordoba
+    topic: civic
+    url: https://transparencia.dipucordoba.es/api-para-desarrolladores/
+    format: ckan-api
+    license: per-dataset
+    access: documented_api
+    automation: enabled
+    interval: 24h

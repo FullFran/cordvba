@@ -1,0 +1,104 @@
+# eye — correlation rules
+#
+# Explainable rules first. No machine learning until a rule engine has proved
+# it cannot express what we need.
+#
+# Every rule produces an INFERENCE, never an official notice. An eye alert must
+# never be presentable as a 112, INFOCA or AEMET communication.
+#
+# Each rule declares:
+#   window            temporal window records must fall inside
+#   radius_km         spatial window
+#   requires          all of these must be present for the rule to fire
+#   boost_if          optional signals that raise confidence
+#   result            what eye emits, always with quality: inferred
+
+rules:
+  - id: wildfire-correlated
+    window: 20m
+    radius_km: 10
+    requires:
+      - source: nasa-firms
+        kind: thermal_anomaly
+      - source: aemet-observation
+        kind: wind
+    boost_if:
+      - source: infoca-risk
+        condition: risk >= high
+      - source: infoca-active
+        kind: active_incident
+    result:
+      topic: fire
+      severity: 4
+      quality: inferred
+      title: Possible wildfire — correlated signals
+      disclaimer: Not an official emergency declaration.
+
+  - id: flood-watch
+    window: 60m
+    radius_km: 25
+    requires:
+      - source: saih-guadalquivir
+        condition: level_delta > threshold
+      - source: aemet-observation
+        condition: precipitation > threshold
+    boost_if:
+      - source: aemet-warnings
+        condition: level in [orange, red]
+    result:
+      topic: hydrology
+      severity: 4
+      quality: inferred
+      title: River level rising during rainfall
+      disclaimer: SAIH readings are automatic and not cross-checked by the publisher.
+
+  - id: surface-transport-disruption
+    window: 30m
+    radius_km: 2
+    requires:
+      - source: dgt-incidents
+        kind: road_incident
+      - source: aucorsa-gtfs
+        condition: route_geometry intersects incident_buffer
+    result:
+      topic: transport
+      severity: 2
+      quality: inferred
+      title: Possible impact on an AUCORSA route
+      disclaimer: >-
+        Geometric inference from static GTFS. Not a confirmed diversion by the
+        operator.
+
+  - id: smoke-impact
+    window: 3h
+    radius_km: 60
+    requires:
+      - source: nasa-firms
+        kind: thermal_anomaly
+      - source: miteco-ica
+        condition: pm25_rise or pm10_rise
+      - source: aemet-observation
+        kind: wind
+    result:
+      topic: air_quality
+      severity: 3
+      quality: inferred
+      title: Particulate increase temporally correlated with a thermal anomaly
+      disclaimer: >-
+        Correlation is not causation. eye states that the signals coincide in
+        time and space, not that the fire caused the reading.
+
+  - id: event-mobility-impact
+    window: 24h
+    radius_km: 1.5
+    requires:
+      - source: "*"
+        topic: events
+        condition: starts_within 24h
+      - source: dgt-incidents
+        kind: road_restriction
+    result:
+      topic: events
+      severity: 2
+      quality: inferred
+      title: Scheduled event coincides with a road restriction
