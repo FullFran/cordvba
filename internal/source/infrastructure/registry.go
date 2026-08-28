@@ -60,7 +60,7 @@ var (
 
 // LoadFile reads and validates the registry at path.
 func LoadFile(path string) ([]domain.Source, error) {
-	data, err := os.ReadFile(path) //nolint:gosec // the path comes from config, not from a request
+	data, err := os.ReadFile(path) // #nosec G304 -- operator-supplied registry path, never request input
 	if err != nil {
 		return nil, fmt.Errorf("%w: read %s: %w", ErrRegistry, path, err)
 	}

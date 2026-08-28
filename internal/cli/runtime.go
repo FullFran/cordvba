@@ -67,7 +67,7 @@ func resolveRegistry(cfg config.Config, override string) (path string, data []by
 		if candidate == "" {
 			continue
 		}
-		body, readErr := os.ReadFile(candidate) //nolint:gosec // operator-supplied path, not request input
+		body, readErr := os.ReadFile(candidate) // #nosec G304 -- operator-supplied registry path, never request input
 		if readErr == nil {
 			return candidate, body, nil
 		}

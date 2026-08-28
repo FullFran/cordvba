@@ -14,7 +14,7 @@ import (
 func loadFixture(t *testing.T, name, contentType string) string {
 	t.Helper()
 
-	body, err := os.ReadFile("../../../../testdata/rss/" + name) //nolint:gosec // fixture path built from a test literal
+	body, err := os.ReadFile("../../../../testdata/rss/" + name) // #nosec G304 -- fixture path built from a test literal
 	if err != nil {
 		t.Fatalf("read fixture: %v", err)
 	}
