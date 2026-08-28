@@ -117,9 +117,37 @@ func (r *runtime) pollable(topics ...string) ([]provider.Provider, []source.Sour
 	return providers.BuildPollable(selected, r.client)
 }
 
-// collect polls the given adapters into the runtime store.
+// collect polls the given adapters into the runtime store and records what
+// each source did.
+//
+// Health is persisted here rather than only in the daemon, so that whichever
+// command last polled a source, `eye sources` can say when it last worked.
 func (r *runtime) collect(ctx context.Context, ps []provider.Provider) []observation.Result {
-	return observation.NewCollector(r.store, r.store).Collect(ctx, ps)
+	results := observation.NewCollector(r.store, r.store).Collect(ctx, ps)
+	r.saveStates(ctx, results)
+	return results
+}
+
+// saveStates persists the outcome of a collection pass.
+func (r *runtime) saveStates(ctx context.Context, results []observation.Result) {
+	for _, res := range results {
+		st := store.SourceState{
+			SourceID:    res.Source,
+			LastAttempt: res.Health.LastAttempt,
+			Records:     res.Health.Records,
+		}
+		if res.OK() {
+			st.LastSuccess = res.Health.LastSuccess
+		} else {
+			st.ConsecutiveErrors = 1
+			if res.Err != nil {
+				st.LastError = res.Err.Error()
+			}
+		}
+		// A failure to record health must not fail the command that was
+		// actually asked for.
+		_ = r.store.SaveState(ctx, st)
+	}
 }
 
 // query reads back from the store.

@@ -7,7 +7,9 @@ import (
 	"io"
 	"sort"
 	"text/tabwriter"
+	"time"
 
+	store "github.com/FullFran/eye/internal/observation/infrastructure"
 	providers "github.com/FullFran/eye/internal/provider/infrastructure"
 	source "github.com/FullFran/eye/internal/source/domain"
 )
@@ -50,10 +52,17 @@ func sourcesCommand() Command {
 				return list[i].ID < list[j].ID
 			})
 
-			if *asJSON {
-				return writeJSON(stdout, sourceViews(list))
+			// Health comes from what earlier runs recorded, so this
+			// answers without polling anything.
+			states, err := rt.store.States(ctx)
+			if err != nil {
+				return err
 			}
-			return renderSources(stdout, rt.registryPath, list)
+
+			if *asJSON {
+				return writeJSON(stdout, sourceViews(list, states, time.Now().UTC()))
+			}
+			return renderSources(stdout, rt.registryPath, list, states, time.Now().UTC())
 		},
 	}
 }
@@ -72,10 +81,28 @@ type sourceView struct {
 	Interval   string `json:"interval,omitempty"`
 	URL        string `json:"url"`
 	Notes      string `json:"notes,omitempty"`
+
+	// Health is what earlier runs recorded. It is absent for a source that
+	// has never been polled, which is different from one that failed.
+	Health *sourceHealthView `json:"health,omitempty"`
 }
 
+// sourceHealthView is the persisted polling state of one source.
+type sourceHealthView struct {
+	LastSuccess       *time.Time `json:"last_success,omitempty"`
+	LastAttempt       *time.Time `json:"last_attempt,omitempty"`
+	Stale             bool       `json:"stale"`
+	ConsecutiveErrors int        `json:"consecutive_errors"`
+	LastError         string     `json:"last_error,omitempty"`
+	Records           int        `json:"records"`
+}
+
+// staleAfter is how far past a source's own interval it may fall before eye
+// calls it stale. Publishers are late; three intervals is late enough to say so.
+const staleAfter = 3
+
 // sourceViews projects the registry for machine consumption.
-func sourceViews(list []source.Source) []sourceView {
+func sourceViews(list []source.Source, states map[string]store.SourceState, now time.Time) []sourceView {
 	out := make([]sourceView, 0, len(list))
 	for _, s := range list {
 		v := sourceView{
@@ -94,19 +121,48 @@ func sourceViews(list []source.Source) []sourceView {
 		if s.Interval > 0 {
 			v.Interval = s.Interval.String()
 		}
+		if st, ok := states[s.ID]; ok {
+			v.Health = healthView(st, s, now)
+		}
 		out = append(out, v)
 	}
 	return out
 }
 
-// renderSources writes the human-readable registry table.
-func renderSources(w io.Writer, registryPath string, list []source.Source) error {
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	_, _ = fmt.Fprintln(tw, "SOURCE\tTOPIC\tFORMAT\tSTATE\tLICENCE\tAUTHORITY")
+// healthView projects persisted polling state, marking a source stale when it
+// has fallen well past its own declared interval.
+func healthView(st store.SourceState, s source.Source, now time.Time) *sourceHealthView {
+	v := &sourceHealthView{
+		ConsecutiveErrors: st.ConsecutiveErrors,
+		LastError:         st.LastError,
+		Records:           st.Records,
+	}
+	if !st.LastSuccess.IsZero() {
+		last := st.LastSuccess
+		v.LastSuccess = &last
+	}
+	if !st.LastAttempt.IsZero() {
+		attempt := st.LastAttempt
+		v.LastAttempt = &attempt
+	}
 
-	var live, held, noAdapter int
+	tolerance := s.Interval * staleAfter
+	if tolerance <= 0 {
+		tolerance = time.Hour
+	}
+	v.Stale = st.Health().Stale(now, tolerance)
+
+	return v
+}
+
+// renderSources writes the human-readable registry table.
+func renderSources(w io.Writer, registryPath string, list []source.Source, states map[string]store.SourceState, now time.Time) error {
+	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+	_, _ = fmt.Fprintln(tw, "SOURCE\tTOPIC\tFORMAT\tSTATE\tLAST OK\tLICENCE\tAUTHORITY")
+
+	var live, held, noAdapter, stale int
 	for _, s := range list {
-		state, ok := stateOf(s)
+		state, _ := stateOf(s)
 		switch state {
 		case "live":
 			live++
@@ -115,19 +171,34 @@ func renderSources(w io.Writer, registryPath string, list []source.Source) error
 		default:
 			held++
 		}
-		_ = ok
 
-		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
-			s.ID, s.Topic, s.Format, state,
-			ellipsis(s.License, 22), ellipsis(s.Authority, 30))
+		lastOK := "never"
+		if st, ok := states[s.ID]; ok {
+			h := healthView(st, s, now)
+			switch {
+			case h.LastSuccess == nil:
+				lastOK = "failing"
+			case h.Stale:
+				lastOK = ageOf(*h.LastSuccess, now) + " · stale"
+				stale++
+			default:
+				lastOK = ageOf(*h.LastSuccess, now)
+			}
+		}
+
+		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+			s.ID, s.Topic, s.Format, state, lastOK,
+			ellipsis(s.License, 20), ellipsis(s.Authority, 28))
 	}
 	if err := tw.Flush(); err != nil {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(w, "\n%s · %s live · %s held · %s awaiting an adapter\n",
-		plural(len(list), "source", "sources"),
-		fmt.Sprint(live), fmt.Sprint(held), fmt.Sprint(noAdapter))
+	_, _ = fmt.Fprintf(w, "\n%s · %d live · %d held · %d awaiting an adapter\n",
+		plural(len(list), "source", "sources"), live, held, noAdapter)
+	if stale > 0 {
+		_, _ = fmt.Fprintf(w, "%d live source(s) have not answered in a while — shown as stale, never as fresh.\n", stale)
+	}
 	_, _ = fmt.Fprintf(w, "registry: %s\n", registryPath)
 
 	if held > 0 {

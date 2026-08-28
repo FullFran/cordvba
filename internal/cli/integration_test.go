@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/FullFran/eye/internal/cli"
+	store "github.com/FullFran/eye/internal/observation/infrastructure"
 )
 
 // fakePortal serves every source shape eye reads, so a command can be exercised
@@ -566,4 +567,150 @@ func TestRetentionDeletesExpiredRecords(t *testing.T) {
 	if !strings.Contains(before, "EYE001") {
 		t.Fatalf("the aircraft was not stored:\n%s", before)
 	}
+}
+
+// Health is persisted by whichever command polled, so `eye sources` can say
+// when each source last worked without polling anything itself.
+func TestSourcesReportsPersistedHealth(t *testing.T) {
+	t.Parallel()
+
+	registry := setup(t)
+	dataDir := t.TempDir()
+
+	if code, _, stderr := runCmdIn(t, registry, dataDir, "news"); code != 0 {
+		t.Fatalf("priming run failed: %d %s", code, stderr)
+	}
+
+	_, stdout, _ := runCmdIn(t, registry, dataDir, "sources", "--json")
+
+	var got []struct {
+		ID     string `json:"id"`
+		Health *struct {
+			LastSuccess       *string `json:"last_success"`
+			Stale             bool    `json:"stale"`
+			ConsecutiveErrors int     `json:"consecutive_errors"`
+			Records           int     `json:"records"`
+		} `json:"health"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &got); err != nil {
+		t.Fatalf("output is not JSON: %v", err)
+	}
+
+	byID := map[string]bool{}
+	for _, s := range got {
+		if s.Health == nil {
+			continue
+		}
+		byID[s.ID] = true
+		if s.ID == "test-press" {
+			if s.Health.LastSuccess == nil {
+				t.Error("the polled source has no recorded success")
+			}
+			if s.Health.Stale {
+				t.Error("a source polled seconds ago is reported as stale")
+			}
+			if s.Health.Records == 0 {
+				t.Error("the recorded record count is zero")
+			}
+		}
+	}
+	if !byID["test-press"] {
+		t.Errorf("no health recorded for the polled source: %s", stdout)
+	}
+
+	// A source that was never polled has no health at all, which is a
+	// different fact from one that failed.
+	for _, s := range got {
+		if s.ID == "test-held" && s.Health != nil {
+			t.Error("a held source, never polled, was given a health record")
+		}
+	}
+}
+
+// A failing source must be recorded as failing, not left looking untouched.
+func TestSourcesRecordsAFailure(t *testing.T) {
+	t.Parallel()
+
+	dead := writeRegistry(t, "http://127.0.0.1:1")
+	dataDir := t.TempDir()
+
+	_, _, _ = runCmdIn(t, dead, dataDir, "news") // the failure is the point
+
+	_, stdout, _ := runCmdIn(t, dead, dataDir, "sources", "--json")
+
+	var got []struct {
+		ID     string `json:"id"`
+		Health *struct {
+			LastSuccess       *string `json:"last_success"`
+			ConsecutiveErrors int     `json:"consecutive_errors"`
+			LastError         string  `json:"last_error"`
+		} `json:"health"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &got); err != nil {
+		t.Fatalf("output is not JSON: %v", err)
+	}
+
+	for _, s := range got {
+		if s.ID != "test-press" {
+			continue
+		}
+		if s.Health == nil {
+			t.Fatal("no health recorded for the failing source")
+		}
+		if s.Health.LastSuccess != nil {
+			t.Error("a source that never answered has a recorded success")
+		}
+		if s.Health.ConsecutiveErrors == 0 || s.Health.LastError == "" {
+			t.Errorf("the failure was not recorded: %+v", s.Health)
+		}
+		return
+	}
+	t.Error("the failing source was not listed")
+}
+
+// A live source that has not answered in a long time must be shown as stale
+// rather than as fresh.
+func TestSourcesMarksAStaleSource(t *testing.T) {
+	t.Parallel()
+
+	registry := setup(t)
+	dataDir := t.TempDir()
+
+	if code, _, _ := runCmdIn(t, registry, dataDir, "news"); code != 0 {
+		t.Fatal("priming run failed")
+	}
+
+	// Age the recorded success far past three intervals of the 30m source.
+	db, err := store.OpenSQLite(filepath.Join(dataDir, "eye.db"))
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	long := time.Now().Add(-30 * 24 * time.Hour).UTC()
+	if err := db.SaveState(context.Background(), store.SourceState{
+		SourceID: "test-press", LastAttempt: long, LastSuccess: long, Records: 1,
+	}); err != nil {
+		t.Fatalf("SaveState: %v", err)
+	}
+	_ = db.Close()
+
+	_, jsonOut, _ := runCmdIn(t, registry, dataDir, "sources", "--json")
+	var got []struct {
+		ID     string `json:"id"`
+		Health *struct {
+			Stale bool `json:"stale"`
+		} `json:"health"`
+	}
+	if err := json.Unmarshal([]byte(jsonOut), &got); err != nil {
+		t.Fatalf("output is not JSON: %v", err)
+	}
+
+	for _, s := range got {
+		if s.ID == "test-press" {
+			if s.Health == nil || !s.Health.Stale {
+				t.Errorf("a source last seen a month ago is not marked stale: %+v", s.Health)
+			}
+			return
+		}
+	}
+	t.Error("the source was not listed")
 }

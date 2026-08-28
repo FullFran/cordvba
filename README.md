@@ -151,7 +151,7 @@ Polled in 505ms · registry: (embedded)
 | `eye sky` | Aircraft currently over the city, live |
 | `eye cameras` | The 32 municipal traffic cameras — positions only |
 | `eye query` | `--topic --since --text --source --limit`, across everything |
-| `eye sources` | The registry: what eye may read, and what it can read |
+| `eye sources` | The registry: what eye may read, what it can read, and when each last answered |
 | `eye daemon` | Polls continuously and persists everything — the watching mode |
 
 Every command takes `--json`, and the JSON keeps the full provenance: publisher,

@@ -67,7 +67,7 @@ Everything else plugs into this.
 - [x] Source registry loader and validation from `configs/sources.yaml`
 - [x] Shared HTTP client: timeouts, body caps, conditional requests,
       `Retry-After`, charset decoding
-- [x] Source health tracking, reported per source
+- [x] Source health tracking, persisted and reported per source with staleness
 - [x] The collector: bounded-concurrency polling that isolates failures
 - [x] `eye status` rendering source health, including held sources
 - [x] Scheduler loop: jitter, exponential backoff, circuit breaker, per-host
