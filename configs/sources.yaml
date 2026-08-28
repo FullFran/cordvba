@@ -30,9 +30,12 @@ sources:
     format: datex2-3.7-xml
     license: CC-BY-4.0
     access: documented_api
-    automation: enabled
+    automation: review_terms
     interval: 60s
-    notes: Backbone of the road picture. Parse against the published XSD, never assume the shape is frozen.
+    notes: >-
+      Backbone of the road picture, but nap.dgt.es answers 403 to automated
+      clients (verified 2026-08-28). Held until access is arranged; parse
+      against the published XSD when it is.
 
   - id: dgt-cameras
     authority: Direccion General de Trafico
@@ -41,13 +44,14 @@ sources:
     format: datex2-3.7-xml
     license: CC-BY-4.0
     access: documented_api
-    automation: enabled
+    automation: review_terms
     interval: 1h
     published_every: 1h
     notes: >-
       Camera INVENTORY only: id, position, road metadata. The official dataset
       documents no JPEG, HLS or RTSP endpoint. eye maps cameras; it does not
-      stream them.
+      stream them. Held: nap.dgt.es answers 403 to automated clients
+      (verified 2026-08-28).
 
   - id: dgt-vms
     authority: Direccion General de Trafico
@@ -56,22 +60,42 @@ sources:
     format: datex2-3.7-xml
     license: CC-BY-4.0
     access: documented_api
-    automation: enabled
+    automation: review_terms
     interval: 60s
+    notes: Held with the other DGT feeds; nap.dgt.es answers 403 to automated clients.
 
   # ── Transport · city ──────────────────────────────────────────────────────
   - id: cordoba-ckan
     authority: Ayuntamiento de Cordoba
     topic: city
-    url: https://datosabiertos.cordoba.es/ckan/
-    format: ckan-api
+    url: https://datosabiertos.cordoba.es/ckan
+    format: ckan-catalog
     license: unspecified
     access: documented_api
     automation: enabled
     interval: 12h
+    options:
+      rows: "50"
     notes: >-
-      Generic CKAN adapter. Many datasets declare no licence; store that as
-      "unspecified" and surface it, do not assume permission.
+      Generic CKAN adapter over the municipal catalog. Emits a record when a
+      dataset is published or updated. Many datasets declare no licence; that
+      is stored as "unspecified" and surfaced, never assumed to be permission.
+
+  - id: cordoba-cameras
+    authority: Ayuntamiento de Cordoba
+    topic: transport
+    url: https://datosabiertos.cordoba.es/ckan
+    format: ckan-geojson
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 24h
+    options:
+      dataset: camaras-de-trafico
+      kind: camera
+    notes: >-
+      Traffic camera INVENTORY as entities: 32 points in WGS84. The dataset
+      publishes CSV, GeoJSON and a PDF map, and no media endpoint of any kind.
 
   - id: aucorsa-gtfs
     authority: AUCORSA / NAP Transportes
@@ -100,13 +124,20 @@ sources:
   - id: adsb-lol
     authority: adsb.lol
     topic: air
-    url: https://api.adsb.lol/docs
-    format: rest-json
+    url: https://api.adsb.lol
+    format: adsb-json
     license: check-terms-before-redistribution
     access: documented_api
     automation: enabled
     interval: 15s
-    notes: Best ergonomics for a local viewport. Raw positions expire fast by design.
+    options:
+      lat: "37.8882"
+      lon: "-4.7794"
+      radius_nm: "60"
+      ttl: "72h"
+    notes: >-
+      Best ergonomics for a local viewport. Positions carry ExpiresAt: movement
+      data is short-lived by design.
 
   - id: opensky
     authority: OpenSky Network
@@ -227,13 +258,17 @@ sources:
   - id: uco-events
     authority: Universidad de Cordoba
     topic: events
-    url: https://eventos.uco.es/
-    format: ics
-    license: check-terms
+    url: https://eventos.uco.es/rss/next.rss
+    format: rss
+    license: unspecified
     access: documented_api
     automation: enabled
     interval: 6h
-    notes: Publishes ICS, RSS and KML explicitly. The easiest event source to ingest correctly.
+    notes: >-
+      The events portal publishes RSS, KML and ICS explicitly — the only
+      Cordoba event source with a real machine contract. In this feed pubDate
+      is the EVENT START, not the publication moment, so it is mapped to
+      ValidFrom.
 
   - id: agenda-unica
     authority: Ayuntamiento de Cordoba
@@ -267,16 +302,54 @@ sources:
     interval: 12h
     notes: Venue, date, time, genre and often price. The best signal for EVENT_CHANGE detection.
 
+  # ── Local press ───────────────────────────────────────────────────────────
+  # Newspapers are the source that catches what every official feed missed.
+  # eye reads their public syndication feeds, which is what those feeds are for;
+  # it does not scrape article bodies and does not republish their content.
+  - id: diario-cordoba
+    authority: Diario Cordoba
+    topic: press
+    url: https://www.diariocordoba.com/rss/
+    format: rss
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 30m
+    notes: Prensa Iberica. RSS 2.0, UTF-8, titles and links wrapped in CDATA.
+
+  - id: cordopolis
+    authority: Cordopolis (eldiario.es)
+    topic: press
+    url: https://cordopolis.eldiario.es/rss/
+    format: rss
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 30m
+
+  - id: eldiadecordoba
+    authority: El Dia de Cordoba (Grupo Joly)
+    topic: press
+    url: https://www.eldiadecordoba.es/rss/
+    format: rss
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 30m
+
   # ── Civic documents ───────────────────────────────────────────────────────
   - id: boe
     authority: Agencia Estatal BOE
     topic: civic
-    url: https://www.boe.es/datosabiertos/api/api.php
-    format: rest-xml
+    url: https://www.boe.es/rss/boe.php
+    format: rss
     license: aebo-reuse-terms
     access: documented_api
     automation: enabled
     interval: 1h
+    notes: >-
+      Served as ISO-8859-1. Decoding it as UTF-8 turns every accented word into
+      a replacement character, so the charset is resolved before parsing.
 
   - id: bop-cordoba
     authority: Diputacion de Cordoba
