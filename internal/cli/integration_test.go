@@ -149,6 +149,13 @@ sources:
     interval: 1h
 `, portal)
 
+	return writeRegistryBody(t, body)
+}
+
+// writeRegistryBody writes registry YAML to a temp file and returns its path.
+func writeRegistryBody(t *testing.T, body string) string {
+	t.Helper()
+
 	path := filepath.Join(t.TempDir(), "sources.yaml")
 	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 		t.Fatalf("write registry: %v", err)
@@ -157,11 +164,23 @@ sources:
 }
 
 // runCmd executes one command against the fake portal.
+//
+// Every invocation gets its own data directory. A test suite that writes into
+// the operator's real store is a bug, and it is one that only shows up as
+// surprising rows in their `eye status`.
 func runCmd(t *testing.T, registry string, args ...string) (int, string, string) {
+	t.Helper()
+	return runCmdIn(t, registry, t.TempDir(), args...)
+}
+
+// runCmdIn executes one command against a specific data directory, so a test
+// can assert that what one invocation stored, the next can read.
+func runCmdIn(t *testing.T, registry, dataDir string, args ...string) (int, string, string) {
 	t.Helper()
 
 	var stdout, stderr bytes.Buffer
-	code := cli.New().Run(context.Background(), append(args, "--registry", registry), &stdout, &stderr)
+	full := append(args, "--registry", registry, "--data-dir", dataDir)
+	code := cli.New().Run(context.Background(), full, &stdout, &stderr)
 	return code, stdout.String(), stderr.String()
 }
 
@@ -454,5 +473,97 @@ func TestTopicWithNoLiveSourceFails(t *testing.T) {
 	}
 	if !strings.Contains(stderr, "no live source") {
 		t.Errorf("stderr = %q, want it to explain there is no live source", stderr)
+	}
+}
+
+// Persistence is the point of this slice: what one invocation collected, a
+// later one must be able to answer from without touching the network.
+func TestOfflineAnswersFromWhatAnEarlierRunStored(t *testing.T) {
+	t.Parallel()
+
+	portal := fakePortal(t)
+	registry := writeRegistry(t, portal.URL)
+	dataDir := t.TempDir()
+
+	if code, _, stderr := runCmdIn(t, registry, dataDir, "news"); code != 0 {
+		t.Fatalf("priming run failed: %d %s", code, stderr)
+	}
+
+	// Point the registry at a dead server: nothing can be fetched now.
+	dead := writeRegistry(t, "http://127.0.0.1:1")
+
+	code, stdout, _ := runCmdIn(t, dead, dataDir, "news", "--offline")
+	if code != 0 {
+		t.Fatalf("offline run exited %d", code)
+	}
+	if !strings.Contains(stdout, "Puente Romano") {
+		t.Errorf("offline output does not carry the stored article:\n%s", stdout)
+	}
+}
+
+func TestOfflineSaysSoWhenTheStoreIsEmpty(t *testing.T) {
+	t.Parallel()
+
+	registry := setup(t)
+	code, _, stderr := runCmd(t, registry, "news", "--offline")
+
+	if code != 1 {
+		t.Errorf("exit = %d, want 1", code)
+	}
+	if !strings.Contains(stderr, "holds nothing") {
+		t.Errorf("stderr = %q, want it to explain the store is empty", stderr)
+	}
+}
+
+func TestDaemonOnceReportsWhatItStored(t *testing.T) {
+	t.Parallel()
+
+	registry := setup(t)
+	code, stdout, _ := runCmd(t, registry, "daemon", "--once")
+
+	if code != 0 {
+		t.Fatalf("exit = %d", code)
+	}
+	for _, want := range []string{"polled", "new", "store holds"} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("output is missing %q:\n%s", want, stdout)
+		}
+	}
+}
+
+// A second daemon pass over unchanged feeds must add nothing: records are
+// append-only and keyed by a stable id.
+func TestDaemonOnceIsIdempotent(t *testing.T) {
+	t.Parallel()
+
+	registry := setup(t)
+	dataDir := t.TempDir()
+
+	if code, _, _ := runCmdIn(t, registry, dataDir, "daemon", "--once"); code != 0 {
+		t.Fatalf("first pass exited %d", code)
+	}
+	_, second, _ := runCmdIn(t, registry, dataDir, "daemon", "--once")
+
+	if !strings.Contains(second, "0 records") {
+		t.Errorf("a second pass over unchanged feeds stored new records:\n%s", second)
+	}
+}
+
+// Expired movement data must actually be deleted. This is the mechanism behind
+// the retention rule, not a note in a document.
+func TestRetentionDeletesExpiredRecords(t *testing.T) {
+	t.Parallel()
+
+	registry := setup(t)
+	dataDir := t.TempDir()
+
+	// The fake ADS-B aircraft carries an expiry from the registry TTL.
+	if code, _, stderr := runCmdIn(t, registry, dataDir, "sky"); code != 0 {
+		t.Fatalf("priming run failed: %d %s", code, stderr)
+	}
+
+	_, before, _ := runCmdIn(t, registry, dataDir, "sky", "--offline", "--json")
+	if !strings.Contains(before, "EYE001") {
+		t.Fatalf("the aircraft was not stored:\n%s", before)
 	}
 }

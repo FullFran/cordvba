@@ -21,7 +21,9 @@ type observeOptions struct {
 	text     string
 	sourceID string
 	asJSON   bool
+	offline  bool
 	registry string
+	dataDir  string
 }
 
 // bind registers the shared flags on a flag set.
@@ -31,7 +33,9 @@ func (o *observeOptions) bind(fs *flag.FlagSet, defaultLimit int, defaultSince t
 	fs.StringVar(&o.text, "text", "", "only entries whose title or description contains this")
 	fs.StringVar(&o.sourceID, "source", "", "only this source id")
 	fs.BoolVar(&o.asJSON, "json", false, "output as JSON")
+	fs.BoolVar(&o.offline, "offline", false, "answer from the local store without polling any source")
 	fs.StringVar(&o.registry, "registry", "", "path to an alternative sources.yaml")
+	fs.StringVar(&o.dataDir, "data-dir", "", "override where the store and raw cache live")
 }
 
 // filter turns the flags into a domain filter.
@@ -112,19 +116,31 @@ func toViews(records []observation.Record) []recordView {
 // observe is the shared body of the topic commands: poll the live sources for
 // those topics, then answer from what came back.
 func observe(ctx context.Context, opts *observeOptions, topics []string, stdout, stderr io.Writer, render func(io.Writer, []observation.Record, []application.Result, time.Time) error) error {
-	rt, err := newRuntime(opts.registry)
+	rt, err := newRuntime(runtimeOptions{registry: opts.registry, dataDir: opts.dataDir})
 	if err != nil {
 		return err
 	}
+	defer func() { _ = rt.Close() }()
 
-	ps, noAdapter := rt.pollable(topics...)
-	if len(ps) == 0 {
-		return fmt.Errorf("no live source for %s (%d enabled but unreadable by this build)",
-			strings.Join(topics, ", "), len(noAdapter))
+	var results []application.Result
+
+	if opts.offline {
+		// Answer from what earlier runs collected. Useful on a train,
+		// and the only way to ask a question without adding traffic to
+		// a public service.
+		if records, _ := rt.query(ctx, observation.Filter{Topics: topics, Limit: 1}); len(records) == 0 {
+			return fmt.Errorf("the local store holds nothing for %s — run without --offline first, or start eye daemon",
+				strings.Join(topics, ", "))
+		}
+	} else {
+		ps, noAdapter := rt.pollable(topics...)
+		if len(ps) == 0 {
+			return fmt.Errorf("no live source for %s (%d enabled but unreadable by this build)",
+				strings.Join(topics, ", "), len(noAdapter))
+		}
+		results = rt.collect(ctx, ps)
+		reportFailures(stderr, results)
 	}
-
-	results := rt.collect(ctx, ps)
-	reportFailures(stderr, results)
 
 	now := time.Now().UTC()
 	records, err := rt.query(ctx, opts.filter(topics, now))

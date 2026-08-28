@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/FullFran/eye/configs"
 	"github.com/FullFran/eye/internal/config"
@@ -23,7 +24,8 @@ import (
 type runtime struct {
 	cfg     config.Config
 	sources []source.Source
-	store   *store.MemStore
+	store   *store.SQLiteStore
+	cache   *store.RawCache
 	client  *httpx.Client
 
 	// registryPath describes where the registry came from, so the user can
@@ -32,12 +34,28 @@ type runtime struct {
 	registryPath string
 }
 
-// newRuntime resolves configuration and loads the registry.
-func newRuntime(sourcesOverride string) (*runtime, error) {
+// runtimeOptions are the per-invocation overrides a command may pass.
+type runtimeOptions struct {
+	// registry is an explicit sources.yaml path.
+	registry string
+	// dataDir overrides where the store and raw cache live. Tests set it
+	// so a test run can never write into the operator's real store.
+	dataDir string
+}
+
+// newRuntime resolves configuration, loads the registry and opens the store.
+//
+// The caller must Close it. Everything a command collects is persisted, so a
+// later --offline query can answer without touching the network.
+func newRuntime(opts runtimeOptions) (*runtime, error) {
 	cfg, err := config.Load()
 	if err != nil {
 		return nil, err
 	}
+	if opts.dataDir != "" {
+		cfg.DataDir = opts.dataDir
+	}
+	sourcesOverride := opts.registry
 
 	path, data, err := resolveRegistry(cfg, sourcesOverride)
 	if err != nil {
@@ -49,14 +67,25 @@ func newRuntime(sourcesOverride string) (*runtime, error) {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 
+	db, err := store.OpenSQLite(cfg.StorePath())
+	if err != nil {
+		return nil, err
+	}
+
+	cache := store.NewRawCache(cfg.RawCachePath())
+
 	return &runtime{
 		cfg:          cfg,
 		sources:      sources,
-		store:        store.NewMemStore(),
-		client:       httpx.New(),
+		store:        db,
+		cache:        cache,
+		client:       httpx.New(httpx.WithRecorder(cache)),
 		registryPath: path,
 	}, nil
 }
+
+// Close releases the store.
+func (r *runtime) Close() error { return r.store.Close() }
 
 // resolveRegistry applies the lookup order: an explicit override, the user's
 // config directory, a registry in the working tree, then the embedded default.
@@ -93,9 +122,15 @@ func (r *runtime) collect(ctx context.Context, ps []provider.Provider) []observa
 	return observation.NewCollector(r.store, r.store).Collect(ctx, ps)
 }
 
-// query reads back from the runtime store.
+// query reads back from the store.
 func (r *runtime) query(ctx context.Context, f observationdomain.Filter) ([]observationdomain.Record, error) {
 	return r.store.Query(ctx, f)
+}
+
+// prune enforces retention. Expired movement records are deleted because a
+// DELETE runs, not because a document says they should be.
+func (r *runtime) prune(ctx context.Context) (int, error) {
+	return r.store.Prune(ctx, time.Now().UTC())
 }
 
 // filterByTopic narrows a registry to the given topics.

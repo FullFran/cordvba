@@ -41,6 +41,7 @@ func New() *App {
 	app := &App{commands: make(map[string]Command)}
 	for _, c := range []Command{
 		statusCommand(),
+		daemonCommand(),
 		newsCommand(),
 		eventsCommand(),
 		civicCommand(),

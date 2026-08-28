@@ -27,15 +27,17 @@ func sourcesCommand() Command {
 				asJSON    = fs.Bool("json", false, "output as JSON")
 				topic     = fs.String("topic", "", "only sources of this topic")
 				registryP = fs.String("registry", "", "path to an alternative sources.yaml")
+				dataDir   = fs.String("data-dir", "", "override where the store and raw cache live")
 			)
 			if err := fs.Parse(args); err != nil {
 				return err
 			}
 
-			rt, err := newRuntime(*registryP)
+			rt, err := newRuntime(runtimeOptions{registry: *registryP, dataDir: *dataDir})
 			if err != nil {
 				return err
 			}
+			defer func() { _ = rt.Close() }()
 
 			list := rt.sources
 			if *topic != "" {

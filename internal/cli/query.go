@@ -29,11 +29,12 @@ func queryCommand() Command {
 
 			wanted := splitCSV(*topics)
 			if len(wanted) == 0 {
-				rt, err := newRuntime(opts.registry)
+				rt, err := newRuntime(runtimeOptions{registry: opts.registry, dataDir: opts.dataDir})
 				if err != nil {
 					return err
 				}
 				wanted = liveTopics(rt)
+				_ = rt.Close()
 				if len(wanted) == 0 {
 					return fmt.Errorf("no live source in the registry")
 				}

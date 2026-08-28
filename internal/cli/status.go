@@ -29,26 +29,35 @@ func statusCommand() Command {
 			var (
 				asJSON    = fs.Bool("json", false, "output as JSON")
 				registryP = fs.String("registry", "", "path to an alternative sources.yaml")
+				dataDir   = fs.String("data-dir", "", "override where the store and raw cache live")
 			)
 			if err := fs.Parse(args); err != nil {
 				return err
 			}
 
-			rt, err := newRuntime(*registryP)
+			rt, err := newRuntime(runtimeOptions{registry: *registryP, dataDir: *dataDir})
 			if err != nil {
 				return err
 			}
+			defer func() { _ = rt.Close() }()
 
 			ps, noAdapter := rt.pollable()
 			started := time.Now()
 			results := rt.collect(ctx, ps)
 			elapsed := time.Since(started)
 
+			if _, err := rt.prune(ctx); err != nil {
+				return err
+			}
+
 			records, err := rt.query(ctx, observation.Filter{})
 			if err != nil {
 				return err
 			}
-			_, entityCount := rt.store.Len()
+			_, entityCount, err := rt.store.Counts(ctx)
+			if err != nil {
+				return err
+			}
 
 			if *asJSON {
 				return writeJSON(stdout, statusView(rt, results, noAdapter, records, entityCount, elapsed))
