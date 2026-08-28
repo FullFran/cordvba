@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.2.0](https://github.com/FullFran/eye/compare/v0.1.0...v0.2.0) (2026-08-28)
+
+
+### Features
+
+* **cli:** add eye daemon, --offline, and persistent answers ([09bdb54](https://github.com/FullFran/eye/commit/09bdb547d2da0bcb51be863cc04a1d91e7e59ba9))
+* **cli:** add structured logging with log/slog ([94e5123](https://github.com/FullFran/eye/commit/94e51236594a6215c3b92fdb836637d04a479a6f))
+* **cli:** persist source health and report it in eye sources ([e94cbbb](https://github.com/FullFran/eye/commit/e94cbbb15938c9577ccaa13a0c4f5c8757b2d69b))
+* **scheduler:** add the polling loop with backoff and a circuit breaker ([13e1840](https://github.com/FullFran/eye/commit/13e184019f6a453c7395199bc281e5aa9917cbf3))
+* **store:** add the content-addressed raw cache ([38c3325](https://github.com/FullFran/eye/commit/38c33251b9d0fa8c429e52b95bc2a494b6d13394))
+* **store:** add the SQLite record and entity store ([a324d18](https://github.com/FullFran/eye/commit/a324d18bfefaf819928767341f2edd32d8a371eb))
+
+
+### Bug Fixes
+
+* **build:** pin a patched Go toolchain ([c51921b](https://github.com/FullFran/eye/commit/c51921b0aaf897ca4d262f55d7551a2c65f74c25))
+
+
+### Documentation
+
+* record the persistence and scheduling slice ([070847e](https://github.com/FullFran/eye/commit/070847e93f8e48bebc256625ac9ada04d5536ae4))
+
 ## 0.1.0 (2026-08-28)
 
 
