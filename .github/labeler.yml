@@ -1,0 +1,55 @@
+# Path-based auto-labeler for actions/labeler@v5.
+# Applied by .github/workflows/labeler.yml on every PR.
+
+"area:domain":
+  - changed-files:
+      - any-glob-to-any-file: "internal/*/domain/**"
+
+"area:application":
+  - changed-files:
+      - any-glob-to-any-file: "internal/*/application/**"
+
+"area:infrastructure":
+  - changed-files:
+      - any-glob-to-any-file: "internal/*/infrastructure/**"
+
+"area:providers":
+  - changed-files:
+      - any-glob-to-any-file: "internal/provider/**"
+
+"area:events":
+  - changed-files:
+      - any-glob-to-any-file: "internal/event/**"
+
+"area:scheduler":
+  - changed-files:
+      - any-glob-to-any-file: "internal/scheduler/**"
+
+"area:fusion":
+  - changed-files:
+      - any-glob-to-any-file: "internal/fusion/**"
+
+"area:cli":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "internal/cli/**"
+          - "cmd/**"
+
+"area:sources":
+  - changed-files:
+      - any-glob-to-any-file: "configs/sources.yaml"
+
+"area:docs":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "README.md"
+          - "AGENTS.md"
+          - ".agents/**"
+
+"area:infra":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+          - "Makefile"
+          - ".golangci.yml"

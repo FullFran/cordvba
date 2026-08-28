@@ -1,0 +1,31 @@
+# GitHub Releases — auto-generated release notes categories.
+# Labels must match those defined in .github/labels.yml.
+
+changelog:
+  exclude:
+    labels:
+      - stale
+  categories:
+    - title: "Features"
+      labels:
+        - "type:feat"
+
+    - title: "Bug Fixes"
+      labels:
+        - "type:fix"
+
+    - title: "Documentation"
+      labels:
+        - "type:docs"
+
+    - title: "Maintenance"
+      labels:
+        - "type:refactor"
+        - "type:chore"
+        - "type:test"
+        - "type:ci"
+        - "type:build"
+
+    - title: "Dependencies"
+      labels:
+        - "dependencies"

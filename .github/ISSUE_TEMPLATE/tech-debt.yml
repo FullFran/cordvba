@@ -1,0 +1,97 @@
+name: Technical Debt
+description: Document a provisional decision that needs to be resolved before it becomes permanent
+title: "[DEBT] "
+labels: ["type:refactor", "status:needs-review"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Technical debt issues document a **deliberate shortcut** taken at a point in time.
+        Without the concrete code that carries the debt and a clear resolution path,
+        this template will be rejected.
+
+        Add labels: one `risk:*` label + one `area:*` label.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: |
+        What provisional decision was made, when, and why?
+        "On [date], we decided [X] as a temporary solution because [reason].
+        We now need [Y] because [consequence of not resolving it]."
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-code
+    attributes:
+      label: Current Code (the debt)
+      description: |
+        Show the exact file path and snippet that carries the debt.
+        Without concrete code, this is not a documented debt issue.
+      placeholder: |
+        ```go
+        // internal/auth/infrastructure/handler.go
+        // TODO: replace with the shared HTTP client once the scheduler lands
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact if Not Resolved
+      description: Concrete side-effects of leaving this unaddressed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-resolution
+    attributes:
+      label: Proposed Resolution
+      description: High-level approach to eliminating the debt.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk Level
+      description: How risky is resolving this debt?
+      options:
+        - "risk:low — safe to change, well-covered by tests"
+        - "risk:medium — touches shared code, requires careful review"
+        - "risk:high — breaking change risk or no test coverage"
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: How do we know the debt is resolved?
+      placeholder: |
+        | ID | Criterion | Verifiable with |
+        |----|-----------|-----------------|
+        | AC-1 | | make test |
+    validations:
+      required: true
+
+  - type: textarea
+    id: agent-instructions
+    attributes:
+      label: Agent Instructions
+      description: Quick-start for Claude Code.
+      value: |
+        <details>
+        <summary>Agent Instructions — Claude Code</summary>
+
+        ```
+        /issue-sdd <this-issue-number>
+        ```
+        </details>
+    validations:
+      required: false

@@ -1,0 +1,71 @@
+name: Security Issue (non-sensitive)
+description: Report a security hardening improvement, audit finding, or best-practice gap that is NOT a sensitive or exploitable vulnerability
+title: "security: "
+labels: ["type:chore", "status:needs-review", "risk:medium"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > **IMPORTANT**
+        >
+        > If the vulnerability is sensitive or exploitable, **do NOT open a public issue**.
+        > Report it privately via [GitHub Security Advisories](../../security/advisories/new).
+        >
+        > This form is for **hardening, best-practice gaps, deprecations, and non-exploitable
+        > audit findings** only.
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Issue Type
+      options:
+        - "Best-practice improvement"
+        - "Deprecated dependency or configuration"
+        - "Configuration hardening"
+        - "Non-exploitable audit finding (govulncheck / trivy)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected-area
+    attributes:
+      label: Affected Area
+      options:
+        - "internal/ (domain / application / infrastructure)"
+        - "cmd/ (composition root)"
+        - "migrations/"
+        - ".github / CI / infrastructure"
+        - "go.mod / dependencies"
+        - "docs"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Explain the security concern, its potential risk, and why it deserves attention.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-fix
+    attributes:
+      label: Proposed Fix
+      description: How should this be resolved? Include code snippets or package suggestions if known.
+    validations:
+      required: false
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: CVE, CWE, OWASP, relevant docs, Go vulnerability advisory links, etc.
+      placeholder: |
+        - CVE-2024-XXXX
+        - https://pkg.go.dev/vuln/...
+        - https://owasp.org/...
+    validations:
+      required: false

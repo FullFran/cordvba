@@ -1,0 +1,13 @@
+# Go binary and build artifacts
+/bin/
+*.out
+*.test
+coverage.out
+
+# Environment secrets
+.env
+
+# Editor/OS noise
+.DS_Store
+.idea/
+.vscode/

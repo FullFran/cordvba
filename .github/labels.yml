@@ -1,0 +1,195 @@
+# Label set for eye
+# Synced automatically via .github/workflows/labels-sync.yml on push to main.
+# Edit here — DO NOT create labels manually in the GitHub UI.
+
+# ── Type (one per PR — required) ─────────────────────────────────────────────
+- name: "type:feat"
+  color: "1f6feb"
+  description: "New feature or capability"
+
+- name: "type:fix"
+  color: "d73a4a"
+  description: "Bug fix"
+
+- name: "type:docs"
+  color: "0075ca"
+  description: "Documentation update"
+
+- name: "type:refactor"
+  color: "cfd3d7"
+  description: "Internal restructuring without behavior change"
+
+- name: "type:chore"
+  color: "e4e669"
+  description: "Maintenance, tooling, or operational task"
+
+- name: "type:test"
+  color: "f9d0c4"
+  description: "Test infrastructure or coverage"
+
+- name: "type:ci"
+  color: "0052cc"
+  description: "CI/CD pipeline change"
+
+- name: "type:build"
+  color: "bfd4f2"
+  description: "Build system change"
+
+# ── Status ────────────────────────────────────────────────────────────────────
+- name: "status:needs-review"
+  color: "ededed"
+  description: "Awaiting approval before implementation"
+
+- name: "status:approved"
+  color: "0e8a16"
+  description: "Approved — implementation may proceed"
+
+- name: "status:blocked"
+  color: "b60205"
+  description: "Blocked by an external dependency or decision"
+
+- name: "status:in-progress"
+  color: "fbca04"
+  description: "Actively being worked on"
+
+# ── Risk ──────────────────────────────────────────────────────────────────────
+- name: "risk:low"
+  color: "2da44e"
+  description: "Low-risk change"
+
+- name: "risk:medium"
+  color: "fbca04"
+  description: "Medium-risk change"
+
+- name: "risk:high"
+  color: "d93f0b"
+  description: "High-risk change — requires extra review"
+
+# ── Size ──────────────────────────────────────────────────────────────────────
+- name: "size:xs"
+  color: "3cbf00"
+  description: "XS — under 50 changed lines"
+
+- name: "size:s"
+  color: "5d9f00"
+  description: "S — 50–150 changed lines"
+
+- name: "size:m"
+  color: "fbca04"
+  description: "M — 150–300 changed lines"
+
+- name: "size:l"
+  color: "f07a00"
+  description: "L — 300–400 changed lines"
+
+- name: "size:xl"
+  color: "d93f0b"
+  description: "XL — over 400 changed lines (requires justification)"
+
+- name: "size:exception"
+  color: "b60205"
+  description: "PR exceeds 400-line budget — justified and approved"
+
+# ── Area ─────────────────────────────────────────────────────────────────────
+- name: "area:domain"
+  color: "5319e7"
+  description: "Affects internal/<domain>/domain/"
+
+- name: "area:application"
+  color: "0e8a16"
+  description: "Affects internal/<domain>/application/"
+
+- name: "area:infrastructure"
+  color: "0052cc"
+  description: "Affects internal/<domain>/infrastructure/"
+
+- name: "area:providers"
+  color: "1d76db"
+  description: "Affects a source adapter under internal/provider/"
+
+- name: "area:events"
+  color: "b60205"
+  description: "Affects the events domain (agendas, dedupe, change tracking)"
+
+- name: "area:scheduler"
+  color: "fbca04"
+  description: "Affects polling, backoff or circuit breaking"
+
+- name: "area:fusion"
+  color: "d4c5f9"
+  description: "Affects the correlation rule engine"
+
+- name: "area:cli"
+  color: "c5def5"
+  description: "Affects cmd/ or internal/cli/"
+
+- name: "area:sources"
+  color: "006b75"
+  description: "Changes the source registry (configs/sources.yaml)"
+
+- name: "area:docs"
+  color: "0075ca"
+  description: "Affects docs/, README or agent governance"
+
+- name: "area:infra"
+  color: "e4e669"
+  description: "Affects .github/* or build configuration"
+
+# ── Epics ─────────────────────────────────────────────────────────────────────
+- name: "epic:core"
+  color: "e94560"
+  description: "E1 — domain, registry, scheduler, store"
+
+- name: "epic:road-city"
+  color: "0984e3"
+  description: "E2 — DGT DATEX II and CKAN Cordoba"
+
+- name: "epic:environment"
+  color: "00b894"
+  description: "E3 — AEMET, FIRMS, SAIH, ICA, INFOCA, IGN"
+
+- name: "epic:movement"
+  color: "6f42c1"
+  description: "E4 — ADS-B, GTFS and GTFS-RT"
+
+- name: "epic:events"
+  color: "d93f0b"
+  description: "E5 — Cordoba agendas, dedupe and change tracking"
+
+- name: "epic:fusion"
+  color: "533483"
+  description: "E6 — spatio-temporal rule engine"
+
+- name: "epic:interface"
+  color: "2da44e"
+  description: "E7 — status, radar, TUI and serve"
+
+- name: "epic:civic"
+  color: "0f4c75"
+  description: "E8 — BOE, BOP, PLACSP and open data catalogs"
+
+- name: "epic:hardening"
+  color: "586069"
+  description: "E9 — retention, observability, releases"
+
+# ── Project-specific concerns ────────────────────────────────────────────────
+- name: "needs:license-review"
+  color: "b60205"
+  description: "Source reuse terms must be resolved before this can be automated"
+
+- name: "concern:privacy"
+  color: "d73a4a"
+  description: "Touches retention, personal data or the ethical boundary"
+
+# ── Special ───────────────────────────────────────────────────────────────────
+- name: "good-first-issue"
+  color: "7057ff"
+  description: "Good starting point for new contributors"
+
+- name: "dependencies"
+  color: "0366d6"
+  description: "Dependency update (Dependabot or manual)"
+
+- name: "stale"
+  color: "ededed"
+  description: "No recent activity — will be closed if not updated"

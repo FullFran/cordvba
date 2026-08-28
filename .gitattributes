@@ -1,0 +1,23 @@
+# Keep line endings stable across operating systems. Without this, a Windows
+# checkout with core.autocrlf=true rewrites LF -> CRLF and breaks shell scripts
+# (`build.sh` / `#!/usr/bin/env sh` becomes a "bad interpreter" error).
+* text=auto eol=lf
+
+# Shell scripts must stay LF even on Windows.
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Go source stays LF (gofmt assumes it).
+*.go text eol=lf
+
+# Binary assets / build output — no diff, no eol conversion.
+*.exe binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+
+# Lockfiles — generated.
+go.sum text eol=lf

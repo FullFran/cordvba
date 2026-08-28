@@ -1,0 +1,87 @@
+name: "Source request"
+description: "Propose a new public data source for eye"
+title: "source: <authority> — <what it publishes>"
+labels: ["type:feat", "area:sources", "status:needs-review"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filling this in, read
+        [docs/legal/data-ethics.md](../../docs/legal/data-ethics.md#adding-a-source-the-checklist).
+
+        A source with an unresolved licence is still worth proposing — it will
+        land as `automation: review_terms`. What is not acceptable is guessing.
+
+  - type: input
+    id: authority
+    attributes:
+      label: Publishing authority
+      description: The body that publishes the data, not the site that mirrors it.
+      placeholder: "Confederación Hidrográfica del Guadalquivir"
+    validations:
+      required: true
+
+  - type: input
+    id: url
+    attributes:
+      label: Public URL
+      placeholder: "https://www.chguadalquivir.es/saih/"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: access
+    attributes:
+      label: Access kind
+      options:
+        - "documented_api — published machine-readable contract"
+        - "documented_download — published file resource, stable terms"
+        - "public_html — public page, no documented reuse contract"
+        - "undocumented_backend — internal endpoint behind a viewer"
+    validations:
+      required: true
+
+  - type: input
+    id: license
+    attributes:
+      label: Declared reuse licence
+      description: Verbatim from the publisher. Write "unspecified" if there is none — do not guess.
+      placeholder: "CC BY 4.0"
+    validations:
+      required: true
+
+  - type: input
+    id: cadence
+    attributes:
+      label: Publication cadence declared by the publisher
+      description: Leave blank if not stated. eye must never poll faster than this.
+      placeholder: "1h"
+
+  - type: textarea
+    id: payload
+    attributes:
+      label: What it would add to eye
+      description: Which topic, what fields, and which question it helps answer.
+    validations:
+      required: true
+
+  - type: textarea
+    id: quality
+    attributes:
+      label: Quality caveats stated by the publisher
+      description: |
+        Anything the source says about the reliability of its own data.
+        SAIH, for example, states its automatic readings are not cross-checked —
+        that must survive normalization as `quality: preliminary`.
+
+  - type: checkboxes
+    id: boundary
+    attributes:
+      label: Boundary check
+      options:
+        - label: "This is a documented public interface, not an endpoint found behind a viewer"
+          required: true
+        - label: "It does not require anyone else's credentials or bypassing access control"
+          required: true
+        - label: "It contains no personal data, or the personal data is out of scope and will not be ingested"
+          required: true

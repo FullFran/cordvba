@@ -1,0 +1,85 @@
+name: Bug Report
+description: Report a reproducible bug in eye
+title: "fix(api): "
+labels: ["type:fix", "status:needs-review"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please fill in as much detail as possible
+        so we can reproduce and fix the issue quickly.
+
+  - type: input
+    id: endpoint
+    attributes:
+      label: Affected Endpoint or Component
+      description: Which route, handler, or layer is affected? (e.g. `POST /auth/refresh`, `RefreshTokenUseCase`)
+      placeholder: "GET /health, internal/health/..."
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Service Version
+      description: Output of `git describe --tags --always` or the deployed tag
+      placeholder: "v1.2.3 or commit SHA"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Minimal steps to reproduce the behavior.
+      placeholder: |
+        1. Call `POST /auth/refresh` with body `{...}`
+        2. Observe response `500 Internal Server Error`
+        3. Check logs: `...`
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened? Include error messages, stack traces, or logs.
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Please complete the following information.
+      value: |
+        - OS:
+        - Go version (`go version`):
+        - golangci-lint version:
+        - How eye was run (make run / built binary / installed):
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other context about the problem (links, related issues, workarounds).

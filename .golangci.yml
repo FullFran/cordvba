@@ -1,0 +1,55 @@
+version: "2"
+
+run:
+  timeout: 5m
+  go: "1.25"
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+linters:
+  default: none
+  enable:
+    # Correctness
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    # Security
+    - gosec
+    # Complexity
+    - gocyclo
+    # Spelling
+    - misspell
+    # Style
+    - revive
+    # Performance
+    - bodyclose
+    - noctx
+  settings:
+    gocyclo:
+      min-complexity: 15
+    gosec:
+      excludes:
+        - G104 # errcheck already covers unhandled errors
+    revive:
+      rules:
+        - name: exported
+        - name: package-comments
+  exclusions:
+    generated: strict
+    paths:
+      - migrations
+      - bin
+      - vendor
+
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+
+severity:
+  default: error

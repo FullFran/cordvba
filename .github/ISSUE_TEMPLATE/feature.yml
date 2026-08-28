@@ -1,0 +1,76 @@
+name: Feature Request
+description: Propose a new feature or enhancement for eye
+title: "feat(api): "
+labels: ["type:feat", "status:needs-review"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to propose a feature. Please provide as much detail as possible
+        so we can evaluate and plan the work effectively.
+
+  - type: input
+    id: area
+    attributes:
+      label: Target Area
+      description: Which domain or layer would this feature affect? (e.g. `internal/auth/`, new domain)
+      placeholder: "internal/auth/ or new domain"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Motivation
+      description: |
+        What problem does this feature solve? Describe the pain point clearly.
+        Example: "The service has no rate limiting on POST /auth/login, which allows brute-force attacks."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: |
+        Describe the feature you would like to see. Include API sketches, interface designs,
+        or any architectural details that clarify your intent.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: How do we know this feature is done?
+      placeholder: |
+        - [ ] AC-1: ...
+        - [ ] AC-2: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What workarounds or alternative solutions have you considered?
+    validations:
+      required: false
+
+  - type: dropdown
+    id: breaking
+    attributes:
+      label: Is this a breaking change?
+      options:
+        - "No"
+        - "Yes — describe in the solution field"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Links to related issues, prior art, RFCs, or any other relevant context.

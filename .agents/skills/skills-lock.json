@@ -1,0 +1,25 @@
+{
+  "version": "1",
+  "skills": [
+    {
+      "name": "go-testing",
+      "why": "Enforces table-driven tests, race-detector usage, and TDD discipline for Go services"
+    },
+    {
+      "name": "owasp-security",
+      "why": "Security review for API endpoints, input validation, and dependency hygiene"
+    },
+    {
+      "name": "senior-architect",
+      "why": "Hexagonal architecture review — ensures layer boundary rules are respected"
+    },
+    {
+      "name": "performance",
+      "why": "store tuning, context-timeout analysis, and provider poll benchmarking"
+    },
+    {
+      "name": "code-review",
+      "why": "General PR review covering correctness, simplification, and Go idioms"
+    }
+  ]
+}
