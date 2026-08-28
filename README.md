@@ -159,6 +159,7 @@ Polled in 505ms · registry: (embedded)
 | `eye cameras` | The camera inventory — 1948 DGT plus 32 municipal, positions and metadata |
 | `eye camera` | Show one camera's current frame, with the age of the image |
 | `eye bus` | Live arrival estimates at a Córdoba stop, searched by name |
+| `eye changes` | What appeared, moved or stopped being published since eye last looked |
 | `eye watch` | A live board of the city, refreshing on screen |
 | `eye serve` | HTTP API, so other programs read the same records |
 | `eye query` | `--topic --since --text --source --limit`, across everything |
@@ -203,6 +204,49 @@ exists not to tell.
 There is no video: all 1948 DGT cameras publish a still JPEG and nothing else.
 See [docs/legal/data-ethics.md](./docs/legal/data-ethics.md) for the reuse terms,
 which are narrower for the images than for the metadata.
+
+### What changed
+
+Every other command answers "what is there". This one answers "what is
+different", which is the question you actually have when you already looked an
+hour ago.
+
+```bash
+eye changes                  # everything that moved in the last day
+eye changes --since 2h
+eye changes --new            # or --changed, or --gone
+eye changes --topic transport
+```
+
+```
+NEW
+  28 Aug 22:00  press      El Puente Romano cierra al tráfico       Diario Córdoba
+
+CHANGED
+  28 Aug 22:00  press      Incendio en la Ribera                    Diario Córdoba
+                             description: Un incendio junto al río → Extinguido
+
+GONE
+  28 Aug 21:59  press      Corte de agua en Ciudad Jardín           Diario Córdoba
+
+3 changes · 1 new · 1 changed · 1 gone
+```
+
+**GONE means a working source stopped publishing it.** A record that stops
+arriving may mean the thing ended, or that the feed broke, or that our poll
+failed — and a tool that cannot tell those apart will eventually announce that
+your train was cancelled because a server was down. eye already records the
+last success and the staleness of every source, so a disappearance is reported
+only when the source that used to publish it answered and left it out. A
+failing or stale source produces silence here, never an ending.
+
+The first run has nothing to compare against and says so, rather than
+announcing every record in Córdoba as breaking news.
+
+Identity is built only from what does not change — kind, title, roughly where,
+roughly when — because a field inside the identity is a field whose change can
+never be detected. The reasoning, and what it costs, is in
+[ADR-0009](./docs/adr/0009-identity-before-fusion.md).
 
 ### Buses
 

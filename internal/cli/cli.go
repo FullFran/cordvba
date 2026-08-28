@@ -52,6 +52,7 @@ func New() *App {
 		camerasCommand(),
 		cameraCommand(),
 		busCommand(),
+		changesCommand(),
 		queryCommand(),
 		sourcesCommand(),
 		versionCommand(),
