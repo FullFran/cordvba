@@ -11,6 +11,26 @@ and [ADR-0007](../adr/0007-ethical-boundary.md).
 **eye observes public systems and phenomena. It does not build profiles of
 people.**
 
+## eye is a personal project, and some licences depend on that
+
+This matters more than it looks. Several sources are licensed in a way that
+works for personal use and breaks for anything else:
+
+| Source | Terms |
+|---|---|
+| DGT camera **images** | Reproduction permitted *"a no ser que sea para uso personal y privado"* — i.e. only for personal and private use |
+| OpenSky | Distinguishes personal and non-profit use from commercial use |
+| Much of the Córdoba CKAN | Licence **unspecified**, which is not permission |
+
+A personal `eye`, rendering a frame in its owner's terminal, is inside all of
+these. The same code feeding a product, a client deliverable or a public service
+is not — and that is a change of licence, not a change of scale.
+
+So: **if eye ever feeds something commercial, the registry gets re-read source
+by source first, not afterwards.** That is also why `eye serve` must never proxy
+camera images: serving them to someone else is precisely the line these terms
+draw.
+
 ## Reachable is not the same as reusable
 
 A resource being visible from the internet does not mean it may be copied,

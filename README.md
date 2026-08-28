@@ -25,6 +25,13 @@ space and time, and shipped as one Go binary with no mandatory services.
 
 ---
 
+> **A personal project.** eye reads public sources for its owner's own use, and
+> several of those sources are licensed on exactly that basis — DGT's camera
+> images permit reproduction only "para uso personal y privado", and OpenSky
+> distinguishes personal from commercial use. Reusing eye for anything
+> commercial means re-reading [the registry](./configs/sources.yaml) source by
+> source first. See [data ethics](./docs/legal/data-ethics.md).
+
 ## The idea
 
 Not "a program for looking at cameras". A small **geo-temporal data fusion
