@@ -158,6 +158,7 @@ Polled in 505ms · registry: (embedded)
 | `eye sky` | Aircraft currently over the city, live |
 | `eye cameras` | The camera inventory — 1948 DGT plus 32 municipal, positions and metadata |
 | `eye camera` | Show one camera's current frame, with the age of the image |
+| `eye bus` | Live arrival estimates at a Córdoba stop, searched by name |
 | `eye watch` | A live board of the city, refreshing on screen |
 | `eye serve` | HTTP API, so other programs read the same records |
 | `eye query` | `--topic --since --text --source --limit`, across everything |
@@ -202,6 +203,37 @@ exists not to tell.
 There is no video: all 1948 DGT cameras publish a still JPEG and nothing else.
 See [docs/legal/data-ethics.md](./docs/legal/data-ethics.md) for the reuse terms,
 which are narrower for the images than for the metadata.
+
+### Buses
+
+```bash
+eye bus tendillas            # find the stop by name, then its next buses
+eye bus --stop 116           # by the number printed on the pole
+eye bus                      # the stops the registry watches
+```
+
+```
+DUE     LINE  ROUTE                               STOP                        OCCUPANCY
+8 min   6     LEVANTE - TEJARES - B.GUADALQUIVIR  Ronda Tejares (Cruz Conde)  Ocupación Baja
+11 min  2     FáTIMA - TEJARES - C. SANITARIA     Ronda Tejares (Cruz Conde)  Ocupación Baja
+24 min  6     LEVANTE - TEJARES - B.GUADALQUIVIR  Ronda Tejares (Cruz Conde)  —
+
+6 arrivals · operator estimate, read 0s ago
+```
+
+**These are predictions, not measurements**, and they are stored as
+`quality=preliminary` so nothing downstream can mistake them for a timetable or
+for a bus that has been seen.
+
+AUCORSA publishes no documentation for this endpoint, so it is registered as an
+undocumented personal source: the registry alone cannot switch it on, the
+machine has to set `EYE_ALLOW_PERSONAL_SOURCES=1`, and its records never leave
+that machine through `eye serve`. See
+[ADR-0008](./docs/adr/0008-undocumented-personal-sources.md).
+
+Search by name rather than guessing numbers. The operator's web pages carry a
+second, unrelated identifier, and configuring that one returns no arrivals and
+no error at all.
 
 ### The live board
 

@@ -60,9 +60,9 @@ func sourcesCommand() Command {
 			}
 
 			if *asJSON {
-				return writeJSON(stdout, sourceViews(list, states, time.Now().UTC()))
+				return writeJSON(stdout, sourceViews(list, states, time.Now().UTC(), rt.cfg.AllowPersonalSources))
 			}
-			return renderSources(stdout, rt.registryPath, list, states, time.Now().UTC())
+			return renderSources(stdout, rt.registryPath, list, states, time.Now().UTC(), rt.cfg.AllowPersonalSources)
 		},
 	}
 }
@@ -97,12 +97,22 @@ type sourceHealthView struct {
 	Records           int        `json:"records"`
 }
 
+// pollableNow reports whether the scheduler will actually fetch this source
+// right now, which is the registry's permission and the machine's opt-in taken
+// together rather than the registry's alone.
+func pollableNow(s source.Source, allowPersonal bool) bool {
+	if s.Access.Personal() && !allowPersonal {
+		return false
+	}
+	return s.Automation.Pollable()
+}
+
 // staleAfter is how far past a source's own interval it may fall before eye
 // calls it stale. Publishers are late; three intervals is late enough to say so.
 const staleAfter = 3
 
 // sourceViews projects the registry for machine consumption.
-func sourceViews(list []source.Source, states map[string]store.SourceState, now time.Time) []sourceView {
+func sourceViews(list []source.Source, states map[string]store.SourceState, now time.Time, allowPersonal bool) []sourceView {
 	out := make([]sourceView, 0, len(list))
 	for _, s := range list {
 		v := sourceView{
@@ -113,7 +123,7 @@ func sourceViews(list []source.Source, states map[string]store.SourceState, now 
 			License:    s.License,
 			Access:     string(s.Access),
 			Automation: string(s.Automation),
-			Pollable:   s.Automation.Pollable(),
+			Pollable:   pollableNow(s, allowPersonal),
 			HasAdapter: providers.Supported(s.Format),
 			URL:        s.URL,
 			Notes:      s.Notes,
@@ -156,13 +166,13 @@ func healthView(st store.SourceState, s source.Source, now time.Time) *sourceHea
 }
 
 // renderSources writes the human-readable registry table.
-func renderSources(w io.Writer, registryPath string, list []source.Source, states map[string]store.SourceState, now time.Time) error {
+func renderSources(w io.Writer, registryPath string, list []source.Source, states map[string]store.SourceState, now time.Time, allowPersonal bool) error {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	_, _ = fmt.Fprintln(tw, "SOURCE\tTOPIC\tFORMAT\tSTATE\tLAST OK\tLICENCE\tAUTHORITY")
 
 	var live, held, noAdapter, stale int
 	for _, s := range list {
-		state, _ := stateOf(s)
+		state, _ := stateOf(s, allowPersonal)
 		switch state {
 		case "live":
 			live++
@@ -209,12 +219,21 @@ func renderSources(w io.Writer, registryPath string, list []source.Source, state
 }
 
 // stateOf describes what eye will actually do with a source.
-func stateOf(s source.Source) (state string, pollable bool) {
+//
+// allowPersonal is the machine's opt-in for undocumented personal sources. It
+// has to be part of this answer: a listing that calls a source "live" when the
+// scheduler will not touch it is a listing that lies, which is the one thing
+// this table exists not to do.
+func stateOf(s source.Source, allowPersonal bool) (state string, pollable bool) {
 	switch {
 	case !s.Automation.Pollable():
 		return string(s.Automation), false
 	case !providers.Supported(s.Format):
 		return "no adapter", false
+	case s.Access.Personal() && !allowPersonal:
+		return "personal, off", false
+	case s.Access.Personal():
+		return "personal", true
 	default:
 		return "live", true
 	}

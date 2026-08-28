@@ -16,6 +16,10 @@ concurrency:
 
 permissions:
   contents: read
+  # gitleaks-action lists the pull request's commits to scan only what the
+  # PR adds. Without this it gets a 403 and the job crashes, which reads as
+  # a failed secret scan when nothing was scanned at all.
+  pull-requests: read
 
 jobs:
   gosec:

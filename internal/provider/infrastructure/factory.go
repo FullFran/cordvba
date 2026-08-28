@@ -54,6 +54,9 @@ var builders = map[string]func(source.Source, *httpx.Client) provider.Provider{
 	"aucorsa-lines": func(s source.Source, c *httpx.Client) provider.Provider {
 		return aucorsa.New(s, c)
 	},
+	"aucorsa-arrivals": func(s source.Source, c *httpx.Client) provider.Provider {
+		return aucorsa.NewRealtime(s, c)
+	},
 }
 
 // SupportedFormats lists the formats this build can read.
