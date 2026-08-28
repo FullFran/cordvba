@@ -34,6 +34,15 @@ linters:
     gosec:
       excludes:
         - G104 # errcheck already covers unhandled errors
+    misspell:
+      # eye reads Spanish sources, so Spanish field names and dataset titles
+      # appear in code and fixtures. They are not English misspellings.
+      ignore-rules:
+        - accidentes
+        - denominacion
+        - descripcion
+        - nombre
+        - titulo
     revive:
       rules:
         - name: exported
