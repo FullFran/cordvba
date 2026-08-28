@@ -388,18 +388,20 @@ make help       # every target
 
 ## Sources
 
-29 sources declared in [`configs/sources.yaml`](./configs/sources.yaml), across
+39 sources declared in [`configs/sources.yaml`](./configs/sources.yaml), across
 transport, air, weather, fire, hydrology, air quality, local press, events and
 civic documents.
 
-**Live now (8):** Diario Córdoba, Cordópolis, El Día de Córdoba, BOE, UCO
-events, the municipal CKAN catalog, the municipal camera inventory, adsb.lol.
+**Live now (18):** the Córdoba press (Diario Córdoba, Cordópolis, El Día de
+Córdoba), BOE, UCO events, IMAE, the municipal CKAN catalog and its map layers,
+the DGT camera and VMS inventories, RENFE timetables and live delays, AUCORSA
+lines and stops, PLACSP, IGN, adsb.lol. One more — AUCORSA live arrivals — is
+live only on a machine that opted into personal sources.
 
-**Held (16):** DGT DATEX II, RENFE, AUCORSA, SAIH Guadalquivir, INFOCA, IGN,
-Agenda Única, Turismo de Córdoba, IMAE, BOP, PLACSP, OpenSky, e-distribución.
-Held means the reuse terms are unresolved, there is no documented machine
-interface, or — for the three DGT feeds — the portal answers `403` to automated
-clients. That is a fact recorded in the registry, not a bug to work around.
+**Held (16):** SAIH Guadalquivir, INFOCA, REDIAM, Agenda Única, Turismo de
+Córdoba, BOP, OpenSky, e-distribución and the Diputación. Held means the reuse
+terms are unresolved or there is no documented machine interface. That is a fact
+recorded in the registry, not a bug to work around.
 
 **Awaiting an adapter (5):** AEMET, NASA FIRMS, MITECO ICA, the Diputación CKAN.
 Permitted, readable in principle, not yet written.
@@ -407,6 +409,12 @@ Permitted, readable in principle, not yet written.
 Those are three different states and `eye sources` reports all three. See
 [docs/legal/data-ethics.md](./docs/legal/data-ethics.md) for why a held source
 is a normal outcome rather than a failure.
+
+A source may also declare `sampled_kinds`: the record kinds it publishes as
+samples of a moving signal rather than as statements. A train position is
+different every time by definition, so diffing two of them reports the reading
+back as news; a delay on the same feed is a statement, and a delay growing is
+exactly what you want to be told. It is per kind because one feed does both.
 
 ## Documentation
 

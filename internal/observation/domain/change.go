@@ -108,7 +108,7 @@ func DetectChanges(previous, current []Record, at time.Time, sourceHealthy bool)
 func byIdentity(records []Record) map[string]Record {
 	out := make(map[string]Record, len(records))
 	for _, r := range records {
-		if id := r.Fingerprint(); id != "" {
+		if id := r.Identity(); id != "" {
 			out[id] = r
 		}
 	}

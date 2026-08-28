@@ -54,6 +54,20 @@ func Normalize(s string) string {
 	return strings.Join(strings.Fields(sb.String()), " ")
 }
 
+// Identity is how eye recognises the same thing arriving from ONE source twice.
+//
+// The source's own identifier when it publishes one, because a computed
+// fingerprint has to guess from content and a publisher does not. This matters
+// most for things that move: an aircraft's position is in its fingerprint, so
+// when the aircraft moves the fingerprint changes and the same aircraft reads
+// as one thing vanishing and another appearing. Its hex code does not move.
+func (r Record) Identity() string {
+	if r.LocalKey != "" {
+		return r.Kind + "|" + r.LocalKey
+	}
+	return r.Fingerprint()
+}
+
 // Fingerprint is the cross-source identity of what a record describes.
 //
 // It is built only from what does not change: the kind of thing, the words

@@ -201,6 +201,7 @@ func (p *Provider) vehicleRecord(e entity, fetchedAt time.Time, prov observation
 		Title:      "Tren " + label,
 		Severity:   observation.SeverityNone,
 		Confidence: 1, Quality: observation.QualityOfficial,
+		LocalKey:  e.ID,
 		DedupeKey: p.src.ID + ":" + e.ID + ":" + observedAt.UTC().Format(time.RFC3339),
 		ExpiresAt: &expires, Payload: payload, Provenance: prov,
 	})
@@ -255,6 +256,7 @@ func (p *Provider) delayRecord(e entity, fetchedAt time.Time, prov observation.P
 		ObservedAt: observedAt, FetchedAt: fetchedAt,
 		Title:    title,
 		Severity: severity, Confidence: 1, Quality: observation.QualityOfficial,
+		LocalKey:  e.ID,
 		DedupeKey: p.src.ID + ":" + e.ID + ":" + strconv.Itoa(worst),
 		ExpiresAt: &expires, Payload: payload, Provenance: prov,
 	})

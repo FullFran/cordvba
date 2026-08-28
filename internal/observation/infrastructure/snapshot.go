@@ -82,7 +82,7 @@ func (s *SQLiteStore) SaveSnapshot(ctx context.Context, source string, records [
 
 	now := time.Now().UTC().Unix()
 	for _, r := range records {
-		identity := r.Fingerprint()
+		identity := r.Identity()
 		if identity == "" {
 			// A record eye cannot identify cannot be paired on the next
 			// poll, so keeping it would only take space.

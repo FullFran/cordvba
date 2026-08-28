@@ -83,7 +83,10 @@ func (p *Provider) Poll(ctx context.Context) ([]observation.Record, error) {
 			Title:       "Línea " + line.Code + " · " + line.ServiceSummary(),
 			Description: strings.Join(line.Hours, " · "),
 			Severity:    observation.SeverityNone, Confidence: 1,
-			Quality:   observation.QualityOfficial,
+			Quality: observation.QualityOfficial,
+			// The service hours are in the title and in the old key, so
+			// a timetable change looked like a different line.
+			LocalKey:  "line:" + line.Code,
 			DedupeKey: p.src.ID + ":line:" + line.Code + ":" + strings.Join(line.Hours, "|"),
 			Payload:   payload, Provenance: prov,
 		}

@@ -32,6 +32,7 @@ type yamlSource struct {
 	Automation     string            `yaml:"automation"`
 	Interval       string            `yaml:"interval"`
 	PublishedEvery string            `yaml:"published_every"`
+	SampledKinds   []string          `yaml:"sampled_kinds"`
 	Notes          string            `yaml:"notes"`
 	Options        map[string]string `yaml:"options"`
 }
@@ -117,6 +118,7 @@ func convert(e yamlSource) (domain.Source, error) {
 		Automation:     domain.AutomationStatus(e.Automation),
 		Interval:       interval,
 		PublishedEvery: published,
+		SampledKinds:   e.SampledKinds,
 		Notes:          e.Notes,
 		Options:        e.Options,
 	}

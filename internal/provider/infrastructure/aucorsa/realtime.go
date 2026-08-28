@@ -298,7 +298,11 @@ func (p *RealtimeProvider) toRecords(stop string, body []byte, now time.Time) []
 			Confidence: 1,
 			// An arrival estimate is the operator's own prediction, not a
 			// measurement, and it is recorded as one.
-			Quality:    observation.QualityPreliminary,
+			Quality: observation.QualityPreliminary,
+			// The minutes are the prediction, not the bus. Keeping them
+			// out is what turns "21 min" becoming "18 min" into a
+			// change instead of a different bus.
+			LocalKey:   fmt.Sprintf("%s:%s:%d", stop, e.Line, e.Position),
 			DedupeKey:  fmt.Sprintf("%s:%s:%s:%d:%d", p.src.ID, stop, e.Line, e.Position, e.Minutes),
 			ExpiresAt:  &expires,
 			Payload:    payload,

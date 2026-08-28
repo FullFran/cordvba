@@ -103,6 +103,13 @@ type Record struct {
 	// DedupeKey is the stable fingerprint used to recognize the same
 	// observation arriving from several catalogs.
 	DedupeKey string `json:"dedupe_key,omitempty"`
+	// LocalKey is the source's OWN stable identifier for the thing this
+	// observation is about: an aircraft's hex, a stop and a line, a
+	// dataset's name. It is what lets eye recognise the same thing arriving
+	// from one source twice, and it must exclude everything that changes —
+	// a position, a delay, a status. When a source publishes one it beats
+	// the computed fingerprint, which has to guess from content.
+	LocalKey string `json:"local_key,omitempty"`
 	// ExpiresAt drives retention. Movement data (ADS-B, GTFS-RT) is short
 	// lived by design.
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`

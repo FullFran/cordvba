@@ -219,3 +219,103 @@ func TestCollectWithoutChangeDetection(t *testing.T) {
 		t.Errorf("changes = %d with no snapshot store", len(changes))
 	}
 }
+
+// A sampled source publishes a moving signal, not statements. Diffing two
+// samples reports the reading back as news: found on the real ADS-B feed, where
+// every aircraft arrived as one thing vanishing and another appearing because
+// its position is part of its computed identity — and would still produce a
+// position change per aircraft per poll once that was fixed.
+func TestCollectSkipsSampledKinds(t *testing.T) {
+	t.Parallel()
+
+	c, mem := collectorOver(t)
+
+	sample := observation("AEA9172", domain.SeverityNone)
+	sample.Kind = "aircraft_position"
+
+	p := &scripted{
+		src:     source.Source{ID: "feed", Topic: "air", SampledKinds: []string{"aircraft_position"}},
+		records: []domain.Record{sample},
+	}
+
+	c.Collect(context.Background(), []provider.Provider{p})
+
+	moved := sample
+	moved.Title = "RYR78DW"
+	p.records = []domain.Record{moved}
+	c.Collect(context.Background(), []provider.Provider{p})
+
+	if changes := storedChanges(t, mem); len(changes) != 0 {
+		t.Errorf("a sampled kind produced %d changes:\n%+v", len(changes), changes)
+	}
+}
+
+// One feed does both. Dropping the whole source would throw away the half
+// worth watching, which for RENFE is the delays.
+func TestCollectWatchesTheStatementsInASourceThatAlsoSamples(t *testing.T) {
+	t.Parallel()
+
+	c, mem := collectorOver(t)
+
+	position := observation("Tren C1-23579", domain.SeverityNone)
+	position.Kind = "vehicle_position"
+	position.LocalKey = "veh-1"
+
+	delay := observation("Tren 2038V22371C3", domain.SeverityLow)
+	delay.Kind = "trip_update"
+	delay.LocalKey = "trip-1"
+
+	p := &scripted{
+		src:     source.Source{ID: "feed", Topic: "transport", SampledKinds: []string{"vehicle_position"}},
+		records: []domain.Record{position, delay},
+	}
+	c.Collect(context.Background(), []provider.Provider{p})
+
+	position.Position = &domain.Point{Lat: 37.9, Lon: -4.7}
+	delay.Severity = domain.SeverityHigh
+	p.records = []domain.Record{position, delay}
+	c.Collect(context.Background(), []provider.Provider{p})
+
+	changes := storedChanges(t, mem)
+	if len(changes) != 1 {
+		t.Fatalf("changes = %d, want only the delay:\n%+v", len(changes), changes)
+	}
+	if len(changes[0].Fields) == 0 || changes[0].Fields[0].Field != "severity" {
+		t.Errorf("fields = %+v, want the delay getting worse", changes[0].Fields)
+	}
+}
+
+// A source's own identifier beats a fingerprint guessed from content, and this
+// is the case that proves why: the thing moved, and it is still the same thing.
+func TestCollectFollowsAThingThatMoves(t *testing.T) {
+	t.Parallel()
+
+	c, mem := collectorOver(t)
+
+	here := observation("AEA9172", domain.SeverityNone)
+	here.LocalKey = "4ca7b3"
+	here.Position = &domain.Point{Lat: 37.88, Lon: -4.77}
+
+	p := &scripted{
+		src:     source.Source{ID: "feed", Topic: "air"},
+		records: []domain.Record{here},
+	}
+	c.Collect(context.Background(), []provider.Provider{p})
+
+	there := here
+	there.Position = &domain.Point{Lat: 37.95, Lon: -4.60}
+	p.records = []domain.Record{there}
+	c.Collect(context.Background(), []provider.Provider{p})
+
+	changes := storedChanges(t, mem)
+	if len(changes) != 1 {
+		t.Fatalf("changes = %d, want one aircraft that moved:\n%+v", len(changes), changes)
+	}
+	// One thing that moved, not one vanishing and another appearing.
+	if changes[0].Kind != domain.ChangeUpdated {
+		t.Errorf("kind = %q, want updated", changes[0].Kind)
+	}
+	if len(changes[0].Fields) == 0 || changes[0].Fields[0].Field != "position" {
+		t.Errorf("fields = %+v, want the position move", changes[0].Fields)
+	}
+}

@@ -61,6 +61,8 @@ func (p *GeoJSONProvider) Poll(ctx context.Context) ([]observation.Record, error
 		Severity:   observation.SeverityNone,
 		Confidence: 1,
 		Quality:    observation.QualityOfficial,
+		// The title carries the count, which is exactly what changes.
+		LocalKey:   "inventory",
 		DedupeKey:  p.src.ID + ":inventory:" + strconv.Itoa(len(entities)),
 		Payload:    payload,
 		Provenance: entities[0].Provenance,

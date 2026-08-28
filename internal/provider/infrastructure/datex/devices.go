@@ -102,6 +102,7 @@ func (p *DeviceProvider) Poll(ctx context.Context) ([]observation.Record, error)
 		Severity:   observation.SeverityNone,
 		Confidence: 1,
 		Quality:    observation.QualityOfficial,
+		LocalKey:   "inventory",
 		DedupeKey:  fmt.Sprintf("%s:inventory:%d", p.src.ID, len(entities)),
 		Payload:    payload,
 		Provenance: entities[0].Provenance,

@@ -4,6 +4,7 @@ package domain
 
 import (
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -80,6 +81,17 @@ func (a Access) Personal() bool { return a == AccessUndocumentedPersonal }
 // licence, and this is the code path that keeps `eye serve` honest about it.
 func (s Source) Redistributable() bool { return !s.Access.Personal() }
 
+// SamplesKind reports whether a record kind from this source is a sample of a
+// moving signal rather than a statement worth diffing.
+func (s Source) SamplesKind(kind string) bool {
+	for _, k := range s.SampledKinds {
+		if strings.EqualFold(k, kind) {
+			return true
+		}
+	}
+	return false
+}
+
 // Source is one entry of the registry in configs/sources.yaml.
 type Source struct {
 	ID        string `json:"id"`
@@ -106,6 +118,24 @@ type Source struct {
 	// PublishedEvery is the refresh cadence the publisher declares, when it
 	// declares one. Polling faster than this buys nothing but rate limits.
 	PublishedEvery time.Duration `json:"published_every,omitempty"`
+
+	// SampledKinds names the record kinds this source publishes as SAMPLES
+	// of a continuously moving signal, rather than as statements about
+	// persistent things.
+	//
+	// A position is a sample: it is different every time by definition, so
+	// diffing two of them reports the reading back as news. A news article,
+	// an incident, a delay or a timetable is a statement, and a statement
+	// changing is exactly what is worth knowing about.
+	//
+	// It is per kind rather than per source because one feed does both:
+	// RENFE's real-time feed publishes train positions, which are samples,
+	// alongside trip delays, which are not. Marking the whole source would
+	// throw away the half worth watching.
+	//
+	// Empty means everything this source publishes is watched. A missed
+	// change is worse than a noisy one, so the default is to watch.
+	SampledKinds []string `json:"sampled_kinds,omitempty"`
 
 	// Notes carries the human reason for a non-enabled automation status.
 	Notes string `json:"notes,omitempty"`

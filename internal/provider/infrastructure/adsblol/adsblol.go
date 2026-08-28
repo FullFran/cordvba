@@ -159,9 +159,13 @@ func (p *Provider) toRecord(ac aircraft, fetchedAt time.Time, rawHash string, tt
 		Severity:   severity,
 		Confidence: 1,
 		Quality:    observation.QualityPreliminary,
-		DedupeKey:  p.src.ID + ":" + ac.Hex + ":" + observedAt.UTC().Format(time.RFC3339),
-		ExpiresAt:  &expires,
-		Payload:    payload,
+		// The hex is the aircraft. Its position is what changes, so
+		// identity built from position would report one aircraft
+		// vanishing and another appearing on every single poll.
+		LocalKey:  ac.Hex,
+		DedupeKey: p.src.ID + ":" + ac.Hex + ":" + observedAt.UTC().Format(time.RFC3339),
+		ExpiresAt: &expires,
+		Payload:   payload,
 		Provenance: observation.Provenance{
 			Publisher: p.src.Authority,
 			SourceURL: p.src.URL,

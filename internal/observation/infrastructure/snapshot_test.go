@@ -232,3 +232,54 @@ func TestPruneClearsExpiredChanges(t *testing.T) {
 		t.Errorf("%d expired changes survived the prune", len(left))
 	}
 }
+
+// A store written by an older eye must keep working. The column arrived after
+// the first release, and a migration that fails leaves somebody with a store
+// they cannot open.
+func TestOpeningAStoreWrittenBeforeLocalKey(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "eye.db")
+	ctx := context.Background()
+
+	// Build the store, then drop the column back out to imitate the old one.
+	first, err := store.OpenSQLite(path)
+	if err != nil {
+		t.Fatalf("OpenSQLite() = %v", err)
+	}
+	if _, err := first.Append(ctx, []domain.Record{snapshotRecord("Concierto A", domain.SeverityInfo)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := first.DropColumnForTest(ctx, "records", "local_key"); err != nil {
+		t.Fatalf("imitate the old schema: %v", err)
+	}
+	if err := first.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	second, err := store.OpenSQLite(path)
+	if err != nil {
+		t.Fatalf("reopening a pre-migration store = %v", err)
+	}
+	t.Cleanup(func() { _ = second.Close() })
+
+	// The rows that were already there survive, and new ones carry the key.
+	withKey := snapshotRecord("Concierto B", domain.SeverityInfo)
+	withKey.LocalKey = "concierto-b"
+	if _, err := second.Append(ctx, []domain.Record{withKey}); err != nil {
+		t.Fatalf("Append() after migration = %v", err)
+	}
+
+	records, err := second.Query(ctx, domain.Filter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(records) != 2 {
+		t.Fatalf("records = %d, want the old row and the new one", len(records))
+	}
+	for _, r := range records {
+		if r.Title == "Concierto B" && r.LocalKey != "concierto-b" {
+			t.Errorf("LocalKey = %q, want it stored", r.LocalKey)
+		}
+	}
+}
