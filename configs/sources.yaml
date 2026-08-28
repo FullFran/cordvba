@@ -48,10 +48,20 @@ sources:
     interval: 1h
     published_every: 1h
     notes: >-
-      Camera INVENTORY only: id, position, road metadata. The official dataset
-      documents no JPEG, HLS or RTSP endpoint. eye maps cameras; it does not
-      stream them. Held: nap.dgt.es answers 403 to automated clients
-      (verified 2026-08-28).
+      1948 cameras with id, position, road, kilometre point and province.
+      Each carries an <fse:deviceUrl> pointing at a still JPEG on
+      etraffic.dgt.es — verified 2026-08-28, image/jpeg 853x480.
+
+      There is NO video: all 1948 devices are type "camera" with a single
+      .jpg URL, and the feed contains no rtsp/rtmp/m3u8/mp4 at all. Images
+      refresh every 5-20 minutes (one sampled camera was 53 days stale), so
+      polling faster buys nothing.
+
+      Two licences, do not conflate them: the DATEX II metadata is free of
+      charge under the NAP dataset terms; the IMAGES are DGT portal content
+      under its aviso legal, which permits reproduction only for personal
+      and private use. eye may render a frame locally. eye serve must never
+      proxy one.
 
   - id: dgt-vms
     authority: Direccion General de Trafico

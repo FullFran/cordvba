@@ -57,25 +57,68 @@ CAMERA ASSET
         JPEG / WebP          HLS / RTSP
 ```
 
-For DGT, only the first block is officially confirmed. The `Cámaras DGT DATEX2
-v3.7` dataset publishes an XML resource with an XSD, classified as static road
-data with hourly updates. It documents **no** JPEG, HLS or RTSP endpoint. The
-Córdoba CKAN publishes camera identification and location in CSV, GeoJSON and
-PDF, with no media field and no declared licence.
+**DGT publishes still images. It publishes no video, and there is none to find.**
 
-So eye integrates the **inventory**. If an authority later publishes a media URL
-with terms that permit reuse, the adapter is small and the pipeline is already
-specified:
+Audited 2026-08-28 against the live feed. Every one of the 1948 devices in
+`DevicePublication/camaras_datex2_v37.xml` is `typeOfDevice: camera` and carries
+exactly one `<fse:deviceUrl>`, and every one of those 1948 URLs ends in `.jpg`.
+The feed contains no `rtsp://`, no `rtmp://`, no `.m3u8` and no `.mp4`. The
+public DGT viewer references no video endpoint either.
+
+*(This corrects an earlier claim in this document, which said DGT documented no
+image endpoint at all. It documents 1948 of them. The correction matters in the
+direction that makes eye more capable, which is exactly when it is worth being
+accurate.)*
+
+### Why there is no meaningful stream, even by polling
+
+The obvious next thought is to poll the JPEG fast enough to approximate video.
+Measured across a sample of 13 cameras, the images were between **205 and 1160
+seconds old** — a refresh of roughly five to twenty minutes. `Cache-Control` on
+the CDN is `max-age=120`. One sampled camera had not updated in **53 days**.
+
+So polling faster buys nothing but rate limits. A DGT camera is a periodic
+still, not a slow video, and eye should present it as what it is.
+
+That last figure is the important one operationally: a frame must always be
+shown with its `Last-Modified` age. Rendering a 53-day-old image as the current
+state of a road would be precisely the kind of lie this project exists not to
+tell.
+
+### Reuse terms are narrower than the metadata's
+
+Two different licences are in play and they must not be conflated:
+
+| | Terms |
+|---|---|
+| The DATEX II **metadata** (positions, road, PK) | Free of charge under the NAP dataset licence |
+| The **images** on `etraffic.dgt.es` | DGT portal content under its [aviso legal](https://www.dgt.es/contenido/aviso-legal/) |
+
+The aviso legal states that unauthorised reproduction, distribution,
+commercialisation or transformation is an infringement **"a no ser que sea para
+uso personal y privado"** — except for personal and private use.
+
+Read plainly: rendering a frame in your own terminal is personal use.
+Republishing those frames, serving them from `eye serve`, or building a product
+on them is not, absent authorisation. The registry records that distinction, and
+`eye serve` must never proxy camera images.
+
+Córdoba's municipal CKAN publishes only `name` plus coordinates — no media field
+of any kind, and no declared licence.
+
+### The pipeline, unchanged
 
 ```
 GET JPEG
   ↓ validate Content-Type and max size
   ↓ RAM cache, 30–120 s
-  ↓ display (Kitty Graphics / chafa)
+  ↓ display (Kitty Graphics / chafa), with the Last-Modified age
   ↓ expire
 ```
 
-There is no persistence branch in that flow, and none is to be added.
+There is no persistence branch in that flow, and none is to be added. The
+existence of 1948 reachable image URLs does not widen the boundary; it is the
+case the boundary was written for.
 
 ## Retention
 
