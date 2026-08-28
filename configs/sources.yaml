@@ -110,10 +110,21 @@ sources:
       Audited 2026-08-28: the municipality publishes NO camera image, by any
       route. The same 32 points appear twice in the catalog (here and as a
       layer of `movilidad-cartografia`), both with only a `name` property.
-      The mobility portal at movilidad.cordoba.es has no camera viewer, and a
-      search of all 145 municipal datasets finds nothing with an image, video
-      or webcam. The only public camera frames for Cordoba are DGT's, three of
-      which sit within 40 km on the A-4.
+      The mobility portal has no camera viewer, the municipal IDE GeoServer
+      publishes 105 layers and none of them is cameras, and a search of all
+      145 municipal datasets finds nothing with an image, video or webcam.
+
+      WHY, and it is not an oversight: the municipality operates 80 cameras
+      from the Traffic Control Room at the Local Police Headquarters — 46 for
+      traffic management, 11 for ACIRE enforcement, the rest for bus lanes,
+      traffic lights, the Mosque area and parking. These are operational and
+      enforcement cameras, not an information service. DGT publishes stills
+      because informing drivers IS its system's purpose; Cordoba's is to
+      manage and to fine. Note also that only 32 of the 80 positions are
+      published, so even this inventory is partial. See issue #58.
+
+      The only public camera frames for Cordoba are DGT's, three of which sit
+      within 40 km on the A-4.
 
   - id: aucorsa-gtfs
     authority: AUCORSA / NAP Transportes
