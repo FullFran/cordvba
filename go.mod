@@ -2,6 +2,11 @@ module github.com/FullFran/eye
 
 go 1.25.0
 
+// Pinned to a patched toolchain. CI resolves the Go version from this file,
+// and the `go` directive alone selects the .0 patch, which govulncheck reports
+// with 27 standard-library CVEs. Raise this when the next advisory lands.
+toolchain go1.26.6
+
 require gopkg.in/yaml.v3 v3.0.1
 
 require (

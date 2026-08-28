@@ -4,6 +4,11 @@
 
 Go 1.25 or newer. That is the whole list.
 
+`go.mod` pins `toolchain go1.26.6`, which Go downloads on its own the first time
+you build. The pin exists because CI resolves its Go version from this file, and
+the `go` directive alone selects the `.0` patch — which `govulncheck` reports
+with 27 standard-library CVEs. Raise it when the next advisory lands.
+
 No database to install, no Docker, no services to start. `eye` is one static
 binary and one SQLite file.
 
