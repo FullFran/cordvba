@@ -1,0 +1,25 @@
+{
+  "ac": [
+    {
+      "hex": "4080e2", "type": "adsb_icao", "flight": "EXS32TE ", "r": "G-JZDG", "t": "B738",
+      "alt_baro": 36000, "gs": 551.6, "track": 187.4,
+      "lat": 37.687, "lon": -5.816, "seen": 0.1, "seen_pos": 12.4
+    },
+    {
+      "hex": "34613a", "flight": "AEA058  ", "r": "EC-NGU", "t": "A20N",
+      "alt_baro": 12000, "gs": 340.0, "track": 45.0,
+      "lat": 37.95, "lon": -4.71, "seen": 0.2, "seen_pos": 3.0,
+      "emergency": "none"
+    },
+    {
+      "hex": "aaaaaa", "flight": "MAYDAY1 ", "t": "C172",
+      "alt_baro": 3000, "gs": 90.0,
+      "lat": 37.88, "lon": -4.78, "seen_pos": 1.0,
+      "emergency": "general"
+    },
+    {
+      "hex": "nopos", "flight": "GROUND  ", "lat": 0, "lon": 0, "seen_pos": 5.0
+    }
+  ],
+  "now": 1787707307.0
+}
