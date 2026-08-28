@@ -355,10 +355,19 @@ func TestStatusCommand(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit = %d", code)
 	}
-	for _, want := range []string{"CÓRDOBA", "press", "events", "answered", "held", "awaiting an adapter"} {
+	// The situation board still has to say all three source states, whatever
+	// it looks like.
+	for _, want := range []string{"CÓRDOBA", "press", "events", "answered", "held", "no adapter"} {
 		if !strings.Contains(stdout, want) {
 			t.Errorf("status is missing %q:\n%s", want, stdout)
 		}
+	}
+	if !strings.Contains(stdout, "traces back to a public source") {
+		t.Errorf("status dropped the provenance line:\n%s", stdout)
+	}
+	// Piped output must carry no escape sequences at all.
+	if strings.Contains(stdout, "\x1b[") {
+		t.Errorf("status wrote ANSI escapes to a pipe:\n%q", stdout)
 	}
 }
 

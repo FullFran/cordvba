@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"io"
 	"sort"
-	"text/tabwriter"
 	"time"
 
 	application "github.com/FullFran/eye/internal/observation/application"
 	observation "github.com/FullFran/eye/internal/observation/domain"
+	"github.com/FullFran/eye/internal/render"
 	source "github.com/FullFran/eye/internal/source/domain"
 )
 
@@ -140,24 +140,34 @@ func statusView(rt *runtime, results []application.Result, noAdapter []source.So
 	return rep
 }
 
-// renderStatus writes the human-readable city summary.
+// renderStatus writes the situation board.
 func renderStatus(w io.Writer, rt *runtime, results []application.Result, noAdapter []source.Source, records []observation.Record, entities int, elapsed time.Duration) error {
+	theme := render.NewTheme(w)
 	now := time.Now()
-	_, _ = fmt.Fprintf(w, "CÓRDOBA · %s\n\n", now.Format("02 Jan 2006 15:04"))
 
-	if err := renderTopics(w, records, entities, now); err != nil {
+	theme.Banner(w, fmt.Sprintf("CÓRDOBA · %s", now.Format("02 Jan 2006 · 15:04:05")))
+
+	_, _ = fmt.Fprintln(w, theme.Section("observations", boardWidth))
+	if err := renderTopics(w, theme, records, entities, now); err != nil {
 		return err
 	}
-	renderSourceHealth(w, rt, results, noAdapter)
 
-	_, _ = fmt.Fprintf(w, "\nPolled in %s · registry: %s\n", elapsed.Round(time.Millisecond), rt.registryPath)
-	_, _ = fmt.Fprintln(w, "Every figure above traces back to a public source. Run with --json for the evidence.")
+	_, _ = fmt.Fprintln(w, "\n"+theme.Section("sources", boardWidth))
+	renderSourceHealth(w, theme, rt, results, noAdapter)
+
+	_, _ = fmt.Fprintln(w, "\n"+theme.Rule(boardWidth))
+	_, _ = fmt.Fprintf(w, "%s  polled in %s · registry %s\n",
+		theme.Indicator("live"), elapsed.Round(time.Millisecond), rt.registryPath)
+	_, _ = fmt.Fprintln(w, theme.Dim("every figure above traces back to a public source · --json for the evidence"))
 	return nil
 }
 
+// boardWidth is the situation board's column width.
+const boardWidth = 66
+
 // renderTopics writes one line per topic, with how fresh its newest
 // observation is. A count without an age is not worth reading.
-func renderTopics(w io.Writer, records []observation.Record, entities int, now time.Time) error {
+func renderTopics(w io.Writer, theme render.Theme, records []observation.Record, entities int, now time.Time) error {
 	byTopic := map[string]int{}
 	newest := map[string]time.Time{}
 	for _, r := range records {
@@ -168,7 +178,7 @@ func renderTopics(w io.Writer, records []observation.Record, entities int, now t
 	}
 
 	if len(byTopic) == 0 {
-		_, _ = fmt.Fprintln(w, "No source answered. Nothing below is a claim about the city.")
+		_, _ = fmt.Fprintln(w, theme.Alert("  no source answered — nothing here is a claim about the city"))
 		return nil
 	}
 
@@ -178,21 +188,35 @@ func renderTopics(w io.Writer, records []observation.Record, entities int, now t
 	}
 	sort.Strings(topics)
 
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	for _, topic := range topics {
-		_, _ = fmt.Fprintf(tw, "  %s\t%s\tnewest %s\n",
-			topic, plural(byTopic[topic], "observation", "observations"),
-			ageOf(newest[topic], now.UTC()))
+		age := ageOf(newest[topic], now.UTC())
+
+		// Freshness is the one thing a situation board must not flatter.
+		// Anything over a day is amber whatever else it says.
+		shown := theme.Live(age)
+		if now.UTC().Sub(newest[topic]) > 24*time.Hour {
+			shown = theme.Warn(age)
+		}
+
+		_, _ = fmt.Fprintf(w, "  %s %s %s %s\n",
+			theme.Indicator("live"),
+			theme.Label(theme.Pad(topic, 12)),
+			theme.Dim(theme.Pad(fmt.Sprint(byTopic[topic]), 6)),
+			shown)
 	}
 	if entities > 0 {
-		_, _ = fmt.Fprintf(tw, "  %s\t%s\t\n", "inventory", plural(entities, "asset mapped", "assets mapped"))
+		_, _ = fmt.Fprintf(w, "  %s %s %s %s\n",
+			theme.Indicator("live"),
+			theme.Label(theme.Pad("inventory", 12)),
+			theme.Dim(theme.Pad(fmt.Sprint(entities), 6)),
+			theme.Dim("mapped"))
 	}
-	return tw.Flush()
+	return nil
 }
 
 // renderSourceHealth reports how many feeds answered, how many are held, and
 // how many this build cannot yet read. All three are different problems.
-func renderSourceHealth(w io.Writer, rt *runtime, results []application.Result, noAdapter []source.Source) {
+func renderSourceHealth(w io.Writer, theme render.Theme, rt *runtime, results []application.Result, noAdapter []source.Source) {
 	var answered, failed int
 	for _, r := range results {
 		if r.OK() {
@@ -209,21 +233,38 @@ func renderSourceHealth(w io.Writer, rt *runtime, results []application.Result, 
 		}
 	}
 
-	_, _ = fmt.Fprintf(w, "\nSources\n")
-	_, _ = fmt.Fprintf(w, "  %d answered\n", answered)
+	row := func(state, label string, count int, note string) {
+		var styled string
+		switch state {
+		case "failing":
+			styled = theme.Alert(theme.Pad(label, 12))
+		case "held":
+			styled = theme.Warn(theme.Pad(label, 12))
+		case "none":
+			styled = theme.Dim(theme.Pad(label, 12))
+		default:
+			styled = theme.Label(theme.Pad(label, 12))
+		}
+		_, _ = fmt.Fprintf(w, "  %s %s %s %s\n",
+			theme.Indicator(state), styled,
+			theme.Dim(theme.Pad(fmt.Sprint(count), 6)), theme.Dim(note))
+	}
+
+	row("live", "answered", answered, "reading now")
 	if failed > 0 {
-		_, _ = fmt.Fprintf(w, "  %d failed\n", failed)
+		row("failing", "failed", failed, "see below")
 	}
 	if held > 0 {
-		_, _ = fmt.Fprintf(w, "  %d held: reuse terms unresolved or no documented interface\n", held)
+		row("held", "held", held, "reuse terms unresolved")
 	}
 	if len(noAdapter) > 0 {
-		_, _ = fmt.Fprintf(w, "  %d awaiting an adapter in this build\n", len(noAdapter))
+		row("none", "no adapter", len(noAdapter), "permitted, not yet written")
 	}
 
 	for _, r := range results {
 		if !r.OK() {
-			_, _ = fmt.Fprintf(w, "\n  %s: %v\n", r.Source, r.Err)
+			_, _ = fmt.Fprintf(w, "  %s %s %s\n",
+				theme.Indicator("failing"), theme.Alert(r.Source), theme.Dim(ellipsis(r.Err.Error(), 46)))
 		}
 	}
 }
