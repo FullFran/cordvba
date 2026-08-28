@@ -1,0 +1,458 @@
+package cli_test
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/FullFran/eye/internal/cli"
+)
+
+// fakePortal serves every source shape eye reads, so a command can be exercised
+// end to end without touching a public service.
+func fakePortal(t *testing.T) *httptest.Server {
+	t.Helper()
+
+	mux := http.NewServeMux()
+	srv := httptest.NewUnstartedServer(mux)
+
+	mux.HandleFunc("/press.rss", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel>
+  <title>Diario de Prueba</title>
+  <item>
+    <title><![CDATA[Corte de tráfico en el Puente Romano]]></title>
+    <link>https://example.org/noticia/1</link>
+    <pubDate>%s</pubDate>
+    <description><![CDATA[<p>Obras hasta el viernes.</p>]]></description>
+  </item>
+</channel></rss>`, time.Now().Add(-30*time.Minute).UTC().Format(time.RFC1123Z))
+	})
+
+	mux.HandleFunc("/events.rss", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="0.91"><channel>
+  <title>Eventos de Prueba</title>
+  <item>
+    <title>Velá de la Fuensanta</title>
+    <link>https://example.org/evento/1</link>
+    <pubDate>%s</pubDate>
+  </item>
+</channel></rss>`, time.Now().Add(72*time.Hour).UTC().Format(time.RFC1123Z))
+	})
+
+	mux.HandleFunc("/v2/", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprint(w, `{"ac":[{"hex":"abc123","flight":"EYE001  ","lat":37.9,"lon":-4.8,"seen_pos":4.0}],"now":1}`)
+	})
+
+	mux.HandleFunc("/api/3/action/package_show", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintf(w, `{"success":true,"result":{"name":"camaras","license_title":"License not specified",
+			"resources":[{"format":"GeoJSON","name":"c.json","url":"%s/cams.json"}]}}`, srv.URL)
+	})
+
+	mux.HandleFunc("/cams.json", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprint(w, `{"type":"FeatureCollection","features":[
+			{"type":"Feature","id":"1","geometry":{"type":"Point","coordinates":[-4.7995,37.8984]},
+			 "properties":{"name":"AVDA. DE LA ARRUZAFILLA"}}]}`)
+	})
+
+	srv.Start()
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+// writeRegistry writes a registry pointing at the fake portal and returns its
+// path.
+func writeRegistry(t *testing.T, portal string) string {
+	t.Helper()
+
+	body := fmt.Sprintf(`
+sources:
+  - id: test-press
+    authority: Diario de Prueba
+    topic: press
+    url: %[1]s/press.rss
+    format: rss
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 30m
+
+  - id: test-events
+    authority: Universidad de Prueba
+    topic: events
+    url: %[1]s/events.rss
+    format: rss
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 6h
+
+  - id: test-air
+    authority: adsb.test
+    topic: air
+    url: %[1]s
+    format: adsb-json
+    license: check-terms
+    access: documented_api
+    automation: enabled
+    interval: 15s
+    options:
+      lat: "37.8882"
+      lon: "-4.7794"
+      radius_nm: "60"
+
+  - id: test-cameras
+    authority: Ayuntamiento de Prueba
+    topic: transport
+    url: %[1]s
+    format: ckan-geojson
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 24h
+    options:
+      dataset: camaras
+      kind: camera
+
+  - id: test-held
+    authority: Fuente Retenida
+    topic: hydrology
+    url: %[1]s/held
+    format: web
+    license: unspecified
+    access: public_html
+    automation: review_terms
+    notes: Reuse terms unresolved.
+
+  - id: test-no-adapter
+    authority: Fuente Sin Adaptador
+    topic: weather
+    url: %[1]s/wms
+    format: wms
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 1h
+`, portal)
+
+	path := filepath.Join(t.TempDir(), "sources.yaml")
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatalf("write registry: %v", err)
+	}
+	return path
+}
+
+// runCmd executes one command against the fake portal.
+func runCmd(t *testing.T, registry string, args ...string) (int, string, string) {
+	t.Helper()
+
+	var stdout, stderr bytes.Buffer
+	code := cli.New().Run(context.Background(), append(args, "--registry", registry), &stdout, &stderr)
+	return code, stdout.String(), stderr.String()
+}
+
+// setup starts the portal and writes its registry.
+func setup(t *testing.T) string {
+	t.Helper()
+	return writeRegistry(t, fakePortal(t).URL)
+}
+
+func TestSourcesCommand(t *testing.T) {
+	t.Parallel()
+
+	registry := setup(t)
+	code, stdout, _ := runCmd(t, registry, "sources")
+
+	if code != 0 {
+		t.Fatalf("exit = %d", code)
+	}
+	for _, want := range []string{"test-press", "live", "review_terms", "no adapter", "held"} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("output is missing %q:\n%s", want, stdout)
+		}
+	}
+}
+
+func TestSourcesCommandJSON(t *testing.T) {
+	t.Parallel()
+
+	registry := setup(t)
+	_, stdout, _ := runCmd(t, registry, "sources", "--json")
+
+	var got []struct {
+		ID         string `json:"id"`
+		Pollable   bool   `json:"pollable"`
+		HasAdapter bool   `json:"has_adapter"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &got); err != nil {
+		t.Fatalf("output is not JSON: %v", err)
+	}
+
+	state := map[string][2]bool{}
+	for _, s := range got {
+		state[s.ID] = [2]bool{s.Pollable, s.HasAdapter}
+	}
+
+	// Permitted and readable are separate facts and both are reported.
+	if state["test-press"] != [2]bool{true, true} {
+		t.Errorf("test-press = %v, want permitted and readable", state["test-press"])
+	}
+	if state["test-held"] != [2]bool{false, false} {
+		t.Errorf("test-held = %v, want neither", state["test-held"])
+	}
+	if state["test-no-adapter"] != [2]bool{true, false} {
+		t.Errorf("test-no-adapter = %v, want permitted but unreadable", state["test-no-adapter"])
+	}
+}
+
+func TestNewsCommand(t *testing.T) {
+	t.Parallel()
+
+	registry := setup(t)
+	code, stdout, _ := runCmd(t, registry, "news")
+
+	if code != 0 {
+		t.Fatalf("exit = %d", code)
+	}
+	if !strings.Contains(stdout, "Puente Romano") {
+		t.Errorf("output does not carry the article:\n%s", stdout)
+	}
+	if !strings.Contains(stdout, "Diario de Prueba") {
+		t.Errorf("output does not attribute the publisher:\n%s", stdout)
+	}
+}
+
+func TestNewsCommandJSONKeepsProvenance(t *testing.T) {
+	t.Parallel()
+
+	registry := setup(t)
+	_, stdout, _ := runCmd(t, registry, "news", "--json")
+
+	var got []struct {
+		Publisher  string  `json:"publisher"`
+		License    string  `json:"license"`
+		URL        string  `json:"url"`
+		LatencyS   float64 `json:"source_latency_seconds"`
+		ObservedAt string  `json:"observed_at"`
+		FetchedAt  string  `json:"fetched_at"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &got); err != nil {
+		t.Fatalf("output is not JSON: %v", err)
+	}
+	if len(got) == 0 {
+		t.Fatal("no records")
+	}
+
+	r := got[0]
+	if r.Publisher == "" || r.License == "" || r.URL == "" {
+		t.Errorf("provenance is incomplete: %+v", r)
+	}
+	if r.ObservedAt == r.FetchedAt {
+		t.Error("observed and fetched times were collapsed")
+	}
+	if r.LatencyS < 60 {
+		t.Errorf("source latency = %.0fs, want the ~30 minutes the fixture declares", r.LatencyS)
+	}
+}
+
+func TestEventsCommandShowsFutureStart(t *testing.T) {
+	t.Parallel()
+
+	registry := setup(t)
+	code, stdout, _ := runCmd(t, registry, "events")
+
+	if code != 0 {
+		t.Fatalf("exit = %d", code)
+	}
+	if !strings.Contains(stdout, "Velá de la Fuensanta") {
+		t.Errorf("output is missing the event:\n%s", stdout)
+	}
+	// Rendered as a relative future distance; the exact rounding is not the
+	// point, that it reads as upcoming is.
+	if !strings.Contains(stdout, "in ") {
+		t.Errorf("output does not show the event as upcoming:\n%s", stdout)
+	}
+}
+
+func TestSkyCommand(t *testing.T) {
+	t.Parallel()
+
+	registry := setup(t)
+	code, stdout, _ := runCmd(t, registry, "sky")
+
+	if code != 0 {
+		t.Fatalf("exit = %d", code)
+	}
+	if !strings.Contains(stdout, "EYE001") {
+		t.Errorf("output is missing the aircraft:\n%s", stdout)
+	}
+	if !strings.Contains(stdout, "expire") {
+		t.Errorf("output does not state the retention policy:\n%s", stdout)
+	}
+}
+
+func TestCamerasCommandStatesItIsInventoryOnly(t *testing.T) {
+	t.Parallel()
+
+	registry := setup(t)
+	code, stdout, _ := runCmd(t, registry, "cameras")
+
+	if code != 0 {
+		t.Fatalf("exit = %d", code)
+	}
+	if !strings.Contains(stdout, "ARRUZAFILLA") {
+		t.Errorf("output is missing the camera:\n%s", stdout)
+	}
+	// The boundary is stated where a user reads it, not only in an ADR.
+	if !strings.Contains(stdout, "does not stream them") {
+		t.Errorf("output does not state that eye maps cameras only:\n%s", stdout)
+	}
+	if !strings.Contains(stdout, "unspecified") {
+		t.Errorf("output does not surface the undeclared licence:\n%s", stdout)
+	}
+}
+
+func TestStatusCommand(t *testing.T) {
+	t.Parallel()
+
+	registry := setup(t)
+	code, stdout, _ := runCmd(t, registry, "status")
+
+	if code != 0 {
+		t.Fatalf("exit = %d", code)
+	}
+	for _, want := range []string{"CÓRDOBA", "press", "events", "answered", "held", "awaiting an adapter"} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("status is missing %q:\n%s", want, stdout)
+		}
+	}
+}
+
+func TestStatusCommandJSON(t *testing.T) {
+	t.Parallel()
+
+	registry := setup(t)
+	_, stdout, _ := runCmd(t, registry, "status", "--json")
+
+	var got struct {
+		Sources struct {
+			Total, Live, Answered, Failed, Held int
+		} `json:"sources"`
+		Records   int      `json:"records"`
+		Entities  int      `json:"entities"`
+		Held      []string `json:"held"`
+		NoAdapter []string `json:"awaiting_adapter"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &got); err != nil {
+		t.Fatalf("output is not JSON: %v", err)
+	}
+
+	if got.Sources.Total != 6 {
+		t.Errorf("total sources = %d, want 6", got.Sources.Total)
+	}
+	if got.Sources.Answered != 4 {
+		t.Errorf("answered = %d, want 4", got.Sources.Answered)
+	}
+	if got.Records == 0 {
+		t.Error("no records collected")
+	}
+	if got.Entities != 1 {
+		t.Errorf("entities = %d, want 1", got.Entities)
+	}
+	if len(got.Held) != 1 || got.Held[0] != "test-held" {
+		t.Errorf("held = %v", got.Held)
+	}
+	if len(got.NoAdapter) != 1 || got.NoAdapter[0] != "test-no-adapter" {
+		t.Errorf("awaiting adapter = %v", got.NoAdapter)
+	}
+}
+
+func TestQueryCommandFiltersByTopic(t *testing.T) {
+	t.Parallel()
+
+	registry := setup(t)
+	_, stdout, _ := runCmd(t, registry, "query", "--topic", "press", "--json")
+
+	var got []struct {
+		Topic string `json:"topic"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &got); err != nil {
+		t.Fatalf("output is not JSON: %v", err)
+	}
+	if len(got) == 0 {
+		t.Fatal("no records")
+	}
+	for _, r := range got {
+		if r.Topic != "press" {
+			t.Errorf("topic = %q, want only press", r.Topic)
+		}
+	}
+}
+
+func TestQueryCommandTextFilter(t *testing.T) {
+	t.Parallel()
+
+	registry := setup(t)
+	_, stdout, _ := runCmd(t, registry, "query", "--topic", "press", "--text", "no such thing")
+
+	if !strings.Contains(stdout, "Nothing in the selected window") {
+		t.Errorf("a filter matching nothing should say so plainly:\n%s", stdout)
+	}
+}
+
+// A source that is down must be reported, never hidden behind an empty result.
+func TestFailingSourceIsReported(t *testing.T) {
+	t.Parallel()
+
+	down := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer down.Close()
+
+	registry := writeRegistry(t, down.URL)
+	_, _, stderr := runCmd(t, registry, "news")
+
+	if !strings.Contains(stderr, "unavailable") {
+		t.Errorf("stderr does not report the failing source: %q", stderr)
+	}
+}
+
+func TestUnknownRegistryPathFails(t *testing.T) {
+	t.Parallel()
+
+	code, _, stderr := runCmd(t, filepath.Join(t.TempDir(), "missing.yaml"), "sources")
+	if code != 1 {
+		t.Errorf("exit = %d, want 1", code)
+	}
+	if !strings.Contains(stderr, "missing.yaml") {
+		t.Errorf("stderr does not name the missing file: %q", stderr)
+	}
+}
+
+func TestTopicWithNoLiveSourceFails(t *testing.T) {
+	t.Parallel()
+
+	registry := setup(t)
+	code, _, stderr := runCmd(t, registry, "civic")
+
+	if code != 1 {
+		t.Errorf("exit = %d, want 1", code)
+	}
+	if !strings.Contains(stderr, "no live source") {
+		t.Errorf("stderr = %q, want it to explain there is no live source", stderr)
+	}
+}

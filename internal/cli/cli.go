@@ -39,7 +39,19 @@ type App struct {
 // New builds an App with the commands available in this build.
 func New() *App {
 	app := &App{commands: make(map[string]Command)}
-	app.Register(versionCommand())
+	for _, c := range []Command{
+		statusCommand(),
+		newsCommand(),
+		eventsCommand(),
+		civicCommand(),
+		skyCommand(),
+		camerasCommand(),
+		queryCommand(),
+		sourcesCommand(),
+		versionCommand(),
+	} {
+		app.Register(c)
+	}
 	return app
 }
 
