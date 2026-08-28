@@ -106,6 +106,13 @@ func (p *Provider) toRecord(item Item, fetchedAt time.Time, rawHash string) (obs
 		},
 	}
 
+	if item.Lat != nil && item.Lon != nil {
+		pos := observation.Point{Lat: *item.Lat, Lon: *item.Lon}
+		if pos.Valid() {
+			rec.Position = &pos
+		}
+	}
+
 	if p.isEventFeed() {
 		// We learned about the event now; the event itself is later.
 		rec.ObservedAt = fetchedAt

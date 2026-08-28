@@ -237,12 +237,15 @@ sources:
   - id: ign-seismic
     authority: Instituto Geografico Nacional
     topic: geophysics
-    url: https://www.ign.es/web/sis-catalogo-terremotos
-    format: catalog-download
+    url: https://www.ign.es/ign/RssTools/sismologia.xml
+    format: rss
     license: official-cite-ign
-    access: documented_download
-    automation: review_terms
-    interval: 2m
+    access: documented_api
+    automation: enabled
+    interval: 5m
+    notes: >-
+      The catalog page is HTML, but IGN also publishes the last 20 events as
+      RSS with geo:lat/geo:long. Verified 2026-08-28.
 
   - id: edistribucion-outages
     authority: e-distribucion
@@ -293,14 +296,21 @@ sources:
 
   - id: imae-teatro
     authority: IMAE / Teatro Cordoba
-    topic: events
-    url: https://teatrocordoba.es/
-    format: html
+    topic: press
+    url: https://teatrocordoba.es/feed/
+    format: rss
     license: unspecified
-    access: public_html
-    automation: review_terms
-    interval: 12h
-    notes: Venue, date, time, genre and often price. The best signal for EVENT_CHANGE detection.
+    access: documented_api
+    automation: enabled
+    interval: 6h
+    notes: >-
+      The venue's announcement feed, NOT its schedule: pubDate is when the
+      article was written, not when the show starts. Filed under press for
+      exactly that reason — treating it as an event source would date every
+      concert on the day it was announced.
+
+      The schedule lives at /wp-json/wp/v2/ajde_events, a documented WordPress
+      REST collection. That needs its own adapter. Verified 2026-08-28.
 
   # ── Local press ───────────────────────────────────────────────────────────
   # Newspapers are the source that catches what every official feed missed.
@@ -365,13 +375,15 @@ sources:
   - id: placsp
     authority: Ministerio de Hacienda
     topic: civic
-    url: https://contrataciondelestado.es/
-    format: open-data-bulk
+    url: https://contrataciondelestado.es/sindicacion/sindicacion_643/licitacionesPerfilesContratanteCompleto3.atom
+    format: rss
     license: open-data
     access: documented_api
-    automation: review_terms
+    automation: enabled
     interval: 6h
-    notes: Public procurement is how a large event leaves a trace months before it is announced.
+    notes: >-
+      Public procurement is how a large event leaves a trace months before it
+      is announced. Served as a 10 MB Atom feed. Verified 2026-08-28.
 
   - id: dipucordoba-ckan
     authority: Diputacion de Cordoba

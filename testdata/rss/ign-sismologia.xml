@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:gml="http://www.opengis.net/gml" xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#" xmlns:georss="http://www.georss.org/georss" xmlns:taxo="http://purl.org/rss/1.0/modules/taxonomy/" version="2.0">
+  <channel>
+    <title>GeoRSS Sismología IGN</title>
+    <link>http://www.ign.es/ign/rss</link>
+    <description>Este canal te permite consultar los terremotos ocurridos en España durante los últimos diez días. Esta información está sujeta a modificaciones como consecuencia de la continua revisión del análisis sísmico.</description>
+    <language>es</language>
+    <dc:language>es</dc:language>
+    <item>
+      <title>-Info.terremoto: 28/08/2026 2:01:23</title>
+      <link>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026quxrn</link>
+      <description>Se ha producido un terremoto de magnitud 3.1 en NE CEHEGÍN.MU en la fecha 28/08/2026 2:01:23 en la siguiente localización: 38.1467,-1.7173</description>
+      <guid>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026quxrn</guid>
+      <geo:lat>38.1467</geo:lat>
+      <geo:long>-1.7173</geo:long>
+    </item>
+    <item>
+      <title>-Info.terremoto: 27/08/2026 6:36:39</title>
+      <link>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qtlgh</link>
+      <description>Se ha producido un terremoto de magnitud 2.7 en SW CABO DE SAN VICENTE en la fecha 27/08/2026 6:36:39 en la siguiente localización: 36.6798,-11.0256</description>
+      <guid>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qtlgh</guid>
+      <geo:lat>36.6798</geo:lat>
+      <geo:long>-11.0256</geo:long>
+    </item>
+    <item>
+      <title>-Info.terremoto: 26/08/2026 17:58:16</title>
+      <link>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qsmfr</link>
+      <description>Se ha producido un terremoto de magnitud 2.8 en ATLÁNTICO-CANARIAS en la fecha 26/08/2026 17:58:16 en la siguiente localización: 28.8273,-16.3017</description>
+      <guid>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qsmfr</guid>
+      <geo:lat>28.8273</geo:lat>
+      <geo:long>-16.3017</geo:long>
+    </item>
+    <item>
+      <title>-Info.terremoto: 26/08/2026 17:37:19</title>
+      <link>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qslns</link>
+      <description>Se ha producido un terremoto de magnitud 3.6 en ATLÁNTICO-CANARIAS en la fecha 26/08/2026 17:37:19 en la siguiente localización: 28.7704,-16.3439</description>
+      <guid>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qslns</guid>
+      <geo:lat>28.7704</geo:lat>
+      <geo:long>-16.3439</geo:long>
+    </item>
+    <item>
+      <title>-Info.terremoto: 26/08/2026 16:57:11</title>
+      <link>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qskfi</link>
+      <description>Se ha producido un terremoto de magnitud 3.0 en ATLÁNTICO-CANARIAS en la fecha 26/08/2026 16:57:11 en la siguiente localización: 28.7915,-16.3247</description>
+      <guid>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qskfi</guid>
+      <geo:lat>28.7915</geo:lat>
+      <geo:long>-16.3247</geo:long>
+    </item>
+    <item>
+      <title>-Info.terremoto: 26/08/2026 15:31:20</title>
+      <link>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qshjr</link>
+      <description>Se ha producido un terremoto de magnitud 3.0 en NW BALBOA.LE en la fecha 26/08/2026 15:31:20 en la siguiente localización: 42.7408,-6.9459</description>
+      <guid>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qshjr</guid>
+      <geo:lat>42.7408</geo:lat>
+      <geo:long>-6.9459</geo:long>
+    </item>
+    <item>
+      <title>-Info.terremoto: 26/08/2026 12:23:04</title>
+      <link>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qsbed</link>
+      <description>Se ha producido un terremoto de magnitud 2.6 en GOLFO DE CÁDIZ en la fecha 26/08/2026 12:23:04 en la siguiente localización: 35.7947,-7.0857</description>
+      <guid>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qsbed</guid>
+      <geo:lat>35.7947</geo:lat>
+      <geo:long>-7.0857</geo:long>
+    </item>
+    <item>
+      <title>-Info.terremoto: 25/08/2026 4:35:20</title>
+      <link>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qpqfo</link>
+      <description>Se ha producido un terremoto de magnitud 2.7 en NE SIDI SLIMANE.MAC en la fecha 25/08/2026 4:35:20 en la siguiente localización: 34.3149,-5.8766</description>
+      <guid>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qpqfo</guid>
+      <geo:lat>34.3149</geo:lat>
+      <geo:long>-5.8766</geo:long>
+    </item>
+    <item>
+      <title>-Info.terremoto: 23/08/2026 16:19:24</title>
+      <link>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qmwkw</link>
+      <description>Se ha producido un terremoto de magnitud 2.7 en GOLFO DE CÁDIZ en la fecha 23/08/2026 16:19:24 en la siguiente localización: 36.5343,-7.7181</description>
+      <guid>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qmwkw</guid>
+      <geo:lat>36.5343</geo:lat>
+      <geo:long>-7.7181</geo:long>
+    </item>
+    <item>
+      <title>-Info.terremoto: 22/08/2026 8:49:48</title>
+      <link>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qkmbu</link>
+      <description>Se ha producido un terremoto de magnitud 2.9 en CANARY ISLANDS, SPAIN REG en la fecha 22/08/2026 8:49:48 en la siguiente localización: 30.4374,-15.1671</description>
+      <guid>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qkmbu</guid>
+      <geo:lat>30.4374</geo:lat>
+      <geo:long>-15.1671</geo:long>
+    </item>
+    <item>
+      <title>-Info.terremoto: 21/08/2026 19:09:13</title>
+      <link>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qjkzx</link>
+      <description>Se ha producido un terremoto de magnitud 3.3 en SW CABO DE SAN VICENTE en la fecha 21/08/2026 19:09:13 en la siguiente localización: 34.58,-10.6527</description>
+      <guid>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qjkzx</guid>
+      <geo:lat>34.58</geo:lat>
+      <geo:long>-10.6527</geo:long>
+    </item>
+    <item>
+      <title>-Info.terremoto: 21/08/2026 11:41:40</title>
+      <link>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qiwfx</link>
+      <description>Se ha producido un terremoto de magnitud 3.4 en SE BENI MELLAL.MAC en la fecha 21/08/2026 11:41:40 en la siguiente localización: 32.2868,-6.2061</description>
+      <guid>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qiwfx</guid>
+      <geo:lat>32.2868</geo:lat>
+      <geo:long>-6.2061</geo:long>
+    </item>
+    <item>
+      <title>-Info.terremoto: 21/08/2026 3:02:02</title>
+      <link>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qifce</link>
+      <description>Se ha producido un terremoto de magnitud 2.9 en SW CABO DE SAN VICENTE en la fecha 21/08/2026 3:02:02 en la siguiente localización: 36.3273,-9.8993</description>
+      <guid>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qifce</guid>
+      <geo:lat>36.3273</geo:lat>
+      <geo:long>-9.8993</geo:long>
+    </item>
+    <item>
+      <title>-Info.terremoto: 20/08/2026 7:24:33</title>
+      <link>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qgsga</link>
+      <description>Se ha producido un terremoto de magnitud 3.2 en NE SIDI SLIMANE.MAC en la fecha 20/08/2026 7:24:33 en la siguiente localización: 34.3397,-5.8382</description>
+      <guid>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qgsga</guid>
+      <geo:lat>34.3397</geo:lat>
+      <geo:long>-5.8382</geo:long>
+    </item>
+    <item>
+      <title>-Info.terremoto: 20/08/2026 0:15:30</title>
+      <link>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qgebw</link>
+      <description>Se ha producido un terremoto de magnitud 3.4 en E ALHENDÍN.GR en la fecha 20/08/2026 0:15:30 en la siguiente localización: 37.108,-3.6316</description>
+      <guid>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qgebw</guid>
+      <geo:lat>37.108</geo:lat>
+      <geo:long>-3.6316</geo:long>
+    </item>
+    <item>
+      <title>-Info.terremoto: 19/08/2026 17:14:51</title>
+      <link>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qfqfa</link>
+      <description>Se ha producido un terremoto de magnitud 3.0 en E CHURRIANA DE LA VEGA.GR en la fecha 19/08/2026 17:14:51 en la siguiente localización: 37.1504,-3.6323</description>
+      <guid>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qfqfa</guid>
+      <geo:lat>37.1504</geo:lat>
+      <geo:long>-3.6323</geo:long>
+    </item>
+    <item>
+      <title>-Info.terremoto: 19/08/2026 10:32:56</title>
+      <link>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qfcyg</link>
+      <description>Se ha producido un terremoto de magnitud 2.8 en NW ARMILLA.GR en la fecha 19/08/2026 10:32:56 en la siguiente localización: 37.1479,-3.6298</description>
+      <guid>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qfcyg</guid>
+      <geo:lat>37.1479</geo:lat>
+      <geo:long>-3.6298</geo:long>
+    </item>
+    <item>
+      <title>-Info.terremoto: 19/08/2026 1:20:03</title>
+      <link>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qekry</link>
+      <description>Se ha producido un terremoto de magnitud 3.0 en N RELIZANE.ARG en la fecha 19/08/2026 1:20:03 en la siguiente localización: 35.9211,0.595</description>
+      <guid>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qekry</guid>
+      <geo:lat>35.9211</geo:lat>
+      <geo:long>0.595</geo:long>
+    </item>
+    <item>
+      <title>-Info.terremoto: 18/08/2026 22:20:47</title>
+      <link>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qeeud</link>
+      <description>Se ha producido un terremoto de magnitud 2.7 en GOLFO DE CÁDIZ en la fecha 18/08/2026 22:20:47 en la siguiente localización: 36.1337,-7.9564</description>
+      <guid>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qeeud</guid>
+      <geo:lat>36.1337</geo:lat>
+      <geo:long>-7.9564</geo:long>
+    </item>
+    <item>
+      <title>-Info.terremoto: 18/08/2026 20:35:39</title>
+      <link>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qebhy</link>
+      <description>Se ha producido un terremoto de magnitud 3.4 en SW OGÍJARES.GR en la fecha 18/08/2026 20:35:39 en la siguiente localización: 37.1162,-3.6158</description>
+      <guid>http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026qebhy</guid>
+      <geo:lat>37.1162</geo:lat>
+      <geo:long>-3.6158</geo:long>
+    </item>
+  </channel>
+</rss>
+

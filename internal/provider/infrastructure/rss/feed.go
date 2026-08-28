@@ -10,6 +10,7 @@ import (
 	"html"
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -19,6 +20,12 @@ var ErrNotAFeed = errors.New("rss: not an RSS or Atom feed")
 
 // Item is one entry, normalized across the three formats.
 type Item struct {
+	// Lat and Lon come from the W3C basic geo vocabulary, which IGN uses to
+	// place each earthquake. Without them a seismic record has no position
+	// and no spatial query can see it.
+	Lat *float64
+	Lon *float64
+
 	Title       string
 	Link        string
 	Description string
@@ -55,6 +62,9 @@ type rssDocument struct {
 			GUID        string   `xml:"guid"`
 			PubDate     string   `xml:"pubDate"`
 			Date        string   `xml:"date"`
+			Lat         string   `xml:"lat"`
+			Long        string   `xml:"long"`
+			GeoPoint    string   `xml:"point"`
 		} `xml:"item"`
 	} `xml:"channel"`
 }
@@ -128,7 +138,7 @@ func parseRSS(body string) (*Feed, error) {
 	}
 
 	for _, it := range doc.Channel.Items {
-		feed.Items = append(feed.Items, Item{
+		item := Item{
 			Title:       clean(it.Title),
 			Link:        clean(it.Link),
 			Description: summarize(it.Description),
@@ -136,7 +146,9 @@ func parseRSS(body string) (*Feed, error) {
 			Categories:  cleanAll(it.Categories),
 			GUID:        clean(it.GUID),
 			Published:   parseTime(firstNonEmpty(it.PubDate, it.Date)),
-		})
+		}
+		item.Lat, item.Lon = parseGeo(it.Lat, it.Long, it.GeoPoint)
+		feed.Items = append(feed.Items, item)
 	}
 	return feed, nil
 }
@@ -181,6 +193,26 @@ func parseAtom(body string) (*Feed, error) {
 		feed.Items = append(feed.Items, item)
 	}
 	return feed, nil
+}
+
+// parseGeo reads a position from the W3C basic geo vocabulary, accepting both
+// the separate lat/long elements and the combined "lat lon" point form.
+//
+// A coordinate that does not parse is left absent rather than defaulted to
+// zero: null island is a real place, and eye does not put earthquakes there.
+func parseGeo(lat, lon, point string) (*float64, *float64) {
+	if strings.TrimSpace(lat) == "" && strings.TrimSpace(point) != "" {
+		if fields := strings.Fields(point); len(fields) == 2 {
+			lat, lon = fields[0], fields[1]
+		}
+	}
+
+	latVal, latErr := strconv.ParseFloat(strings.TrimSpace(lat), 64)
+	lonVal, lonErr := strconv.ParseFloat(strings.TrimSpace(lon), 64)
+	if latErr != nil || lonErr != nil {
+		return nil, nil
+	}
+	return &latVal, &lonVal
 }
 
 // timeLayouts covers what publishers actually emit, which is a superset of what
