@@ -9,7 +9,13 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
+  contents: read
   pull-requests: read
+  # `wip: true` below makes the action post a commit status so the check can
+  # stay pending while a title is marked WIP — v5 does this with
+  # `POST /repos/:owner/:repo/statuses/:sha`. Without this it gets a 403 and
+  # reports as a failed title check whatever the title says.
+  statuses: write
 
 jobs:
   semantic:
@@ -22,18 +28,25 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           # Scope-enum for Go backend services
+          # The domains this repository actually has. The boilerplate's list
+          # named none of them, so every commit eye has ever made would have
+          # been rejected by this check had it ever run.
           scopes: |
+            cli
+            source
+            provider
+            observation
+            store
+            scheduler
+            config
             api
-            infra
+            render
             docs
-            skills
             deps
             ci
             build
-            audit
-            governance
-            lint
             release
+            main
           requireScope: false
           disallowScopes: ""
           subjectPattern: "^[a-z].+$"
