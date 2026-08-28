@@ -3,6 +3,7 @@ package infrastructure_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -450,4 +451,67 @@ func keys(m map[string]bool) []string {
 		out = append(out, k)
 	}
 	return out
+}
+
+// The store must fold accents too. SQLite's LIKE does not, which is why the
+// text filter is applied in Go rather than pushed into SQL.
+func TestSQLiteTextSearchFoldsAccents(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	s := openStore(t)
+	now := time.Now().UTC()
+
+	rec := fullRecord("cam", now)
+	rec.Title = "A-4 km 399.1 · CÓRDOBA"
+	if _, err := s.Append(ctx, []domain.Record{rec}); err != nil {
+		t.Fatalf("Append() = %v", err)
+	}
+
+	for _, text := range []string{"cordoba", "CÓRDOBA", "Cordoba", "a-4 cordoba"} {
+		got, err := s.Query(ctx, domain.Filter{Text: text})
+		if err != nil {
+			t.Fatalf("Query(%q) = %v", text, err)
+		}
+		if len(got) != 1 {
+			t.Errorf("Query(%q) returned %d records, want 1", text, len(got))
+		}
+	}
+
+	got, _ := s.Query(ctx, domain.Filter{Text: "sevilla"})
+	if len(got) != 0 {
+		t.Errorf("Query(\"sevilla\") returned %d records, want 0", len(got))
+	}
+}
+
+// A text filter must not lose rows to an early SQL LIMIT applied before the
+// Go-side match runs.
+func TestSQLiteTextSearchAppliesLimitAfterFiltering(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	s := openStore(t)
+	now := time.Now().UTC()
+
+	batch := make([]domain.Record, 0, 30)
+	for i := range 30 {
+		r := fullRecord(fmt.Sprintf("noise-%d", i), now.Add(-time.Duration(i)*time.Minute))
+		r.Title = "unrelated road"
+		batch = append(batch, r)
+	}
+	target := fullRecord("target", now.Add(-time.Hour))
+	target.Title = "A-4 km 399.1 · CÓRDOBA"
+	batch = append(batch, target)
+
+	if _, err := s.Append(ctx, batch); err != nil {
+		t.Fatalf("Append() = %v", err)
+	}
+
+	got, err := s.Query(ctx, domain.Filter{Text: "cordoba", Limit: 5})
+	if err != nil {
+		t.Fatalf("Query() = %v", err)
+	}
+	if len(got) != 1 || got[0].ID != "target" {
+		t.Errorf("got %d records %v, want just the matching one", len(got), got)
+	}
 }

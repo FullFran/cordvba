@@ -40,11 +40,11 @@ sources:
   - id: dgt-cameras
     authority: Direccion General de Trafico
     topic: transport
-    url: https://nap.dgt.es/en/dataset/camaras-dgt-datex2-v3-7
-    format: datex2-3.7-xml
-    license: CC-BY-4.0
+    url: https://nap.dgt.es/datex2/v3/dgt/DevicePublication/camaras_datex2_v37.xml
+    format: datex2-devices
+    license: free-of-charge-nap-terms
     access: documented_api
-    automation: review_terms
+    automation: enabled
     interval: 1h
     published_every: 1h
     notes: >-

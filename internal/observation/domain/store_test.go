@@ -145,3 +145,59 @@ func TestApplyLimit(t *testing.T) {
 		t.Errorf("limit above length = %d items", len(got))
 	}
 }
+
+func TestFold(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct{ name, in, want string }{
+		{name: "córdoba", in: "CÓRDOBA", want: "cordoba"},
+		{name: "diputación", in: "Diputación", want: "diputacion"},
+		{name: "velá", in: "Velá de la Fuensanta", want: "vela de la fuensanta"},
+		{name: "españa", in: "España", want: "espana"},
+		{name: "jaén", in: "JAÉN", want: "jaen"},
+		{name: "already plain", in: "A-4 km 399.1", want: "a-4 km 399.1"},
+		{name: "empty", in: "", want: ""},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := domain.Fold(tc.in); got != tc.want {
+				t.Errorf("Fold(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+// The camera outside Córdoba is titled "A-4 km 399.1 · CÓRDOBA". Nobody types
+// the accent, and nobody types the fields in that order.
+func TestFilterTextIsAccentInsensitiveAndOrderFree(t *testing.T) {
+	t.Parallel()
+
+	rec := recordAt("transport", "dgt-cameras", "camera", time.Now().UTC(), nil)
+	rec.Title = "A-4 km 399.1 · CÓRDOBA"
+	rec.Description = "Direccion General de Trafico"
+
+	cases := []struct {
+		name string
+		text string
+		want bool
+	}{
+		{name: "exact", text: "A-4 km 399.1", want: true},
+		{name: "no accent", text: "cordoba", want: true},
+		{name: "with accent", text: "CÓRDOBA", want: true},
+		{name: "words out of order", text: "cordoba a-4", want: true},
+		{name: "across title and description", text: "cordoba trafico", want: true},
+		{name: "one word missing", text: "cordoba sevilla", want: false},
+		{name: "no match at all", text: "burgos", want: false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := (domain.Filter{Text: tc.text}).MatchRecord(rec); got != tc.want {
+				t.Errorf("MatchRecord with text %q = %v, want %v", tc.text, got, tc.want)
+			}
+		})
+	}
+}

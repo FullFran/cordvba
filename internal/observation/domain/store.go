@@ -106,17 +106,59 @@ func (f Filter) matchPosition(p *Point) bool {
 }
 
 // matchText applies the free-text part of the filter.
+//
+// Two behaviours worth stating, both learned from the data rather than assumed:
+//
+//   - Accents are folded. eye reads Spanish sources and nobody types "CÓRDOBA"
+//     with the accent when searching. Without folding, the camera on the A-4 is
+//     unfindable by the name of the city it sits outside.
+//   - Every word must appear, in any order, across the fields together. A
+//     search for "A-4 Córdoba" should find "A-4 km 399.1 · CÓRDOBA", which a
+//     contiguous substring match never would.
 func (f Filter) matchText(fields ...string) bool {
 	if f.Text == "" {
 		return true
 	}
-	needle := strings.ToLower(f.Text)
-	for _, field := range fields {
-		if strings.Contains(strings.ToLower(field), needle) {
-			return true
+
+	haystack := Fold(strings.Join(fields, " "))
+	for _, word := range strings.Fields(Fold(f.Text)) {
+		if !strings.Contains(haystack, word) {
+			return false
 		}
 	}
-	return false
+	return true
+}
+
+// accentFolding maps the accented characters Spanish sources actually emit onto
+// their unaccented forms. It is a table rather than a Unicode normalisation
+// dependency: the alphabet is small, known, and does not change.
+var accentFolding = map[rune]rune{
+	'á': 'a', 'à': 'a', 'ä': 'a', 'â': 'a', 'ã': 'a', 'å': 'a',
+	'é': 'e', 'è': 'e', 'ë': 'e', 'ê': 'e',
+	'í': 'i', 'ì': 'i', 'ï': 'i', 'î': 'i',
+	'ó': 'o', 'ò': 'o', 'ö': 'o', 'ô': 'o', 'õ': 'o',
+	'ú': 'u', 'ù': 'u', 'ü': 'u', 'û': 'u',
+	'ñ': 'n', 'ç': 'c', 'ý': 'y',
+}
+
+// Fold lowercases a string and strips the accents Spanish text carries, so a
+// search for "cordoba" finds "CÓRDOBA".
+//
+// Ñ folds to N deliberately. It is a distinct letter in Spanish, but somebody
+// searching for "espana" should still find "España", and no eye query
+// distinguishes the two.
+func Fold(s string) string {
+	var sb strings.Builder
+	sb.Grow(len(s))
+
+	for _, r := range strings.ToLower(s) {
+		if folded, ok := accentFolding[r]; ok {
+			sb.WriteRune(folded)
+			continue
+		}
+		sb.WriteRune(r)
+	}
+	return sb.String()
 }
 
 // matchAny reports whether value is in allowed, treating an empty list as

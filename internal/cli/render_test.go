@@ -1,9 +1,17 @@
 package cli
 
 import (
+	"strings"
 	"testing"
 	"time"
+
+	observation "github.com/FullFran/eye/internal/observation/domain"
 )
+
+// observationEntityWithID builds a bare entity for naming tests.
+func observationEntityWithID(id string) observation.Entity {
+	return observation.Entity{ID: id}
+}
 
 func TestAgeOf(t *testing.T) {
 	t.Parallel()
@@ -69,5 +77,32 @@ func TestPlural(t *testing.T) {
 	}
 	if got := plural(0, "source", "sources"); got != "0 sources" {
 		t.Errorf("plural(0) = %q", got)
+	}
+}
+
+func TestFrameName(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct{ name, id, want string }{
+		{name: "dgt id", id: "dgt-cameras:421", want: "camera-421"},
+		{name: "cordoba id", id: "cordoba-cameras:num.7", want: "camera-num-7"},
+		{name: "no prefix", id: "421", want: "camera-421"},
+		{name: "path characters are stripped", id: "s:../../etc/passwd", want: "camera-------etc-passwd"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := frameName(observationEntityWithID(tc.id))
+			if got != tc.want {
+				t.Errorf("frameName(%q) = %q, want %q", tc.id, got, tc.want)
+			}
+			// Whatever the id contains, the result must not be able to
+			// escape the directory it is joined to.
+			if strings.ContainsAny(got, "/\\") {
+				t.Errorf("frameName(%q) = %q contains a path separator", tc.id, got)
+			}
+		})
 	}
 }

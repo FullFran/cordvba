@@ -141,7 +141,7 @@ func (s *SQLiteStore) Query(ctx context.Context, f domain.Filter) ([]domain.Reco
 
 	// The limit is applied after the radius refinement, so a circular query
 	// cannot come back short because the box happened to hold more.
-	if f.Limit > 0 && f.Near == nil {
+	if f.Limit > 0 && f.Near == nil && f.Text == "" {
 		query += fmt.Sprintf(" LIMIT %d", f.Limit)
 	}
 
@@ -157,7 +157,8 @@ func (s *SQLiteStore) Query(ctx context.Context, f domain.Filter) ([]domain.Reco
 		if err != nil {
 			return nil, err
 		}
-		if f.Near != nil && !f.MatchRecord(r) {
+		// Text and radius are both refined here rather than in SQL.
+		if (f.Near != nil || f.Text != "") && !f.MatchRecord(r) {
 			continue
 		}
 		out = append(out, r)
@@ -252,7 +253,7 @@ func (s *SQLiteStore) Entities(ctx context.Context, f domain.Filter) ([]domain.E
 		if err != nil {
 			return nil, err
 		}
-		if f.Near != nil && !f.MatchEntity(e) {
+		if (f.Near != nil || f.Text != "") && !f.MatchEntity(e) {
 			continue
 		}
 		out = append(out, e)

@@ -51,11 +51,10 @@ func recordPredicates(f domain.Filter) (string, []any) {
 		clauses = append(clauses, "severity >= ?")
 		args = append(args, int(f.MinSeverity))
 	}
-	if f.Text != "" {
-		clauses = append(clauses, "(LOWER(title) LIKE ? OR LOWER(description) LIKE ?)")
-		needle := "%" + strings.ToLower(f.Text) + "%"
-		args = append(args, needle, needle)
-	}
+	// Text is deliberately NOT pushed into SQL. SQLite's LIKE does not fold
+	// accents, so "cordoba" would miss "CÓRDOBA" — and the sources eye reads
+	// are Spanish. The filter is applied in Go instead, which costs a scan of
+	// the rows the other predicates already narrowed.
 
 	clauses, args = appendSpatial(clauses, args, f)
 
@@ -83,11 +82,7 @@ func entityPredicates(f domain.Filter) (string, []any) {
 	addIn("source", f.Sources)
 	addIn("kind", f.Kinds)
 
-	if f.Text != "" {
-		clauses = append(clauses, "(LOWER(title) LIKE ? OR LOWER(description) LIKE ?)")
-		needle := "%" + strings.ToLower(f.Text) + "%"
-		args = append(args, needle, needle)
-	}
+	// Text is applied in Go, for the accent-folding reason above.
 
 	clauses, args = appendSpatial(clauses, args, f)
 

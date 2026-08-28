@@ -10,6 +10,7 @@ package cli
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"sort"
@@ -47,6 +48,7 @@ func New() *App {
 		civicCommand(),
 		skyCommand(),
 		camerasCommand(),
+		cameraCommand(),
 		queryCommand(),
 		sourcesCommand(),
 		versionCommand(),
@@ -105,6 +107,27 @@ func (a *App) usage(w io.Writer) {
 	_ = tw.Flush()
 
 	_, _ = fmt.Fprintf(w, "\nEvery figure eye prints can be traced back to the public source it came from.\n")
+}
+
+// parseInterspersed parses flags that may appear before, after or between
+// positional arguments, and returns the positionals.
+//
+// Go's flag package stops at the first non-flag argument, so `eye camera A-4
+// --width 32` would otherwise treat "--width" and "32" as part of the search
+// text. People type it that way, so it has to work.
+func parseInterspersed(fs *flag.FlagSet, args []string) ([]string, error) {
+	var positional []string
+
+	for {
+		if err := fs.Parse(args); err != nil {
+			return nil, err
+		}
+		if fs.NArg() == 0 {
+			return positional, nil
+		}
+		positional = append(positional, fs.Arg(0))
+		args = fs.Args()[1:]
+	}
 }
 
 // versionCommand reports the build identity.

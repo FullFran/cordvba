@@ -120,6 +120,29 @@ There is no persistence branch in that flow, and none is to be added. The
 existence of 1948 reachable image URLs does not widen the boundary; it is the
 case the boundary was written for.
 
+### Showing a frame outside the terminal
+
+`eye camera --open` hands the frame to the system image viewer, and every such
+viewer opens a *file*. That is a genuine tension with "RAM only", so it is
+resolved explicitly rather than quietly:
+
+- The frame is written to a **memory-backed filesystem** — `XDG_RUNTIME_DIR` or
+  `/dev/shm`, both tmpfs. Nothing reaches a disk.
+- If neither exists, eye **refuses**. It does not fall back to `/tmp`, which on
+  many systems is a real directory on real storage.
+- eye **blocks until the viewer closes**, then deletes the file. That is what
+  makes "the frame exists only while you are looking at it" literally true
+  rather than a promise.
+- The directory is `0700`. Images of public roads are still not for every other
+  account on the machine.
+
+`eye camera --window` avoids the question entirely: it opens a fresh graphical
+terminal and re-runs the command there, so the frame is drawn with the Kitty
+graphics protocol and never becomes a file at all.
+
+Both paths are covered by tests that assert no image reaches the data
+directory, and that the tmpfs file is gone afterwards.
+
 ## Retention
 
 | Data | Retention |

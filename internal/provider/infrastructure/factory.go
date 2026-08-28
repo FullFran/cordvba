@@ -12,6 +12,7 @@ import (
 	provider "github.com/FullFran/eye/internal/provider/domain"
 	"github.com/FullFran/eye/internal/provider/infrastructure/adsblol"
 	"github.com/FullFran/eye/internal/provider/infrastructure/ckan"
+	"github.com/FullFran/eye/internal/provider/infrastructure/datex"
 	"github.com/FullFran/eye/internal/provider/infrastructure/rss"
 	source "github.com/FullFran/eye/internal/source/domain"
 )
@@ -33,6 +34,9 @@ var builders = map[string]func(source.Source, *httpx.Client) provider.Provider{
 	},
 	"adsb-json": func(s source.Source, c *httpx.Client) provider.Provider {
 		return adsblol.New(s, c)
+	},
+	"datex2-devices": func(s source.Source, c *httpx.Client) provider.Provider {
+		return datex.NewDevices(s, c)
 	},
 }
 

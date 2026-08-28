@@ -149,7 +149,8 @@ Polled in 505ms · registry: (embedded)
 | `eye events` | What is scheduled, from the UCO events feed |
 | `eye civic` | BOE publications and municipal open-data catalog changes |
 | `eye sky` | Aircraft currently over the city, live |
-| `eye cameras` | The 32 municipal traffic cameras — positions only |
+| `eye cameras` | The camera inventory — 1948 DGT plus 32 municipal, positions and metadata |
+| `eye camera` | Show one camera's current frame, with the age of the image |
 | `eye query` | `--topic --since --text --source --limit`, across everything |
 | `eye sources` | The registry: what eye may read, what it can read, and when each last answered |
 | `eye daemon` | Polls continuously and persists everything — the watching mode |
@@ -162,6 +163,36 @@ eye news --since 6h --json | jq '.[] | {title, publisher, source_latency_seconds
 eye query --topic press,events --text patio
 eye sky --json | jq '.[].payload.callsign'
 ```
+
+### Cameras
+
+```bash
+eye camera "A-4 cordoba"          # draw it in the terminal
+eye camera 421 --open             # system image viewer
+eye camera 421 --window           # a fresh Ghostty window, outside tmux
+eye camera --near 37.88,-4.78     # nearest camera to a point
+```
+
+```
+A-4 km 399.1 · CÓRDOBA
+37.8900, -4.7449
+
+IMAGE AGE   11m (captured 12:59:01)
+SOURCE      Direccion General de Trafico · free-of-charge-nap-terms
+IMAGE       https://etraffic.dgt.es/camarasEtraffic/421.jpg
+
+Held in memory only. eye does not store camera images.
+```
+
+**The age is not decoration.** DGT cameras refresh every two to three minutes,
+and some stop refreshing entirely — one sampled camera had not updated in 53
+days. A frame older than half an hour is labelled `STALE`, loudly, because
+showing it as the current state of a road would be the exact lie this project
+exists not to tell.
+
+There is no video: all 1948 DGT cameras publish a still JPEG and nothing else.
+See [docs/legal/data-ethics.md](./docs/legal/data-ethics.md) for the reuse terms,
+which are narrower for the images than for the metadata.
 
 ### Persistence
 
