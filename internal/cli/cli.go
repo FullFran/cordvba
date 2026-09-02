@@ -44,6 +44,7 @@ func New() *App {
 		statusCommand(),
 		daemonCommand(),
 		watchCommand(),
+		tuiCommand(),
 		serveCommand(),
 		newsCommand(),
 		eventsCommand(),
