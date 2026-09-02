@@ -2,9 +2,16 @@ package httpx_test
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 	"errors"
+	"math/big"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -389,5 +396,79 @@ func TestWithExtraCAFileIgnoresAnEmptyPath(t *testing.T) {
 
 	if _, err := httpx.NewWithOptions(httpx.WithExtraCAFile("  ")); err != nil {
 		t.Fatalf("an unset EYE_EXTRA_CA_FILE broke the client: %v", err)
+	}
+}
+
+// selfSignedServer starts a TLS server on a certificate generated here.
+//
+// httptest.NewTLSServer reuses one built-in certificate for every server it
+// creates, so two of those are not two authorities — trusting one trusts the
+// other, and a test built on them proves nothing about the size of the pool.
+func selfSignedServer(t *testing.T, commonName string) *httptest.Server {
+	t.Helper()
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+
+	// The serial and the validity window are fixed rather than derived from
+	// the clock: nothing here depends on the date, and a test that does is a
+	// test that fails on a Tuesday in a year's time.
+	template := x509.Certificate{
+		SerialNumber:          big.NewInt(4242),
+		Subject:               pkix.Name{CommonName: commonName},
+		NotBefore:             time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC),
+		NotAfter:              time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
+		DNSNames:              []string{"localhost"},
+	}
+
+	der, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
+	if err != nil {
+		t.Fatalf("create certificate: %v", err)
+	}
+
+	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(commonName))
+	}))
+	srv.TLS = &tls.Config{
+		MinVersion:   tls.VersionTLS12,
+		Certificates: []tls.Certificate{{Certificate: [][]byte{der}, PrivateKey: key}},
+	}
+	srv.StartTLS()
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+// TestWithExtraCAFileWidensTheSystemPoolRatherThanReplacingIt guards the
+// invariant the option is named after.
+//
+// The failure it prevents is subtle and nasty: build the pool from the extra
+// file alone and eye trusts that authority and NOTHING else, so every other
+// source in the registry starts failing TLS against certificates that are
+// perfectly valid. That reads as "the internet broke", not as "the CA option is
+// wrong", which is exactly the kind of error this option exists to avoid
+// creating.
+func TestWithExtraCAFileWidensTheSystemPoolRatherThanReplacingIt(t *testing.T) {
+	t.Parallel()
+
+	trusted := selfSignedServer(t, "trusted.example")
+	stranger := selfSignedServer(t, "stranger.example")
+
+	client, err := httpx.NewWithOptions(httpx.WithExtraCAFile(writePEM(t, trusted.Certificate())))
+	if err != nil {
+		t.Fatalf("NewWithOptions() = %v", err)
+	}
+
+	if _, err := client.Get(t.Context(), trusted.URL, httpx.Validators{}); err != nil {
+		t.Errorf("the authority in the extra file was not trusted: %v", err)
+	}
+	if _, err := client.Get(t.Context(), stranger.URL, httpx.Validators{}); err == nil {
+		t.Error("an unrelated certificate authority was accepted; the option widened trust too far")
 	}
 }

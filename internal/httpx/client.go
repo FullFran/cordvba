@@ -167,9 +167,19 @@ func (c *Client) applyExtraCAs() error {
 	// Start from the system pool rather than replacing it. The point is to
 	// ADD a missing intermediate, not to narrow eye down to trusting one
 	// authority and nothing else.
+	//
+	// A failure here is reported rather than worked around. Falling back to an
+	// empty pool would leave eye trusting the operator's one file and nothing
+	// else, so every OTHER source would start failing TLS against certificates
+	// that are perfectly valid — which reads as "the internet broke", not as
+	// "the CA option misfired". Widening a pool we cannot read is not
+	// something to approximate.
 	pool, err := x509.SystemCertPool()
-	if err != nil || pool == nil {
-		pool = x509.NewCertPool()
+	if err != nil {
+		return fmt.Errorf("read the system certificate pool: %w", err)
+	}
+	if pool == nil {
+		return errors.New("httpx: the system certificate pool is empty; refusing to trust only the extra CA file")
 	}
 	if !pool.AppendCertsFromPEM(pem) {
 		return fmt.Errorf("extra CA file %s contains no certificate", c.extraCAFile)
