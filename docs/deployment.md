@@ -130,7 +130,7 @@ sudo install -m 0644 deploy/eye-daemon.service deploy/eye-api.service /etc/syste
 sudo install -m 0600 -D /dev/null /etc/eye/api.env
 echo "EYE_API_TOKEN=$(openssl rand -base64 32)" | sudo tee /etc/eye/api.env >/dev/null
 
-sudo install -m 0600 -D /dev/null /etc/eye/daemon.env   # AEMET_API_KEY, FIRMS_MAP_KEY
+sudo install -m 0600 -D /dev/null /etc/eye/daemon.env   # AEMET_API_KEY, FIRMS_MAP_KEY, EYE_EXTRA_CA_FILE
 
 sudo systemctl daemon-reload
 sudo systemctl enable --now eye-daemon eye-api
@@ -155,6 +155,38 @@ is world-readable and `systemctl show` prints it back to anyone who asks. The
 leading `-` on the path means an absent file does not block startup — and if
 the token file is missing, `eye serve --public` refuses, which is the correct
 failure.
+
+## Servers with an incomplete certificate chain
+
+One source in the registry needs a word of setup, and it is worth understanding
+rather than copying.
+
+MITECO's air-quality host serves a certificate that is valid and rooted in a CA
+your system already trusts — but it omits the FNMT-RCM intermediate that links
+the two. A browser hides this by fetching the missing certificate from the
+address in the certificate's AIA extension. Go does not do that, by design, so
+`eye` fails the handshake with `certificate signed by unknown authority`
+against a perfectly good server.
+
+`EYE_EXTRA_CA_FILE` points at a PEM file whose authorities are added to the
+system pool:
+
+```sh
+curl -o /tmp/accomp.crt http://www.cert.fnmt.es/certs/ACCOMP.crt
+openssl x509 -inform DER -in /tmp/accomp.crt -out /etc/eye/fnmt-intermediate.pem
+# then in the daemon's environment file:
+EYE_EXTRA_CA_FILE=/etc/eye/fnmt-intermediate.pem
+```
+
+Supplying a missing intermediate **completes** a chain. That is the opposite of
+skipping verification, which `eye` has no option for and will not grow: every
+certificate is still checked, against a pool you widened on purpose, one named
+file at a time. A path that cannot be read, or that holds no certificate, stops
+the command rather than quietly falling back — a typo here would otherwise
+become a source that fails at TLS for a reason nobody would think to look for.
+
+Installing the intermediate system-wide works equally well, if you would rather
+fix it once for every program on the machine.
 
 ## TLS and a public name
 
