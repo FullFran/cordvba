@@ -26,16 +26,31 @@ sources:
   - id: dgt-incidents
     authority: Direccion General de Trafico
     topic: transport
-    url: https://nap.dgt.es/es/dataset/incidencias-dgt-datex2-v3-7
-    format: datex2-3.7-xml
+    url: https://nap.dgt.es/datex2/v3/dgt/SituationPublication/datex2_v37.xml
+    format: datex2-situations
     license: CC-BY-4.0
     access: documented_api
-    automation: review_terms
-    interval: 60s
+    automation: enabled
+    interval: 5m
+    published_every: 5m
     notes: >-
-      Backbone of the road picture, but nap.dgt.es answers 403 to automated
-      clients (verified 2026-08-28). Held until access is arranged; parse
-      against the published XSD when it is.
+      Backbone of the road picture: incidents, roadworks and closures for the
+      whole national network, including the A-4, A-45, N-432 and the rest of
+      Córdoba's approaches.
+
+      THE 403 IN THE PREVIOUS NOTE WAS ATTRIBUTED TO THE WRONG ENDPOINT, and
+      this source sat held for it. Re-verified 2026-09-03: nap.dgt.es refuses
+      only its CKAN discovery path (/api/3/action/package_show → 403). The
+      published DATEX II data file is served openly to any client — 200,
+      3,762,760 bytes, 578 <sit:situation> elements, publicationTime minutes
+      old, and the answer is identical with a browser User-Agent, with eye's
+      own, and with no User-Agent at all.
+
+      The URL here is the DATA FILE, not the dataset landing page. That
+      distinction is the whole difference between held and working.
+
+      No geographic filter is applied at ingestion: DGT publishes Spain and
+      eye filters at query time.
 
   - id: dgt-cameras
     authority: Direccion General de Trafico
@@ -66,13 +81,24 @@ sources:
   - id: dgt-vms
     authority: Direccion General de Trafico
     topic: transport
-    url: https://nap.dgt.es/es/dataset/paneles-dgt-tiempo-real-datex2-v3-7
-    format: datex2-3.7-xml
+    url: https://nap.dgt.es/datex2/v3/dgt/VmsPublication/datex2_v37.xml
+    format: datex2-vms
     license: CC-BY-4.0
     access: documented_api
-    automation: review_terms
-    interval: 60s
-    notes: Held with the other DGT feeds; nap.dgt.es answers 403 to automated clients.
+    automation: enabled
+    interval: 5m
+    published_every: 5m
+    notes: >-
+      What the motorway signs are actually displaying. Verified 2026-09-03:
+      200, 3,062,527 bytes. Unblocked for the same reason as `dgt-incidents` —
+      the 403 was on the CKAN path, never on the data.
+
+      MIND THE SPELLING. The publisher's own dataset page links this resource
+      as `VmsPublicaction`, which 404s. The correct path, and the one the XSD
+      on that same page uses, is `VmsPublication`. Somebody will "fix" this
+      URL back one day; this note is why they should not.
+
+      A sign displaying nothing is not news, and the adapter drops it.
 
   # ── Transport · city ──────────────────────────────────────────────────────
   - id: cordoba-ckan
@@ -136,7 +162,22 @@ sources:
     automation: review_terms
     interval: 24h
     published_every: 24h
-    notes: Static GTFS only; no official GTFS-RT found. Download needs a NAP session, so ingestion is not yet unattended.
+    notes: >-
+      HELD FOR TWO REASONS NOW, and the second one is worse than the first.
+
+      Login: /Files/Download/1375 answers 405 and the page says "Inicia sesión
+      para descargar". That was already known.
+
+      EXPIRED: the NAP metadata for this feed reads "Rango de fechas
+      24/2/2026 – 30/3/2026, actualizado el 25/2/2026". The service calendar
+      ran out over five months ago. Even with credentials this GTFS would
+      produce zero valid departures today, so arranging them buys nothing
+      until AUCORSA republishes. Verified 2026-09-03.
+
+      Worth recording that it EXISTS, though, because two other notes in this
+      file used to say AUCORSA publishes no GTFS at all. It does: 37 routes,
+      721 stops, validated without warnings. It is login-gated and stale, not
+      absent.
 
   # RENFE publishes its own open-data portal at data.renfe.com, which needs no
   # registration at all. The NAP entry that once made this source look
@@ -193,9 +234,21 @@ sources:
     interval: 168h
     notes: >-
       City bus lines, stops and service hours, read from the operator's own
-      public line pages. AUCORSA publishes no GTFS and no open-data feed, but
-      each page at /linea/{code}/ is server-rendered and carries every stop
-      with its id and name plus the first and last service per day type.
+      public line pages. Each page at /linea/{code}/ is server-rendered and
+      carries every stop with its id and name plus the first and last service
+      per day type.
+
+      This note used to say AUCORSA publishes no GTFS. It does — see
+      `aucorsa-gtfs` — but that feed is login-gated and its calendar expired
+      in March 2026, so these pages remain the only current source of a
+      Córdoba city timetable.
+
+      OUTAGE 2026-09-03: aucorsa.es was unreachable for the whole session.
+      DNS resolves (18.101.44.203, AWS eu-south-2) and TCP 443 and 80 both
+      refuse, while Cloudflare-fronted hosts on the same network answer
+      normally. That is an origin outage, not a countermeasure, and it takes
+      `aucorsa-arrivals` down with it because the CSRF token is read from
+      this same host.
 
       Ordinary public HTML, fetched the way a browser fetches it. The pages
       carry no coordinates; the municipal cartography layer does, and matching
@@ -223,9 +276,279 @@ sources:
       The name field holds rendered HTML ("ACERA DE GUERRITA<br><br>DIRECCIÓN:
       CENTRO CIUDAD"), stripped by the shared mapper.
 
-      Stops and routes only. AUCORSA publishes no timetable and no real-time
-      arrivals as open data; its app reads an undocumented backend at
-      lightapi.aucorsa.es, which is a separate decision under ADR-0008.
+      Stops and routes only, and mostly routes: of the 118 features, all but
+      a handful are line geometry titled "Line". This layer cannot tell you
+      where a named stop is, which is why `osm-bus-stops` exists.
+
+      AUCORSA publishes no real-time arrivals as open data; its app reads an
+      undocumented backend at lightapi.aucorsa.es, which is a separate
+      decision under ADR-0008. Its GTFS timetable does exist through NAP, but
+      login-gated and expired — see `aucorsa-gtfs`.
+
+  - id: ctan-cordoba
+    authority: Consorcio de Transporte Metropolitano del Area de Cordoba
+    topic: transport
+    url: https://api.ctan.es/v1/datos/UNIFICADO/gtfs.zip
+    format: gtfs
+    license: reuse-authorised-ley-37-2007
+    access: documented_download
+    automation: enabled
+    interval: 12h
+    published_every: 24h
+    options:
+      kind: station
+      stops: "8_99,8_126"
+    notes: >-
+      Metropolitan buses between Córdoba and its province: 11 lines, 131 stops,
+      operators including AUCORSA. Verified 2026-09-03 — every file in the zip
+      was rebuilt at 00:10 that morning, and the portal states the data is
+      rebuilt daily.
+
+      THE BEST LICENCE IN THIS REGISTRY, and the reason this entry is enabled
+      while several municipal ones are not. api.ctan.es/avisolegal.html grants
+      reuse explicitly under Ley 37/2007, for commercial AND non-commercial
+      purposes, worldwide and free of charge, on two conditions: do not distort
+      the meaning of the data, and cite "Información obtenida a través del
+      Portal de Datos Abiertos de la Red de Consorcios de Transporte de
+      Andalucía" with the date of retrieval.
+
+      Consortium 8 is Córdoba. Consortium 7 is Jaén — the portal's own table
+      is the documentation, and there is no index endpoint (/v1/Consorcios
+      is a 404), so this is worth writing down before somebody guesses again.
+
+      stops are the two consortium-8 stops inside the city: 8_99 Estación de
+      Autobuses de Córdoba, where every metropolitan line terminates, and
+      8_126 Campus Universitario de Rabanales. The other 129 are out in the
+      province. The feed is the whole Andalusian network — 5026 stops across
+      nine consortia — so asking for everything would bury Córdoba in it.
+
+      This is the timetable. CTAN also publishes a full REST API with live
+      service notices; see `ctan-cordoba-notices`.
+
+  - id: ctan-cordoba-notices
+    authority: Consorcio de Transporte Metropolitano del Area de Cordoba
+    topic: transport
+    url: https://api.ctan.es/v1/Consorcios/8/noticias?lang=ES
+    format: ctan-notices
+    license: reuse-authorised-ley-37-2007
+    access: documented_api
+    automation: enabled
+    interval: 30m
+    notes: >-
+      Service notices for the Córdoba metropolitan network: 18 active when
+      this entry was written, each with a start date, an end date and the
+      lines it affects. This is a real disruption feed, which the city buses
+      do not have.
+
+      Same reuse authorisation as `ctan-cordoba`. Attribution is a condition,
+      not a courtesy, so the licence travels on every record.
+
+  - id: ctan-cordoba-stops
+    authority: Consorcio de Transporte Metropolitano del Area de Cordoba
+    topic: transport
+    url: https://api.ctan.es/v1/Consorcios/8/paradas?lang=ES
+    format: ctan-stops
+    license: reuse-authorised-ley-37-2007
+    access: documented_api
+    automation: enabled
+    interval: 168h
+    options:
+      kind: bus_stop
+    notes: >-
+      78 metropolitan stops WITH COORDINATES, plus fare zone, locality and
+      municipality. The consortium publishes what AUCORSA does not.
+
+      These are the province's stops, not the city's — the two Córdoba-city
+      entries are the bus station and Rabanales. For city stop coordinates see
+      `osm-bus-stops`, which is a different publisher under a different
+      licence, and is kept separate for that reason.
+
+  - id: osm-bus-stops
+    authority: OpenStreetMap contributors
+    topic: transport
+    url: https://overpass-api.de/api/interpreter
+    format: overpass-json
+    license: ODbL-1.0
+    access: documented_api
+    automation: enabled
+    interval: 168h
+    published_every: 24h
+    options:
+      kind: bus_stop
+      bbox: "37.80,-4.90,37.98,-4.65"
+      query: |
+        (
+          node["highway"="bus_stop"]({{bbox}});
+          node["public_transport"="platform"]["bus"="yes"]({{bbox}});
+        );
+    notes: >-
+      Bus stop COORDINATES, which no other source in this registry has.
+
+      The gap this fills, measured 2026-09-03: AUCORSA publishes 690 stops with
+      names and pole numbers and not one coordinate, because its line pages
+      carry none. The municipal cartography layer publishes 118 features that
+      are almost entirely route geometry, with a handful of named stops. So
+      until now eye could tell you when your bus arrives and not where to stand.
+
+      This query returns 473 stops inside the bounding box, 454 of them named.
+
+      NO MATCHING IS DONE, and that is a decision rather than an omission.
+      Folding abbreviations matches 305 of AUCORSA's 690 names exactly (44%),
+      and a token-overlap threshold would take it to about 57% — which means
+      roughly one in ten "matches" would be a guess. eye does not publish a
+      guessed coordinate under a publisher's name. The two inventories sit side
+      by side, each with its own provenance, and a person reading either can see
+      which one they are looking at.
+
+      BOUNDING BOX, NOT AREA NAME. An `area["name"="Córdoba"]` query returns
+      6,125 stops because it also matches Córdoba, Argentina — verified, the
+      results span latitude -31.5 to 37.99. The box is the city and its ring.
+
+      ODbL is share-alike. Attribution is required wherever these coordinates
+      are shown, and anything redistributed that is derived from them carries
+      the same licence. That is why the licence travels on every entity rather
+      than living in a footnote.
+
+  # The `movilidad-cartografia` dataset publishes 33 resources, 28 of them
+  # GeoJSON, and until 2026-09-03 this registry read exactly one of them. Every
+  # entry below is the SAME dataset, the same publisher and the same terms as
+  # `cordoba-bus` above, read by the same adapter with a different `resource`.
+  # No new code, and they are what turns a map of nothing into a map of the
+  # city's kerbside.
+  #
+  # Licence is "unspecified" for all of them, exactly as for `cordoba-bus` and
+  # `cordoba-cameras`. That is a fact recorded, never a permission assumed.
+  - id: cordoba-parking
+    authority: Ayuntamiento de Cordoba
+    topic: transport
+    url: https://datosabiertos.cordoba.es/ckan
+    format: ckan-geojson
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 168h
+    options:
+      dataset: movilidad-cartografia
+      resource: Parking
+      kind: parking
+    notes: >-
+      The nine public car parks, as static inventory. Verified 2026-09-03:
+      there is NO occupancy field, and no occupancy source exists anywhere in
+      the municipal catalogue. eye can say where to park, not whether there is
+      space, and must not imply otherwise.
+
+  - id: cordoba-zona-azul
+    authority: Ayuntamiento de Cordoba
+    topic: transport
+    url: https://datosabiertos.cordoba.es/ckan
+    format: ckan-geojson
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 168h
+    options:
+      dataset: movilidad-cartografia
+      resource: Zona Azul
+      kind: paid_parking_zone
+    notes: The 79 paid on-street parking sections.
+
+  - id: cordoba-bike-racks
+    authority: Ayuntamiento de Cordoba
+    topic: transport
+    url: https://datosabiertos.cordoba.es/ckan
+    format: ckan-geojson
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 168h
+    options:
+      dataset: movilidad-cartografia
+      resource: Bicicletas
+      kind: bike_rack
+    notes: >-
+      293 bike racks. PARKING INFRASTRUCTURE, NOT A BIKE-SHARE SYSTEM — the
+      resource is named "Bicicletas" but the file behind it is
+      parking_bicicletas.geojson, and there is no live availability in it.
+      Córdoba has no entry in the MobilityData GBFS registry either (checked
+      2026-09-03 against systems.csv: no match), so no share-scheme feed
+      exists to add.
+
+  - id: cordoba-ev-charging
+    authority: Ayuntamiento de Cordoba
+    topic: transport
+    url: https://datosabiertos.cordoba.es/ckan
+    format: ckan-geojson
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 168h
+    options:
+      dataset: movilidad-cartografia
+      resource: Puntos de recarga
+      kind: ev_charger
+    notes: 22 electric vehicle charging points. Locations only; no live status.
+
+  - id: cordoba-taxi-ranks
+    authority: Ayuntamiento de Cordoba
+    topic: transport
+    url: https://datosabiertos.cordoba.es/ckan
+    format: ckan-geojson
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 168h
+    options:
+      dataset: movilidad-cartografia
+      resource: Paradas de Taxi
+      kind: taxi_rank
+    notes: 52 taxi ranks.
+
+  - id: cordoba-loading-bays
+    authority: Ayuntamiento de Cordoba
+    topic: transport
+    url: https://datosabiertos.cordoba.es/ckan
+    format: ckan-geojson
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 168h
+    options:
+      dataset: movilidad-cartografia
+      resource: Zonas de carga y descarga
+      kind: loading_bay
+    notes: >-
+      484 loading bays. The densest kerbside layer the city publishes, and the
+      one that explains why a street is blocked at eight in the morning.
+
+  - id: cordoba-moto-parking
+    authority: Ayuntamiento de Cordoba
+    topic: transport
+    url: https://datosabiertos.cordoba.es/ckan
+    format: ckan-geojson
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 168h
+    options:
+      dataset: movilidad-cartografia
+      resource: Motos
+      kind: moto_parking
+    notes: 79 motorcycle parking areas.
+
+  - id: cordoba-accessible-parking
+    authority: Ayuntamiento de Cordoba
+    topic: transport
+    url: https://datosabiertos.cordoba.es/ckan
+    format: ckan-geojson
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 168h
+    options:
+      dataset: movilidad-cartografia
+      resource: Zonas reservadas para P.M.R.
+      kind: accessible_parking
+    notes: Parking reserved for people with reduced mobility.
 
   - id: renfe-cordoba-departures
     authority: RENFE
@@ -276,11 +599,21 @@ sources:
       news. Trip delays from the same publisher are statements and stay
       watched.
 
-      CERCANÍAS ONLY. All three of RENFE's real-time datasets say so
-      explicitly, and Córdoba has no Cercanías network: the nearest live
-      train on this feed was 72 km away, on the Sevilla line. Córdoba is
-      served by AV/LD/MD, for which RENFE publishes the timetable but not
-      real-time. Kept for regional context, not for the city.
+      CERCANÍAS ONLY, and Córdoba has no Cercanías network: the nearest
+      live train on this feed was 72 km away, on the Sevilla line. Kept for
+      regional context, not for the city.
+
+      CORRECTION 2026-09-03: this note used to end "RENFE publishes the
+      timetable but not real-time" for AV/LD/MD. That was wrong. RENFE's own
+      CKAN carries `posicion-vehiculos-av-ld-md` and
+      `horarios-viaje-alta-velocidad-larga-media-distancia`, both CC-BY-4.0
+      and both refreshed every minute. They are now declared as
+      `renfe-positions-ld` and `renfe-delays-ld`, and for this city they
+      matter more than this entry does.
+
+      Also worth knowing for anyone reading an empty poll: this feed returns
+      85 bytes and zero entities overnight, because Cercanías does not run.
+      An empty answer here is the network sleeping, not the adapter failing.
 
   - id: renfe-delays
     authority: RENFE
@@ -296,6 +629,62 @@ sources:
       Delays, cancellations, added services and stations out of service.
       Punctual trains are dropped by the adapter: reporting every on-time
       service would bury the late ones, which are the reason to read this.
+
+  # RENFE publishes real time for AV/LD/MD too. The three feeds above are the
+  # Cercanías ones, and Córdoba has no Cercanías network — which is why the
+  # entries below matter more to this city than the ones above it.
+  - id: renfe-positions-ld
+    authority: RENFE
+    topic: transport
+    url: https://gtfsrt.renfe.com/vehicle_positions_LD.json
+    format: gtfs-rt-json
+    license: CC-BY-4.0
+    access: documented_api
+    automation: enabled
+    interval: 60s
+    published_every: 60s
+    sampled_kinds: [vehicle_position]
+    options:
+      ttl: "24h"
+    notes: >-
+      Live positions for Alta Velocidad, Larga Distancia and Media Distancia —
+      the network that actually serves Córdoba.
+
+      This CORRECTS the note on `renfe-positions`, which said RENFE publishes
+      no real time for AV/LD/MD. It does. The dataset is
+      `posicion-vehiculos-av-ld-md` in RENFE's own CKAN, declared
+      Creative Commons Attribution 4.0, and the JSON resource was last
+      refreshed 2026-09-03T00:01 when this entry was added — one minute
+      before it was read.
+
+      Same GTFS-Realtime JSON envelope as the Cercanías feeds, so no new
+      adapter. Honest caveat about what was actually observed: at 00:38 the
+      whole national feed carried one vehicle and twelve trip updates, so a
+      Córdoba train was NOT seen in it. What is verified is that the feed
+      exists, is licensed, and is current. Whether Córdoba services appear
+      needs a daytime look.
+
+      sampled_kinds for the same reason as the Cercanías feed: a position is
+      a sample of a moving signal, and diffing it reports the reading back
+      as news.
+
+  - id: renfe-delays-ld
+    authority: RENFE
+    topic: transport
+    url: https://gtfsrt.renfe.com/trip_updates_LD.json
+    format: gtfs-rt-json
+    license: CC-BY-4.0
+    access: documented_api
+    automation: enabled
+    interval: 60s
+    published_every: 60s
+    notes: >-
+      Delays and cancellations for AV/LD/MD, from the CKAN dataset
+      `horarios-viaje-alta-velocidad-larga-media-distancia`. CC-BY-4.0.
+
+      This is the one that can tell Córdoba its train is late. The adapter
+      drops punctual services, so an empty poll here means the network is
+      running to time, not that the feed is broken.
 
   - id: renfe-alerts
     authority: RENFE
@@ -357,7 +746,31 @@ sources:
     access: documented_api
     automation: enabled
     interval: 5m
-    notes: Two-step API — the first response returns metadata plus a `datos` URL to fetch.
+    options:
+      product: warnings
+      area: "61"
+    notes: >-
+      Meteorological warnings for Andalucía, as CAP 1.2. Area 61 is Andalucía
+      Occidental, which is where Córdoba is.
+
+      NEEDS A FREE KEY: set AEMET_API_KEY. The key is a JWT, requested by email
+      from https://opendata.aemet.es/centrodedescargas/altaUsuario, and it
+      travels in an `api_key` HEADER rather than the query string so it never
+      lands in a URL, a log line or a stored health row.
+
+      TWO-STEP, AND THE FIRST STEP LIES WHEN IT IS UNHAPPY. The API answers
+      with metadata plus a `datos` URL, and the payload is at that URL. Two
+      traps, both verified and both covered by tests: without a key it answers
+      HTTP 200 with a ZERO-BYTE BODY, which a naive adapter reads as a
+      successful empty poll; and a `datos` URL that has aged out answers HTTP
+      200 carrying {"estado":404,"descripcion":"datos expirados"}.
+
+      `product` exists because `rest-json-two-step` names a transport, not a
+      product. This entry and `aemet-observation` share the format, so without
+      it the registry cannot say which of the two an adapter should fetch, and
+      the adapter fails closed rather than guessing.
+
+      Reuse is authorised with attribution to AEMET as the author.
 
   - id: aemet-observation
     authority: AEMET
@@ -368,6 +781,20 @@ sources:
     access: documented_api
     automation: enabled
     interval: 10m
+    options:
+      product: observation
+      station: "5402"
+      ttl: 720h
+    notes: >-
+      Automatic station readings. 5402 is Córdoba Aeropuerto.
+
+      Needs the same AEMET_API_KEY, with the same two-step behaviour as
+      `aemet-warnings`.
+
+      Recorded as quality=preliminary, deliberately. These are automatic
+      readings the publisher has not reviewed, and a temperature that turns
+      out to be a sensor fault is still not an official statement. The
+      distinction has to survive all the way to the display.
 
   - id: nasa-firms
     authority: NASA FIRMS
@@ -378,9 +805,28 @@ sources:
     access: documented_api
     automation: enabled
     interval: 10m
+    options:
+      bbox: "-5.8,37.2,-4.0,38.8"
+      source: VIIRS_SNPP_NRT
+      days: "1"
     notes: >-
-      Latency is orbital, not network. Polling faster changes nothing. The FIRMS
-      `confidence` field is product metadata and must not be copied into
+      Active-fire detections over Córdoba province and its approaches.
+
+      NEEDS A FREE KEY: set FIRMS_MAP_KEY, requested at
+      https://firms.modaps.eosdis.nasa.gov/api/area/. Without it the endpoint
+      answers 400 "Invalid MAP_KEY." — the literal placeholder in this URL is
+      the placeholder, not a working key.
+
+      THE KEY IS IN THE URL PATH, which FIRMS chose and eye has to live with.
+      Since a failed fetch quotes the URL into an error, and errors are
+      persisted as source health, the adapter redacts it to [MAP_KEY] before
+      it can reach the store.
+
+      bbox is required by the adapter rather than defaulted, because the
+      alternative to a bounding box here is asking NASA for the planet.
+
+      Latency is orbital, not network. Polling faster changes nothing. The
+      FIRMS `confidence` field is product metadata and must not be copied into
       Record.Confidence.
 
   - id: infoca-risk
@@ -421,13 +867,36 @@ sources:
   - id: miteco-ica
     authority: MITECO
     topic: air_quality
-    url: https://catalogo.datosabiertos.miteco.gob.es/
+    url: https://ica.miteco.es/datos/ica-ultima-hora.csv
     format: csv-dcat
-    license: check-distribution
+    license: CC-BY-4.0
     access: documented_api
     automation: enabled
     interval: 20m
     published_every: 1h
+    options:
+      distribution: https://ica.miteco.es/datos/ica-ultima-hora.csv
+      bbox: "-5.8,37.2,-4.0,38.8"
+    notes: >-
+      The national air-quality index, hourly, per station. 624 rows nationally,
+      narrowed here to Córdoba province by bounding box.
+
+      TLS: THIS HOST SERVES AN INCOMPLETE CHAIN. The root CA (AC RAIZ FNMT-RCM)
+      is publicly trusted and the intermediate (AC Componentes Informáticos) is
+      simply absent from the handshake. Go does not chase AIA, so it cannot
+      complete the chain by itself and the poll fails with "certificate signed
+      by unknown authority". The fix is the operator's, not the code's: install
+      the intermediate from http://www.cert.fnmt.es/certs/ACCOMP.crt. eye will
+      not disable certificate verification to work around somebody's
+      misconfigured server.
+
+      TWO CAVEATS THE PUBLISHER'S OWN DICTIONARY STATES, both preserved. An
+      index computed from fewer pollutants than the full set is published as
+      the same category multiplied by ten (10, 20 … 60) — same rank, but
+      recorded as quality=preliminary rather than official. And 63 of the 624
+      rows carry a BLANK index, which the dictionary does not explain at all;
+      those stations are kept with index_reported:false instead of being
+      quietly dropped.
 
   - id: ign-seismic
     authority: Instituto Geografico Nacional
@@ -438,9 +907,21 @@ sources:
     access: documented_api
     automation: enabled
     interval: 5m
+    options:
+      kind: seismic_event
+      severity: magnitude
     notes: >-
       The catalog page is HTML, but IGN also publishes the last 20 events as
       RSS with geo:lat/geo:long. Verified 2026-08-28.
+
+      kind and severity are set here rather than left to the RSS adapter's
+      defaults. A feed is a transport, not a subject: without `kind` these
+      earthquakes are stored as "news_item" and are invisible to anything
+      looking for seismic events, and without `severity` a magnitude 5.0 ranks
+      exactly as high as a press headline. `severity: magnitude` reads the
+      figure out of IGN's own sentence ("terremoto de magnitud 3.1") and is
+      opt-in for that reason — it must never be applied to a feed whose numbers
+      are not magnitudes.
 
   - id: edistribucion-outages
     authority: e-distribucion
@@ -658,9 +1139,26 @@ sources:
   - id: dipucordoba-ckan
     authority: Diputacion de Cordoba
     topic: civic
-    url: https://transparencia.dipucordoba.es/api-para-desarrolladores/
-    format: ckan-api
+    url: https://dipucordoba-opendata.e-admin.es
+    format: ckan-catalog
     license: per-dataset
     access: documented_api
     automation: enabled
     interval: 24h
+    options:
+      rows: "50"
+    notes: >-
+      ENABLED AND SILENTLY UNPOLLABLE UNTIL 2026-09-03, for two reasons at
+      once. The url pointed at a WordPress page of generic CKAN documentation
+      — /api/3/action/package_list under that host returns a WordPress 404 —
+      and the format said `ckan-api`, a name no adapter has ever answered to,
+      so BuildPollable dropped it without a word.
+
+      The real platform leaks out of that documentation page, which left an
+      example host in the copy. Substituting the province gives a working
+      CKAN 3 API needing no key: 2,242 datasets, 69 municipalities by roughly
+      30 topics each.
+
+      Civic only. There is no transport, bus, schedule or parking family in
+      it; the useful ones are agenda-municipal, noticias, plenos-y-juntas and
+      the complaints register.
