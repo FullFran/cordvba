@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<alert xmlns = "urn:oasis:names:tc:emergency:cap:1.2">
+<identifier>2.49.0.0.724.0.ES.20260902230000.611402ATTA030000</identifier>
+  <sender>http://www.aemet.es</sender>
+  <sent>2026-09-02T23:00:00-00:00</sent>
+  <status>Actual</status>
+  <msgType>Alert</msgType>
+  <scope>Public</scope>
+  <info>
+    <language>es-ES</language>
+    <category>Met</category>
+    <event>Aviso de temperaturas máximas de nivel naranja</event>
+    <responseType>Monitor</responseType>
+    <urgency>Expected</urgency>
+    <severity>Severe</severity>
+    <certainty>Likely</certainty>
+    <eventCode>
+      <valueName>AEMET-Meteoalerta fenomeno</valueName>
+      <value>AT;Temperaturas máximas</value>
+    </eventCode>
+    <effective>2026-09-03T01:00:00+02:00</effective>
+    <onset>2026-09-03T13:00:00+02:00</onset>
+    <expires>2026-09-03T21:00:00+02:00</expires>
+    <senderName>AEMET. Agencia Estatal de Meteorología</senderName>
+    <headline>Aviso de temperaturas máximas de nivel naranja. Campiña cordobesa</headline>
+    <description>Temperatura máxima: 41 ºC</description>
+    <instruction>Esté preparado. Tome precauciones y manténgase informado de la predicción meteorológica más actualizada. Las actividades habituales pueden verse alteradas y las realizadas al aire libre, interrumpidas.</instruction>
+    <web>http://www.aemet.es/es/eltiempo/prediccion/avisos</web>
+    <contact>AEMET</contact>
+    <parameter>
+      <valueName>AEMET-Meteoalerta nivel</valueName>
+      <value>naranja</value>
+    </parameter>
+    <parameter>
+      <valueName>AEMET-Meteoalerta parametro</valueName>
+      <value>TA;Temperatura máxima;41 ºC</value>
+    </parameter>
+    <parameter>
+      <valueName>AEMET-Meteoalerta probabilidad</valueName>
+      <value>40%-70%</value>
+    </parameter>
+    <area>
+      <areaDesc>Campiña cordobesa</areaDesc>
+      <polygon>38.05,-5.15 37.95,-4.55 37.75,-4.25 37.55,-4.35 37.45,-4.85 37.65,-5.35 37.90,-5.45 38.05,-5.15</polygon>
+      <geocode>
+        <valueName>AEMET-Meteoalerta zona</valueName>
+        <value>611402</value>
+      </geocode>
+    </area>
+  </info>
+  <info>
+    <language>en-GB</language>
+    <category>Met</category>
+    <event>Severe high temperature warning</event>
+    <responseType>Monitor</responseType>
+    <urgency>Expected</urgency>
+    <severity>Severe</severity>
+    <certainty>Likely</certainty>
+    <eventCode>
+      <valueName>AEMET-Meteoalerta fenomeno</valueName>
+      <value>AT;Temperaturas máximas</value>
+    </eventCode>
+    <effective>2026-09-03T01:00:00+02:00</effective>
+    <onset>2026-09-03T13:00:00+02:00</onset>
+    <expires>2026-09-03T21:00:00+02:00</expires>
+    <senderName>AEMET. State Meteorological Agency</senderName>
+    <headline>Severe high temperature warning. Campiña cordobesa</headline>
+    <description>Maximum temperature: 41 ºC</description>
+    <instruction>Be prepared. Take precautions and keep up to date with the latest weather forecast.</instruction>
+    <web>http://www.aemet.es/en/eltiempo/prediccion/avisos</web>
+    <contact>AEMET</contact>
+    <parameter>
+      <valueName>AEMET-Meteoalerta nivel</valueName>
+      <value>naranja</value>
+    </parameter>
+    <parameter>
+      <valueName>AEMET-Meteoalerta parametro</valueName>
+      <value>TA;Maximum temperature;41 ºC</value>
+    </parameter>
+    <area>
+      <areaDesc>Campiña cordobesa</areaDesc>
+      <polygon>38.05,-5.15 37.95,-4.55 37.75,-4.25 37.55,-4.35 37.45,-4.85 37.65,-5.35 37.90,-5.45 38.05,-5.15</polygon>
+      <geocode>
+        <valueName>AEMET-Meteoalerta zona</valueName>
+        <value>611402</value>
+      </geocode>
+    </area>
+  </info>
+</alert>

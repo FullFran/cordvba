@@ -222,3 +222,73 @@ func TestGetSurvivesARecorderFailure(t *testing.T) {
 		t.Error("RecordError is nil; the cache failure was swallowed silently")
 	}
 }
+
+// A credential belongs in a header, not in a URL: URLs end up in error
+// messages, in the health table and in the operator's terminal.
+func TestDoSendsRequestHeaders(t *testing.T) {
+	t.Parallel()
+
+	var gotKey, gotAccept, gotUA string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotKey = r.Header.Get("api_key")
+		gotAccept = r.Header.Get("Accept")
+		gotUA = r.Header.Get("User-Agent")
+		_, _ = w.Write([]byte(`{"estado":200}`))
+	}))
+	defer srv.Close()
+
+	resp, err := httpx.New().Do(context.Background(), httpx.Request{
+		URL:     srv.URL,
+		Headers: map[string]string{"api_key": "a.b.c", "Accept": "application/json"},
+	})
+	if err != nil {
+		t.Fatalf("Do() = %v", err)
+	}
+	if gotKey != "a.b.c" {
+		t.Errorf("api_key = %q, want the caller's header", gotKey)
+	}
+	if gotAccept != "application/json" {
+		t.Errorf("Accept = %q", gotAccept)
+	}
+	if !strings.Contains(gotUA, "eye") {
+		t.Errorf("User-Agent = %q, want eye to still identify itself", gotUA)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("StatusCode = %d, want 200", resp.StatusCode)
+	}
+}
+
+// The status code is part of the answer. AEMET says "no data" with a 404 and
+// "wrong key" with a 401, and telling those apart is the difference between an
+// empty poll and a misconfiguration.
+func TestDoReportsStatusCodeOnFailure(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		code int
+	}{
+		{name: "unauthorized", code: http.StatusUnauthorized},
+		{name: "no data", code: http.StatusNotFound},
+		{name: "rate limited", code: http.StatusTooManyRequests},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tc.code)
+			}))
+			defer srv.Close()
+
+			resp, err := httpx.New().Get(context.Background(), srv.URL, httpx.Validators{})
+			if !errors.Is(err, httpx.ErrStatus) {
+				t.Fatalf("Get() = %v, want ErrStatus", err)
+			}
+			if resp.StatusCode != tc.code {
+				t.Errorf("StatusCode = %d, want %d", resp.StatusCode, tc.code)
+			}
+		})
+	}
+}

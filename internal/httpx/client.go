@@ -98,10 +98,31 @@ type Validators struct {
 	LastModified string
 }
 
+// Request describes one outbound fetch: the URL, the cache validators from the
+// previous poll, and any extra headers the source's contract requires.
+//
+// Headers exist for credentials. AEMET takes its key in an `api_key` header,
+// and putting a key in a query string would leak it into every error message,
+// log line and health row that quotes the URL.
+type Request struct {
+	URL        string
+	Validators Validators
+	// Headers are set before the conditional ones, so a caller can never
+	// silently disable If-None-Match by supplying it here.
+	Headers map[string]string
+}
+
 // Response is a fetched body plus the metadata needed to poll politely next
 // time.
 type Response struct {
-	Body       []byte
+	Body []byte
+	// StatusCode is the status the source answered with, set for every
+	// outcome including the failures. A source that says "no data" with a
+	// 404 and "wrong key" with a 401 is telling the caller two very
+	// different things, and ErrStatus alone cannot carry the difference.
+	StatusCode int
+	// Status is the full status line, for messages meant for a human.
+	Status     string
 	Validators Validators
 	// ContentType is the raw header value, charset parameter included. RSS
 	// feeds in the wild are not all UTF-8.
@@ -120,12 +141,25 @@ type Response struct {
 // A 304 returns ErrNotModified with a Response carrying the retained
 // validators, so the caller can record a successful, empty poll.
 func (c *Client) Get(ctx context.Context, url string, v Validators) (*Response, error) {
+	return c.Do(ctx, Request{URL: url, Validators: v})
+}
+
+// Do fetches one request, applying every policy Get applies plus the caller's
+// own headers.
+func (c *Client) Do(ctx context.Context, r Request) (*Response, error) {
+	url, v := r.URL, r.Validators
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
 	}
 
 	req.Header.Set("User-Agent", c.userAgent)
+	for name, value := range r.Headers {
+		if value != "" {
+			req.Header.Set(name, value)
+		}
+	}
 	// Accept-Encoding is deliberately NOT set: net/http negotiates gzip on
 	// its own and decompresses transparently, but only while the caller has
 	// not touched the header. Setting it by hand hands us raw gzip bytes,
@@ -144,6 +178,8 @@ func (c *Client) Get(ctx context.Context, url string, v Validators) (*Response, 
 	defer func() { _ = resp.Body.Close() }()
 
 	out := &Response{
+		StatusCode:  resp.StatusCode,
+		Status:      resp.Status,
 		ContentType: resp.Header.Get("Content-Type"),
 		FetchedAt:   time.Now().UTC(),
 		RetryAfter:  parseRetryAfter(resp.Header.Get("Retry-After")),

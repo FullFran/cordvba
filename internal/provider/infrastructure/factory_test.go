@@ -1,12 +1,16 @@
 package infrastructure_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
 
 	"github.com/FullFran/eye/internal/httpx"
+	provider "github.com/FullFran/eye/internal/provider/domain"
 	providers "github.com/FullFran/eye/internal/provider/infrastructure"
+	"github.com/FullFran/eye/internal/provider/infrastructure/aemet"
+	"github.com/FullFran/eye/internal/provider/infrastructure/firms"
 	source "github.com/FullFran/eye/internal/source/domain"
 )
 
@@ -24,7 +28,7 @@ func TestBuildKnownFormats(t *testing.T) {
 
 	client := httpx.New()
 	for _, format := range providers.SupportedFormats() {
-		p, err := providers.Build(src("s", format, source.AutomationEnabled), client)
+		p, err := providers.Build(src("s", format, source.AutomationEnabled), client, providers.Options{})
 		if err != nil {
 			t.Errorf("Build(%q) = %v", format, err)
 			continue
@@ -38,7 +42,7 @@ func TestBuildKnownFormats(t *testing.T) {
 func TestBuildUnknownFormat(t *testing.T) {
 	t.Parallel()
 
-	_, err := providers.Build(src("s", "carrier-pigeon", source.AutomationEnabled), httpx.New())
+	_, err := providers.Build(src("s", "carrier-pigeon", source.AutomationEnabled), httpx.New(), providers.Options{})
 	if !errors.Is(err, providers.ErrNoAdapter) {
 		t.Fatalf("Build() = %v, want ErrNoAdapter", err)
 	}
@@ -146,5 +150,92 @@ func TestPersonalSourcesAreNotRedistributable(t *testing.T) {
 	personal.Access = source.AccessUndocumentedPersonal
 	if personal.Redistributable() {
 		t.Error("a personal source is redistributable")
+	}
+}
+
+// The five formats this build learned to read. A registry entry marked
+// automation: enabled and left without an adapter fetches nothing and says
+// nothing, which is the one failure mode eye cannot afford.
+func TestCredentialedFormatsAreRegistered(t *testing.T) {
+	t.Parallel()
+
+	for _, format := range []string{"rest-json-two-step", "aemet-warnings", "aemet-observation", "rest-csv", "csv-dcat"} {
+		if !providers.Supported(format) {
+			t.Errorf("format %q still has no adapter", format)
+		}
+	}
+}
+
+// A credential is the machine's, not the registry's. It reaches the adapter
+// through Options so that sources.yaml never has to hold a key.
+func TestCredentialsReachTheAdapters(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name   string
+		format string
+		opts   providers.Options
+		want   error
+	}{
+		{
+			name:   "aemet without a key",
+			format: "aemet-warnings",
+			want:   aemet.ErrMissingAPIKey,
+		},
+		{
+			name:   "firms without a key",
+			format: "rest-csv",
+			want:   firms.ErrMissingMapKey,
+		},
+		{
+			name:   "a two-step source that does not name its product",
+			format: "rest-json-two-step",
+			opts:   providers.Options{AEMETAPIKey: "a.b.c"},
+			want:   aemet.ErrUnspecifiedProduct,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			p, err := providers.Build(src("s", tc.format, source.AutomationEnabled), httpx.New(), tc.opts)
+			if err != nil {
+				t.Fatalf("Build() = %v", err)
+			}
+			if _, err := p.Poll(context.Background()); !errors.Is(err, tc.want) {
+				t.Fatalf("Poll() = %v, want %v", err, tc.want)
+			}
+		})
+	}
+}
+
+// With the product named, the same registry format builds two different
+// adapters, and the observation one is an inventory of stations as well.
+func TestTwoStepFormatResolvesItsProduct(t *testing.T) {
+	t.Parallel()
+
+	warnings := src("aemet-warnings", "rest-json-two-step", source.AutomationEnabled)
+	warnings.Options = map[string]string{"product": "warnings"}
+
+	observation := src("aemet-observation", "rest-json-two-step", source.AutomationEnabled)
+	observation.Options = map[string]string{"product": "observation"}
+
+	opts := providers.Options{AEMETAPIKey: "a.b.c"}
+
+	w, err := providers.Build(warnings, httpx.New(), opts)
+	if err != nil {
+		t.Fatalf("Build(warnings) = %v", err)
+	}
+	if _, ok := w.(provider.EntityProvider); ok {
+		t.Error("the warnings adapter should not claim to publish an inventory")
+	}
+
+	o, err := providers.Build(observation, httpx.New(), opts)
+	if err != nil {
+		t.Fatalf("Build(observation) = %v", err)
+	}
+	if _, ok := o.(provider.EntityProvider); !ok {
+		t.Error("the observation adapter publishes stations and must implement EntityProvider")
 	}
 }

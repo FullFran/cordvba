@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<alert xmlns = "urn:oasis:names:tc:emergency:cap:1.2">
+<identifier>2.49.0.0.724.0.ES.20260902230000.61VV61TOTO040000</identifier>
+  <sender>http://www.aemet.es</sender>
+  <sent>2026-09-02T23:00:00-00:00</sent>
+  <status>Actual</status>
+  <msgType>Update</msgType>
+  <scope>Public</scope>
+  <references>http://www.aemet.es,2.49.0.0.724.0.ES.20260901230000.61VV61TOTO030000,2026-09-01T23:00:00-00:00</references>
+  <info>
+    <language>es-ES</language>
+    <category>Met</category>
+    <event>Sin aviso de tormentas</event>
+    <responseType>None</responseType>
+    <urgency>Future</urgency>
+    <severity>Minor</severity>
+    <certainty>Likely</certainty>
+    <eventCode>
+      <valueName>AEMET-Meteoalerta fenomeno</valueName>
+      <value>TO;Tormentas</value>
+    </eventCode>
+    <effective>2026-09-03T01:00:00+02:00</effective>
+    <onset>2026-09-03T00:00:00+02:00</onset>
+    <expires>2026-09-04T23:59:59+02:00</expires>
+    <senderName>AEMET. Agencia Estatal de Meteorología</senderName>
+    <headline>Sin aviso de tormentas</headline>
+    <description>No se prevén tormentas que superen los umbrales de aviso.</description>
+    <instruction></instruction>
+    <web>http://www.aemet.es/es/eltiempo/prediccion/avisos</web>
+    <contact>AEMET</contact>
+    <parameter>
+      <valueName>AEMET-Meteoalerta nivel</valueName>
+      <value>verde</value>
+    </parameter>
+    <parameter>
+      <valueName>AEMET-Meteoalerta parametro</valueName>
+      <value>TO;Tormentas;</value>
+    </parameter>
+    <area>
+      <areaDesc>Sierra y Pedroches</areaDesc>
+      <polygon>38.72,-5.35 38.60,-4.55 38.30,-4.30 38.10,-4.75 38.25,-5.55 38.72,-5.35</polygon>
+      <geocode>
+        <valueName>AEMET-Meteoalerta zona</valueName>
+        <value>611401</value>
+      </geocode>
+    </area>
+    <area>
+      <areaDesc>Subbética cordobesa</areaDesc>
+      <polygon>37.60,-4.55 37.55,-4.05 37.30,-4.10 37.25,-4.60 37.60,-4.55</polygon>
+      <geocode>
+        <valueName>AEMET-Meteoalerta zona</valueName>
+        <value>611403</value>
+      </geocode>
+    </area>
+  </info>
+</alert>

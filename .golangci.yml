@@ -39,12 +39,16 @@ linters:
       # appear in code and fixtures. They are not English misspellings.
       ignore-rules:
         - accidentes
+        - instituto
         - responsable
         - propietario
         - denominacion
         - descripcion
         - nombre
         - titulo
+        - observacion
+        - convencional
+        - temperaturas
     revive:
       rules:
         - name: exported

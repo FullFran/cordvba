@@ -116,6 +116,11 @@ func (r *runtime) pollable(topics ...string) ([]provider.Provider, []source.Sour
 	}
 	return providers.BuildPollable(selected, r.client, providers.Options{
 		AllowPersonal: r.cfg.AllowPersonalSources,
+		// The two sources that need a credential get it from the machine,
+		// never from the registry. An absent key does not hide the
+		// source; the adapter reports it by name on the first poll.
+		AEMETAPIKey: r.cfg.AEMETAPIKey,
+		FIRMSMapKey: r.cfg.FIRMSMapKey,
 	})
 }
 
