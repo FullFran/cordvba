@@ -5,11 +5,15 @@ package httpx
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -43,6 +47,14 @@ type Client struct {
 	userAgent string
 	maxBytes  int64
 	recorder  Recorder
+
+	// extraCAFile is a PEM file of additional certificate authorities to
+	// trust, applied by NewWithOptions. It is a path rather than a pool so
+	// that a bad path is reported as the configuration error it is.
+	extraCAFile string
+	// buildErr carries a failure an Option could not return, so
+	// NewWithOptions can surface it instead of New silently ignoring it.
+	buildErr error
 }
 
 // Option customises a Client.
@@ -69,6 +81,29 @@ func WithHTTPClient(h *http.Client) Option {
 	return func(c *Client) { c.http = h }
 }
 
+// WithExtraCAFile trusts the certificate authorities in a PEM file, in addition
+// to the system pool.
+//
+// It exists for one specific and unglamorous reason. Several Spanish
+// public-sector servers send an INCOMPLETE certificate chain: MITECO's
+// air-quality host, for instance, omits the FNMT-RCM intermediate that links
+// its certificate to a root the system already trusts. Browsers paper over this
+// by fetching the missing certificate from the address in the AIA extension.
+// Go does not, by design, so the handshake fails with "certificate signed by
+// unknown authority" against a server whose certificate is perfectly valid.
+//
+// Supplying the missing intermediate COMPLETES a chain. It is the opposite of
+// InsecureSkipVerify, which eye does not have and will not grow: every
+// certificate is still verified, against a pool the operator widened on
+// purpose, one named file at a time.
+//
+// An empty path means "not configured" and changes nothing. Anything else that
+// cannot be read, or that contains no certificate, is an error — a typo in this
+// path must not degrade into a source that fails for a reason nobody can find.
+func WithExtraCAFile(path string) Option {
+	return func(c *Client) { c.extraCAFile = strings.TrimSpace(path) }
+}
+
 // WithRecorder stores every successful payload as evidence.
 //
 // Recording here rather than in each provider means the bytes kept are exactly
@@ -79,7 +114,28 @@ func WithRecorder(r Recorder) Option {
 }
 
 // New builds a Client. The zero-option form is the one providers should use.
+//
+// Options that can fail are ignored here. Use NewWithOptions when any of them
+// can — today that is WithExtraCAFile — so the failure is returned rather than
+// swallowed.
 func New(opts ...Option) *Client {
+	c, _ := build(opts)
+	return c
+}
+
+// NewWithOptions builds a Client and reports an option that could not be
+// applied.
+func NewWithOptions(opts ...Option) (*Client, error) {
+	c, err := build(opts)
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+// build applies the options and wires anything that needs assembling after
+// them, such as the TLS trust pool.
+func build(opts []Option) (*Client, error) {
 	c := &Client{
 		http:      &http.Client{Timeout: DefaultTimeout},
 		userAgent: DefaultUserAgent,
@@ -88,7 +144,52 @@ func New(opts ...Option) *Client {
 	for _, opt := range opts {
 		opt(c)
 	}
-	return c
+	if c.buildErr != nil {
+		return nil, c.buildErr
+	}
+	if err := c.applyExtraCAs(); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+// applyExtraCAs widens the client's trust pool with the operator's PEM file.
+func (c *Client) applyExtraCAs() error {
+	if c.extraCAFile == "" {
+		return nil
+	}
+
+	pem, err := os.ReadFile(c.extraCAFile) // #nosec G304 -- operator-supplied CA path, never request input
+	if err != nil {
+		return fmt.Errorf("read extra CA file %s: %w", c.extraCAFile, err)
+	}
+
+	// Start from the system pool rather than replacing it. The point is to
+	// ADD a missing intermediate, not to narrow eye down to trusting one
+	// authority and nothing else.
+	pool, err := x509.SystemCertPool()
+	if err != nil || pool == nil {
+		pool = x509.NewCertPool()
+	}
+	if !pool.AppendCertsFromPEM(pem) {
+		return fmt.Errorf("extra CA file %s contains no certificate", c.extraCAFile)
+	}
+
+	transport, ok := c.http.Transport.(*http.Transport)
+	if !ok || transport == nil {
+		base, _ := http.DefaultTransport.(*http.Transport)
+		transport = base.Clone()
+	} else {
+		transport = transport.Clone()
+	}
+	if transport.TLSClientConfig == nil {
+		transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12}
+	} else {
+		transport.TLSClientConfig = transport.TLSClientConfig.Clone()
+	}
+	transport.TLSClientConfig.RootCAs = pool
+	c.http.Transport = transport
+	return nil
 }
 
 // Validators carries the cache validators a source returned last time, so the

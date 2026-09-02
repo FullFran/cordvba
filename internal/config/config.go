@@ -46,6 +46,17 @@ type Config struct {
 	// application of their own.
 	CORSOrigin string
 
+	// ExtraCAFile is a PEM file of certificate authorities to trust in
+	// addition to the system pool.
+	//
+	// It exists because several Spanish public-sector servers send an
+	// incomplete certificate chain — MITECO's air-quality host omits the
+	// FNMT-RCM intermediate — and Go does not fetch the missing certificate
+	// the way a browser does. Pointing this at the published intermediate
+	// completes the chain. It is not a way to skip verification, and eye
+	// has no such option.
+	ExtraCAFile string
+
 	// AllowPersonalSources enables sources marked undocumented_personal.
 	//
 	// The registry saying "enabled" is not enough for these on purpose. They
@@ -67,6 +78,8 @@ func Load() (Config, error) {
 		LogLevel:    strings.ToLower(envOr("EYE_LOG_LEVEL", "info")),
 		AEMETAPIKey: os.Getenv("AEMET_API_KEY"),
 		FIRMSMapKey: os.Getenv("FIRMS_MAP_KEY"),
+
+		ExtraCAFile: strings.TrimSpace(os.Getenv("EYE_EXTRA_CA_FILE")),
 
 		APIToken:   strings.TrimSpace(os.Getenv("EYE_API_TOKEN")),
 		CORSOrigin: strings.TrimSpace(os.Getenv("EYE_CORS_ORIGIN")),

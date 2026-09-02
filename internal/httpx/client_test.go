@@ -2,9 +2,13 @@ package httpx_test
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -290,5 +294,100 @@ func TestDoReportsStatusCodeOnFailure(t *testing.T) {
 				t.Errorf("StatusCode = %d, want %d", resp.StatusCode, tc.code)
 			}
 		})
+	}
+}
+
+// writePEM saves a certificate as PEM and returns the path.
+func writePEM(t *testing.T, cert *x509.Certificate) string {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), "extra-ca.pem")
+	encoded := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
+	if err := os.WriteFile(path, encoded, 0o600); err != nil {
+		t.Fatalf("write pem: %v", err)
+	}
+	return path
+}
+
+// A server whose certificate is not in the system pool must be refused. This is
+// the control for the test below it: without it, WithExtraCAFile could be doing
+// nothing and both tests would still pass.
+func TestGetRefusesAnUntrustedCertificate(t *testing.T) {
+	t.Parallel()
+
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("secret"))
+	}))
+	t.Cleanup(srv.Close)
+
+	_, err := httpx.New().Get(t.Context(), srv.URL, httpx.Validators{})
+	if err == nil {
+		t.Fatal("an unknown certificate authority was accepted")
+	}
+}
+
+// TestWithExtraCAFileCompletesAChain is why this option exists.
+//
+// Several Spanish public-sector servers — MITECO's air-quality host among them —
+// send an INCOMPLETE certificate chain, omitting the FNMT-RCM intermediate. The
+// root is publicly trusted and the intermediate is published; Go simply does not
+// fetch it, because it does no AIA chasing. Supplying it is completing a chain,
+// not disabling verification, and the difference is the whole point.
+func TestWithExtraCAFileCompletesAChain(t *testing.T) {
+	t.Parallel()
+
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("data"))
+	}))
+	t.Cleanup(srv.Close)
+
+	client, err := httpx.NewWithOptions(httpx.WithExtraCAFile(writePEM(t, srv.Certificate())))
+	if err != nil {
+		t.Fatalf("httpx.NewWithOptions() = %v", err)
+	}
+
+	resp, err := client.Get(t.Context(), srv.URL, httpx.Validators{})
+	if err != nil {
+		t.Fatalf("Get() = %v", err)
+	}
+	if got := string(resp.Body); got != "data" {
+		t.Errorf("body = %q, want %q", got, "data")
+	}
+}
+
+// A missing or unreadable CA file is an error the operator must see. Silently
+// carrying on with the system pool would turn a typo in a path into a source
+// that fails for a reason nobody can find.
+func TestWithExtraCAFileReportsAMissingFile(t *testing.T) {
+	t.Parallel()
+
+	_, err := httpx.NewWithOptions(httpx.WithExtraCAFile(filepath.Join(t.TempDir(), "nope.pem")))
+	if err == nil {
+		t.Fatal("a missing CA file was accepted")
+	}
+}
+
+// A file that exists but holds no certificate is the same class of mistake, and
+// is worse to miss: it looks configured.
+func TestWithExtraCAFileRejectsAFileWithNoCertificate(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "empty.pem")
+	if err := os.WriteFile(path, []byte("not a certificate\n"), 0o600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	_, err := httpx.NewWithOptions(httpx.WithExtraCAFile(path))
+	if err == nil {
+		t.Fatal("a file with no certificate in it was accepted")
+	}
+}
+
+// An empty path means "not configured" and must build a normal client.
+func TestWithExtraCAFileIgnoresAnEmptyPath(t *testing.T) {
+	t.Parallel()
+
+	if _, err := httpx.NewWithOptions(httpx.WithExtraCAFile("  ")); err != nil {
+		t.Fatalf("an unset EYE_EXTRA_CA_FILE broke the client: %v", err)
 	}
 }

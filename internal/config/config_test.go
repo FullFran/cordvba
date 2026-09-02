@@ -131,3 +131,33 @@ func TestLoadCORSOriginIsConfigurable(t *testing.T) {
 		t.Errorf("CORSOrigin = %q", cfg.CORSOrigin)
 	}
 }
+
+// TestLoadReadsTheExtraCAFile checks the operator can widen the trust pool.
+//
+// It is one path, and it exists for the servers that send an incomplete
+// certificate chain rather than for anything general. Nothing about it disables
+// verification.
+func TestLoadReadsTheExtraCAFile(t *testing.T) {
+	t.Setenv("EYE_EXTRA_CA_FILE", "  /etc/ssl/extra/fnmt-intermediate.pem  ")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load() = %v", err)
+	}
+	if want := "/etc/ssl/extra/fnmt-intermediate.pem"; cfg.ExtraCAFile != want {
+		t.Errorf("ExtraCAFile = %q, want %q", cfg.ExtraCAFile, want)
+	}
+}
+
+// An unset variable must leave the client on the system pool alone.
+func TestLoadLeavesTheExtraCAFileEmptyByDefault(t *testing.T) {
+	t.Setenv("EYE_EXTRA_CA_FILE", "")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load() = %v", err)
+	}
+	if cfg.ExtraCAFile != "" {
+		t.Errorf("ExtraCAFile = %q, want empty", cfg.ExtraCAFile)
+	}
+}

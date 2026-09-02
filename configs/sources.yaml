@@ -884,11 +884,20 @@ sources:
       TLS: THIS HOST SERVES AN INCOMPLETE CHAIN. The root CA (AC RAIZ FNMT-RCM)
       is publicly trusted and the intermediate (AC Componentes Informáticos) is
       simply absent from the handshake. Go does not chase AIA, so it cannot
-      complete the chain by itself and the poll fails with "certificate signed
-      by unknown authority". The fix is the operator's, not the code's: install
-      the intermediate from http://www.cert.fnmt.es/certs/ACCOMP.crt. eye will
-      not disable certificate verification to work around somebody's
-      misconfigured server.
+      complete the chain by itself, and the poll fails with "certificate signed
+      by unknown authority" against a certificate that is perfectly valid.
+
+      THE FIX, verified 2026-09-03 — 13 Córdoba stations returned:
+
+        curl -o /tmp/accomp.crt http://www.cert.fnmt.es/certs/ACCOMP.crt
+        openssl x509 -inform DER -in /tmp/accomp.crt \
+          -out ~/.config/eye/fnmt-intermediate.pem
+        export EYE_EXTRA_CA_FILE=~/.config/eye/fnmt-intermediate.pem
+
+      That COMPLETES a chain. It is the opposite of disabling verification,
+      which eye does not offer and will not grow: every certificate is still
+      checked, against a pool the operator widened on purpose, one named file
+      at a time.
 
       TWO CAVEATS THE PUBLISHER'S OWN DICTIONARY STATES, both preserved. An
       index computed from fewer pollutants than the full set is published as
