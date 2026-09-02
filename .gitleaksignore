@@ -15,5 +15,7 @@
 #
 # The literal is gone from the working tree — it is a named constant now, and
 # deliberately not key-shaped. This entry covers the commit that already carries
-# it, which cannot be rewritten once the branch is shared.
-5315808c05a25093770ad8b5d43fddbf1e761f95:internal/provider/infrastructure/firms/firms_test.go:generic-api-key:361
+# it. Note the commit hash: rewriting this branch's history changes it, and a
+# fingerprint pointing at a commit that no longer exists silently stops
+# suppressing anything.
+107c9ad181e8c50ff06c19949ffc6c0c0acadd88:internal/provider/infrastructure/firms/firms_test.go:generic-api-key:361
