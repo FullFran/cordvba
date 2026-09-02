@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -144,6 +146,10 @@ func (p *Provider) toRecord(item Item, fetchedAt time.Time, rawHash string) (obs
 	if item.Published.IsZero() {
 		payload["published_missing"] = true
 	}
+	if magnitude, ok := p.magnitude(item); ok {
+		payload["magnitude"] = magnitude
+		rec.Severity = severityForMagnitude(magnitude)
+	}
 	if raw, err := json.Marshal(payload); err == nil {
 		rec.Payload = raw
 	}
@@ -155,7 +161,17 @@ func (p *Provider) toRecord(item Item, fetchedAt time.Time, rawHash string) (obs
 }
 
 // kind labels the record by what the feed publishes.
+//
+// The registry wins when it says something. A syndication feed is a transport,
+// not a subject: IGN publishes earthquakes over RSS, and calling those
+// "news_item" because they arrived as RSS makes them unfindable by anything
+// looking for seismic events. Everything else falls back to the topic, so a
+// feed that says nothing keeps the behaviour it has always had.
 func (p *Provider) kind() string {
+	if declared := strings.TrimSpace(p.src.Options["kind"]); declared != "" {
+		return declared
+	}
+
 	switch p.src.Topic {
 	case "events":
 		return "event_listing"
@@ -163,6 +179,60 @@ func (p *Provider) kind() string {
 		return "official_publication"
 	default:
 		return "news_item"
+	}
+}
+
+// magnitudePattern reads the magnitude out of the sentence IGN writes for every
+// earthquake: "Se ha producido un terremoto de magnitud 3.1 en NE CEHEGÍN.MU".
+//
+// It is anchored on the word rather than on any number in the text, because a
+// headline is full of numbers and none of the others is a magnitude.
+var magnitudePattern = regexp.MustCompile(`(?i)magnitud[a-z]*\s*:?\s*([0-9]+(?:[.,][0-9]+)?)`)
+
+// magnitude extracts a stated magnitude, and only for a source that asked.
+//
+// It is opt-in per registry entry (`options: {severity: magnitude}`) rather
+// than applied everywhere, because guessing severity from a number found in a
+// press headline would be exactly the kind of invention this project does not
+// do. A feed that states a magnitude may be read this way; one that does not,
+// may not.
+func (p *Provider) magnitude(item Item) (float64, bool) {
+	if !strings.EqualFold(strings.TrimSpace(p.src.Options["severity"]), "magnitude") {
+		return 0, false
+	}
+
+	match := magnitudePattern.FindStringSubmatch(item.Title + " " + item.Description)
+	if match == nil {
+		return 0, false
+	}
+
+	value, err := strconv.ParseFloat(strings.Replace(match[1], ",", ".", 1), 64)
+	if err != nil || value < 0 {
+		return 0, false
+	}
+	return value, true
+}
+
+// severityForMagnitude maps the Richter-like scale the publisher states onto
+// eye's cross-source severity scale.
+//
+// The boundaries follow the usual reading of the moment magnitude scale: below
+// 2 is only instrumentally detectable, 4 is where damage becomes possible, and
+// 5 is where it becomes likely. They are coarse on purpose — the point is that
+// a magnitude 5 does not sit in the same rank as a press headline, not that eye
+// has an opinion about seismology.
+func severityForMagnitude(magnitude float64) observation.Severity {
+	switch {
+	case magnitude >= 5:
+		return observation.SeverityCritical
+	case magnitude >= 4:
+		return observation.SeverityHigh
+	case magnitude >= 3:
+		return observation.SeverityModerate
+	case magnitude >= 2:
+		return observation.SeverityLow
+	default:
+		return observation.SeverityInfo
 	}
 }
 

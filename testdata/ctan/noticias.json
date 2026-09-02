@@ -1,0 +1,88 @@
+{
+ "noticias": [
+  {
+   "idNoticia": "161",
+   "idCategoria": "2",
+   "titulo": "Anulación de parada en la línea M-220 del 6 al 10 de septiembre",
+   "subTitulo": "Anulación de las paradas en Villa del Río, celebración Feria 2026",
+   "resumen": "Por motivos de la celebración de la feria y fiestas en honor de Ntra. Sra. Virgen de la Estrella Coronada, durante los días de 6 al 11 de septiembre de 2026, se procederá a anular las paradas existentes, realizándose la parada en la Glorieta sita enl Polígono industrial Virgen de la Estrella, de  Villa del Río.\r\nDisculpen las molestias.",
+   "fechaInicio": "2026-08-24",
+   "fechafin": "2026-09-13",
+   "fechafinFija": "2026-09-13",
+   "lineas": "11, ",
+   "novedad": "1",
+   "categoria": "Parada no operativa",
+   "orden": "2"
+  },
+  {
+   "idNoticia": "78",
+   "idCategoria": "4",
+   "titulo": "Ganadores Concursos SEM 2020",
+   "subTitulo": "Concursos con motivo de la Semana Europea de la Movilidad 2020",
+   "resumen": "Tras la reunión del jurado de los premios SEM 2020 del Consorcio de Transporte Metropolitano del Área de Córdoba, el fallo del jurado nombra como ganadores de los concursos:",
+   "fechaInicio": "2020-09-22",
+   "fechafin": null,
+   "fechafinFija": "2020-12-31",
+   "lineas": "10, 11, 12, 13, 15, 16, 17, 18, 8, 9, ",
+   "novedad": "0",
+   "categoria": "General",
+   "orden": "2"
+  },
+  {
+   "idNoticia": "77",
+   "idCategoria": "4",
+   "titulo": "Campaña mundial de apoyo al transporte público y lucha contra el cambio climático",
+   "subTitulo": "Cambio climático",
+   "resumen": "Campaña mundial de apoyo al transporte público y lucha contra el cambio climático promovida por la entidad UITP, entidad  creada para promover las mejores prácticas y crear cooperación entre los miembros para ofrecer alternativas para la movilidad de las ciudades.",
+   "fechaInicio": "2019-09-17",
+   "fechafin": null,
+   "fechafinFija": "2020-06-15",
+   "lineas": "10, 11, 12, 13, 15, 16, 17, 18, 8, 9, ",
+   "novedad": "0",
+   "categoria": "General",
+   "orden": "2"
+  },
+  {
+   "idNoticia": "67",
+   "idCategoria": "3",
+   "titulo": "Ganadores Concursos Fotografía Digital y Relato Corto ",
+   "subTitulo": "Actos Semana Europea de la Movilidad 2018",
+   "resumen": "Ganadores del 6ª Concurso de Fotografía Digital y 5ª Concurso de Relato Corto con motivo de la Semana Europea de la Movilidad 2018",
+   "fechaInicio": "2018-09-18",
+   "fechafin": null,
+   "fechafinFija": "2018-11-18",
+   "lineas": "10, 11, 12, 13, 15, 16, 17, 18, 8, 9, ",
+   "novedad": "0",
+   "categoria": "Concursos",
+   "orden": "2"
+  },
+  {
+   "idNoticia": "66",
+   "idCategoria": "2",
+   "titulo": "Anulación temporal de parada metropolitana en Pedro Abad",
+   "subTitulo": "Anulación temporal de parada metropolitana en Pedro Abad",
+   "resumen": "Anulación Temporal de parada de Transporte público en Pedro Abad los días del 13 al 16 de septiembre de 2018, ambos inclusives.\r\n\r\nQueda anulada los días 13, 14, 15 y 16 de septiembre de 2018, la parada de autobuses de la Calle Espino-Calle Santa ela María, en dirección a Córdoba.Con motivo de la celebración de la Feria y Fiestas de Pedro Abad.\r\n\r\nDisculpen las molestias.",
+   "fechaInicio": "2018-08-23",
+   "fechafin": null,
+   "fechafinFija": "2018-09-17",
+   "lineas": null,
+   "novedad": "0",
+   "categoria": "Parada no operativa",
+   "orden": "2"
+  },
+  {
+   "idNoticia": "53",
+   "idCategoria": "1",
+   "titulo": "Anulación temporal de parada en Pedro Abad",
+   "subTitulo": "Anulación de parada en Pedro Abad por celebración de carrera solidaria \"Corre por una causa\"",
+   "resumen": "Parada  frente a Farmacia anulada, el próximo 27 de enero de 2018, en el sentido Montoro para el servicio de las 10:10 h",
+   "fechaInicio": "2018-01-25",
+   "fechafin": null,
+   "fechafinFija": null,
+   "lineas": null,
+   "novedad": "0",
+   "categoria": "Ruta alternativa",
+   "orden": "2"
+  }
+ ]
+}

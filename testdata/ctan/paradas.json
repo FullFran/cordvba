@@ -1,0 +1,92 @@
+{
+ "paradas": [
+  {
+   "idParada": "50",
+   "idNucleo": "73",
+   "idZona": "B",
+   "nombre": "Alcolea (Hostal)",
+   "latitud": "37.933357230",
+   "longitud": "-4.670696663",
+   "idMunicipio": "6",
+   "municipio": "Córdoba",
+   "nucleo": "Alcolea"
+  },
+  {
+   "idParada": "133",
+   "idNucleo": "73",
+   "idZona": "B",
+   "nombre": "Alcolea (Ronda De Salida)",
+   "latitud": "37.9359497624",
+   "longitud": "-4.67001020015",
+   "idMunicipio": "6",
+   "municipio": "Córdoba",
+   "nucleo": "Alcolea"
+  },
+  {
+   "idParada": "48",
+   "idNucleo": "73",
+   "idZona": "B",
+   "nombre": "Alcolea (Supermercado Dia)",
+   "latitud": "37.930988440",
+   "longitud": "-4.676291650",
+   "idMunicipio": "6",
+   "municipio": "Córdoba",
+   "nucleo": "Alcolea"
+  },
+  {
+   "idParada": "22",
+   "idNucleo": "49",
+   "idZona": "C",
+   "nombre": "Aldea Quintana",
+   "latitud": "37.712233380",
+   "longitud": "-4.868131316",
+   "idMunicipio": "4",
+   "municipio": "La Carlota",
+   "nucleo": "Aldea Quintana"
+  },
+  {
+   "idParada": "107",
+   "idNucleo": "233",
+   "idZona": "D",
+   "nombre": "Almacén (El Cortinilla)",
+   "latitud": "37.9606930094",
+   "longitud": "-4.54993743989",
+   "idMunicipio": "16",
+   "municipio": "Villafranca De Córdoba",
+   "nucleo": "Villafranca De Córdoba"
+  },
+  {
+   "idParada": "24",
+   "idNucleo": "23",
+   "idZona": "C",
+   "nombre": "Arrecife 1",
+   "latitud": "37.703971790",
+   "longitud": "-4.884157204",
+   "idMunicipio": "4",
+   "municipio": "La Carlota",
+   "nucleo": "El Arrecife"
+  },
+  {
+   "idParada": "153",
+   "idNucleo": "23",
+   "idZona": "C",
+   "nombre": "Arrecife 2",
+   "latitud": "37.7011810992",
+   "longitud": "-4.88979519572",
+   "idMunicipio": "4",
+   "municipio": "La Carlota",
+   "nucleo": "El Arrecife"
+  },
+  {
+   "idParada": "26",
+   "idNucleo": "23",
+   "idZona": "C",
+   "nombre": "Arrecife 3",
+   "latitud": "37.698482740",
+   "longitud": "-4.895695753",
+   "idMunicipio": "4",
+   "municipio": "La Carlota",
+   "nucleo": "El Arrecife"
+  }
+ ]
+}

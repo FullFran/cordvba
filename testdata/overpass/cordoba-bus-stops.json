@@ -1,0 +1,179 @@
+{
+ "version": 0.6,
+ "generator": "Overpass API 0.7.62.11 87bfad18",
+ "osm3s": {
+  "timestamp_osm_base": "2026-09-02T22:44:55Z",
+  "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+ },
+ "elements": [
+  {
+   "type": "node",
+   "id": 1657890577,
+   "lat": 37.8975133,
+   "lon": -4.7534886,
+   "tags": {
+    "bench": "yes",
+    "bin": "yes",
+    "bus": "yes",
+    "highway": "bus_stop",
+    "lit": "no",
+    "name": "Fátima",
+    "public_transport": "platform",
+    "ref": "105",
+    "shelter": "yes",
+    "tactile_paving": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 1707006371,
+   "lat": 37.8988295,
+   "lon": -4.7739324,
+   "tags": {
+    "bench": "yes",
+    "bin": "yes",
+    "bus": "yes",
+    "highway": "bus_stop",
+    "lit": "no",
+    "name": "Virgen Angustias 3ª DC",
+    "public_transport": "platform",
+    "ref": "288",
+    "shelter": "yes",
+    "tactile_paving": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 1707006912,
+   "lat": 37.8996614,
+   "lon": -4.777034,
+   "tags": {
+    "bench": "yes",
+    "bin": "yes",
+    "bus": "yes",
+    "check_date:shelter": "2026-04-06",
+    "highway": "bus_stop",
+    "lit": "yes",
+    "name": "Virgen Angustias 2ª DC",
+    "public_transport": "platform",
+    "ref": "287",
+    "shelter": "yes",
+    "tactile_paving": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2043185474,
+   "lat": 37.9138213,
+   "lon": -4.7176759,
+   "tags": {
+    "bench": "yes",
+    "bin": "yes",
+    "bus": "yes",
+    "highway": "bus_stop",
+    "lit": "yes",
+    "name": "Campus de Rabanales",
+    "public_transport": "platform",
+    "ref": "808",
+    "shelter": "yes",
+    "tactile_paving": "no"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2150098699,
+   "lat": 37.894732,
+   "lon": -4.7841,
+   "tags": {
+    "bus": "yes",
+    "highway": "bus_stop",
+    "name": "Goya 2ª",
+    "public_transport": "platform",
+    "ref": "130"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2150098703,
+   "lat": 37.8949339,
+   "lon": -4.7839688,
+   "tags": {
+    "bench": "yes",
+    "bus": "yes",
+    "highway": "bus_stop",
+    "name": "Avenida brillante Goya",
+    "public_transport": "platform",
+    "ref": "148",
+    "shelter": "yes",
+    "tactile_paving": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2153841977,
+   "lat": 37.8937423,
+   "lon": -4.7625108,
+   "tags": {
+    "bench": "yes",
+    "bin": "no",
+    "bus": "yes",
+    "highway": "bus_stop",
+    "lit": "no",
+    "name": "Sagunto (Los Apóstoles)",
+    "public_transport": "platform",
+    "ref": "173",
+    "shelter": "yes",
+    "tactile_paving": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2195839177,
+   "lat": 37.8983529,
+   "lon": -4.7598247,
+   "tags": {
+    "bench": "yes",
+    "bin": "yes",
+    "bus": "yes",
+    "highway": "bus_stop",
+    "name": "Virgen de Fátima 1ª",
+    "public_transport": "platform",
+    "ref": "289",
+    "shelter": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 914978713,
+   "lat": 37.8808681,
+   "lon": -4.8529387,
+   "tags": {
+    "bench": "yes",
+    "bin": "yes",
+    "bus": "yes",
+    "description": "Shuttle",
+    "description:en": "Stop for the shuttle bus up to Medina al-Zahra archeological site",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "shelter": "no"
+   }
+  },
+  {
+   "type": "node",
+   "id": 914978716,
+   "lat": 37.8873731,
+   "lon": -4.8692584,
+   "tags": {
+    "bench": "no",
+    "bin": "yes",
+    "bus": "yes",
+    "description": "Shuttle",
+    "description:en": "Shuttle bus down to the parking lot at the ticket office",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "shelter": "no",
+    "tactile_paving": "no"
+   }
+  }
+ ]
+}
