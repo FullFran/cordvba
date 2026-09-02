@@ -84,7 +84,7 @@ func detections(t *testing.T) ([]observation.Record, string) {
 	srv := serve(t, http.StatusOK, fixture(t, "andalucia_24h.csv"), &gotPath)
 
 	p := firms.New(src(srv.URL, map[string]string{"source": "VIIRS_SNPP_NRT", "days": "1"}),
-		httpx.New(), "0123456789abcdef0123456789abcdef")
+		httpx.New(), testMapKey)
 	records, err := p.Poll(context.Background())
 	if err != nil {
 		t.Fatalf("Poll() = %v", err)
@@ -149,7 +149,7 @@ func TestPollProvenanceCarriesNoCredential(t *testing.T) {
 		r.Provenance.License == "" || r.Provenance.SourceURL == "" {
 		t.Errorf("incomplete provenance: %+v", r.Provenance)
 	}
-	if strings.Contains(r.Provenance.SourceURL, "0123456789abcdef") {
+	if strings.Contains(r.Provenance.SourceURL, testMapKey) {
 		t.Errorf("the map key leaked into provenance: %q", r.Provenance.SourceURL)
 	}
 }
@@ -161,7 +161,7 @@ func TestConfidenceStaysInThePayload(t *testing.T) {
 	t.Parallel()
 
 	srv := serve(t, http.StatusOK, fixture(t, "andalucia_24h.csv"), nil)
-	records, err := firms.New(src(srv.URL, nil), httpx.New(), "0123456789abcdef0123456789abcdef").
+	records, err := firms.New(src(srv.URL, nil), httpx.New(), testMapKey).
 		Poll(context.Background())
 	if err != nil {
 		t.Fatalf("Poll() = %v", err)
@@ -223,7 +223,7 @@ func TestSeverityTracksFireRadiativePower(t *testing.T) {
 			body := header + "37.8,-4.8,340.0,0.4,0.4,2026-09-01,1301,N,nominal,2.0NRT,300.0," + tc.frp + ",D\n"
 			srv := serve(t, http.StatusOK, []byte(body), nil)
 
-			records, err := firms.New(src(srv.URL, nil), httpx.New(), "0123456789abcdef0123456789abcdef").
+			records, err := firms.New(src(srv.URL, nil), httpx.New(), testMapKey).
 				Poll(context.Background())
 			if err != nil {
 				t.Fatalf("Poll() = %v", err)
@@ -247,7 +247,7 @@ func TestReadsColumnsByName(t *testing.T) {
 		"37.85,-4.79,338.4,0.45,0.42,2026-09-01,1302,N,VIIRS,high,2.0NRT,302.1,44.2,D\n"
 	srv := serve(t, http.StatusOK, []byte(body), nil)
 
-	records, err := firms.New(src(srv.URL, nil), httpx.New(), "0123456789abcdef0123456789abcdef").
+	records, err := firms.New(src(srv.URL, nil), httpx.New(), testMapKey).
 		Poll(context.Background())
 	if err != nil {
 		t.Fatalf("Poll() = %v", err)
@@ -319,7 +319,7 @@ func TestErrorEmptyAndMalformed(t *testing.T) {
 			t.Parallel()
 
 			srv := serve(t, tc.status, tc.body, nil)
-			got, err := firms.New(src(srv.URL, nil), httpx.New(), "0123456789abcdef0123456789abcdef").
+			got, err := firms.New(src(srv.URL, nil), httpx.New(), testMapKey).
 				Poll(context.Background())
 
 			if tc.wantErr != nil {
@@ -343,7 +343,7 @@ func TestMissingBoundingBox(t *testing.T) {
 	t.Parallel()
 
 	s := src("https://firms.modaps.eosdis.nasa.gov", map[string]string{"bbox": " "})
-	_, err := firms.New(s, httpx.New(), "0123456789abcdef0123456789abcdef").Poll(context.Background())
+	_, err := firms.New(s, httpx.New(), testMapKey).Poll(context.Background())
 	if !errors.Is(err, firms.ErrFIRMS) {
 		t.Fatalf("Poll() = %v, want ErrFIRMS", err)
 	}
@@ -355,21 +355,27 @@ func TestMissingBoundingBox(t *testing.T) {
 // FIRMS puts the credential in the URL path, and the transport quotes URLs back
 // in its errors. That error is persisted as the source's last failure, so the
 // key must not survive the trip.
+// testMapKey stands in for a FIRMS credential.
+//
+// It is deliberately not key-shaped. A plausible-looking hex string here was
+// reported by the repository's secret scanner as a leaked credential, and a
+// scanner that cries wolf on test fixtures is a scanner people start ignoring.
+// Nothing under test cares about the shape: redaction is a string replacement.
+const testMapKey = "FIRMS-TEST-KEY-NOT-A-CREDENTIAL"
+
 func TestTransportErrorsDoNotLeakTheMapKey(t *testing.T) {
 	t.Parallel()
-
-	const key = "0123456789abcdef0123456789abcdef"
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer srv.Close()
 
-	_, err := firms.New(src(srv.URL, nil), httpx.New(), key).Poll(context.Background())
+	_, err := firms.New(src(srv.URL, nil), httpx.New(), testMapKey).Poll(context.Background())
 	if err == nil {
 		t.Fatal("a 500 was accepted")
 	}
-	if strings.Contains(err.Error(), key) {
+	if strings.Contains(err.Error(), testMapKey) {
 		t.Fatalf("the map key leaked into the error: %v", err)
 	}
 	if !strings.Contains(err.Error(), "[MAP_KEY]") {

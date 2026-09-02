@@ -1,0 +1,19 @@
+# Findings gitleaks has reported that are not secrets.
+#
+# One line per finding, as `<commit>:<path>:<rule>:<line>`. Every entry needs a
+# reason above it. An ignore file nobody can audit is worse than a scanner that
+# occasionally cries wolf — if you cannot explain why a line is here, the right
+# move is to remove it and change the code instead.
+
+# A synthetic FIRMS credential in a test — thirty-two hex characters counting
+# from zero, which is not quoted here because the scanner reads this file too
+# and reported the quotation as a second leak.
+#
+# The test it belongs to is the one PROVING the real key never reaches an error
+# message, since FIRMS puts its credential in the URL path and a failed fetch
+# quotes the URL into an error that is persisted as source health.
+#
+# The literal is gone from the working tree — it is a named constant now, and
+# deliberately not key-shaped. This entry covers the commit that already carries
+# it, which cannot be rewritten once the branch is shared.
+5315808c05a25093770ad8b5d43fddbf1e761f95:internal/provider/infrastructure/firms/firms_test.go:generic-api-key:361
