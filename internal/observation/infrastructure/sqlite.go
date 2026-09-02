@@ -295,6 +295,88 @@ func (s *SQLiteStore) Counts(ctx context.Context) (records, entities int, err er
 	return records, entities, nil
 }
 
+// Aggregate summarises everything the store holds.
+//
+// The grouping runs in SQL rather than over a page of rows read back through a
+// filter: a total computed from the first five thousand records is not a
+// total, and a dashboard built on one is confidently wrong.
+type Aggregate struct {
+	Records  int
+	Entities int
+	ByTopic  map[string]int
+	BySource map[string]int
+	ByKind   map[string]int
+	// Oldest and Newest bound the observation times held. Both are zero on
+	// an empty store, which is different from an epoch timestamp.
+	Oldest time.Time
+	Newest time.Time
+}
+
+// Aggregate returns the summary.
+func (s *SQLiteStore) Aggregate(ctx context.Context) (Aggregate, error) {
+	records, entities, err := s.Counts(ctx)
+	if err != nil {
+		return Aggregate{}, err
+	}
+
+	agg := Aggregate{Records: records, Entities: entities}
+	for _, group := range []struct {
+		column string
+		into   *map[string]int
+	}{
+		{column: "topic", into: &agg.ByTopic},
+		{column: "source", into: &agg.BySource},
+		{column: "kind", into: &agg.ByKind},
+	} {
+		counts, err := s.countBy(ctx, group.column)
+		if err != nil {
+			return Aggregate{}, err
+		}
+		*group.into = counts
+	}
+
+	var oldest, newest sql.NullInt64
+	if err := s.db.QueryRowContext(ctx,
+		`SELECT MIN(observed_at), MAX(observed_at) FROM records`).Scan(&oldest, &newest); err != nil {
+		return Aggregate{}, fmt.Errorf("%w: aggregate span: %w", ErrStore, err)
+	}
+	agg.Oldest = timeFromNull(oldest)
+	agg.Newest = timeFromNull(newest)
+
+	return agg, nil
+}
+
+// countBy groups the records by one column.
+//
+// The column is never request input: it comes from the fixed list above, which
+// is what keeps a GROUP BY that cannot use a placeholder from being an
+// injection vector.
+func (s *SQLiteStore) countBy(ctx context.Context, column string) (map[string]int, error) {
+	// #nosec G202 -- column comes from a package-local literal list, never from a request
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT `+column+`, COUNT(*) FROM records GROUP BY `+column)
+	if err != nil {
+		return nil, fmt.Errorf("%w: count by %s: %w", ErrStore, column, err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	out := map[string]int{}
+	for rows.Next() {
+		var (
+			value string
+			count int
+		)
+		if err := rows.Scan(&value, &count); err != nil {
+			return nil, fmt.Errorf("%w: scan count by %s: %w", ErrStore, column, err)
+		}
+		out[value] = count
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%w: count by %s: %w", ErrStore, column, err)
+	}
+	return out, nil
+}
+
 // SaveState persists a source's polling state, so a restart does not
 // re-download what the publisher already said has not changed.
 func (s *SQLiteStore) SaveState(ctx context.Context, st SourceState) error {

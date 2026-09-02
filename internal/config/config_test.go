@@ -91,3 +91,43 @@ func TestLoadReadsAPIKeys(t *testing.T) {
 		t.Errorf("keys not loaded: %+v", cfg)
 	}
 }
+
+// A token is what turns "listening on a port" into "a private deployment", so
+// it is read in the one place every other external input is read.
+func TestLoadReadsTheAPIToken(t *testing.T) {
+	t.Setenv("EYE_API_TOKEN", "  s3cret  ")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load() = %v", err)
+	}
+	// Surrounding whitespace is a copy-and-paste artefact, never part of a
+	// token, and a token with a stray newline fails in a way nobody can see.
+	if cfg.APIToken != "s3cret" {
+		t.Errorf("APIToken = %q, want it trimmed", cfg.APIToken)
+	}
+}
+
+func TestLoadCORSOriginDefaultsToAnyOrigin(t *testing.T) {
+	t.Setenv("EYE_CORS_ORIGIN", "")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load() = %v", err)
+	}
+	if cfg.CORSOrigin != "*" {
+		t.Errorf("CORSOrigin = %q, want the permissive default", cfg.CORSOrigin)
+	}
+}
+
+func TestLoadCORSOriginIsConfigurable(t *testing.T) {
+	t.Setenv("EYE_CORS_ORIGIN", "https://map.example.org")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load() = %v", err)
+	}
+	if cfg.CORSOrigin != "https://map.example.org" {
+		t.Errorf("CORSOrigin = %q", cfg.CORSOrigin)
+	}
+}

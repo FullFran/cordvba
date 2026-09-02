@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -20,6 +21,7 @@ type fakeStore struct {
 	lastFilter observation.Filter
 	records    []observation.Record
 	entities   []observation.Entity
+	states     []api.SourceState
 	err        error
 }
 
@@ -35,6 +37,10 @@ func (f *fakeStore) Entities(_ context.Context, filter observation.Filter) ([]ob
 
 func (f *fakeStore) Counts(context.Context) (int, int, error) {
 	return len(f.records), len(f.entities), f.err
+}
+
+func (f *fakeStore) States(context.Context) ([]api.SourceState, error) {
+	return f.states, f.err
 }
 
 // record builds a valid observation.
@@ -428,5 +434,91 @@ func TestChangesFromAPersonalSourceAreNeverServed(t *testing.T) {
 		if entry, _ := r.(map[string]any); entry["source"] == "adif-live" {
 			t.Fatal("a change derived from a personal source was served")
 		}
+	}
+}
+
+// TestWithUIServesTheConsoleAtTheRoot checks that a build wired with a UI hands
+// the root to it, assets and all, while the machine-readable index stays where
+// a machine looks for it.
+//
+// The two audiences are different and both are real: a person opens `/` in a
+// browser, a script curls `/v1`. Serving JSON to the person was the old
+// behaviour and it is the one being replaced here.
+func TestWithUIServesTheConsoleAtTheRoot(t *testing.T) {
+	t.Parallel()
+
+	// The fake records what it was asked for rather than echoing it into the
+	// response, so the assertion is on the routing and the test body carries
+	// no request-controlled bytes.
+	var served []string
+	ui := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		served = append(served, r.URL.Path)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte("console"))
+	})
+	handler := api.New(&fakeStore{}, nil, nil, api.WithUI(ui)).Handler()
+
+	want := []string{"/", "/css/app.css", "/js/main.js"}
+	for _, path := range want {
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, path, nil))
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("GET %s = %d, want 200 from the UI", path, rec.Code)
+		}
+		if got := rec.Body.String(); got != "console" {
+			t.Errorf("GET %s served %q, not the UI", path, got)
+		}
+	}
+	if len(served) != len(want) {
+		t.Errorf("the UI was asked for %v, want %v", served, want)
+	}
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /v1 = %d, want the JSON index still there", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.Contains(ct, "json") {
+		t.Errorf("GET /v1 content-type = %q, want JSON", ct)
+	}
+}
+
+// TestWithoutUITheRootStaysJSON checks the default is unchanged: a build with
+// no console still answers the root with the service description, so `eye
+// serve --no-ui` and every existing script keep working.
+func TestWithoutUITheRootStaysJSON(t *testing.T) {
+	t.Parallel()
+
+	rec := httptest.NewRecorder()
+	api.New(&fakeStore{}, nil, nil).Handler().
+		ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET / = %d, want 200", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.Contains(ct, "json") {
+		t.Errorf("content-type = %q, want JSON", ct)
+	}
+}
+
+// TestUIDoesNotSwallowTheAPI is the failure this wiring most easily creates: a
+// catch-all at "/" that also answers /v1/records, so every API call returns a
+// web page with a 200 and nothing works for reasons nobody can see.
+func TestUIDoesNotSwallowTheAPI(t *testing.T) {
+	t.Parallel()
+
+	ui := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("console"))
+	})
+	rec := httptest.NewRecorder()
+	api.New(&fakeStore{}, nil, nil, api.WithUI(ui)).Handler().
+		ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/records", nil))
+
+	if body := rec.Body.String(); strings.Contains(body, "console") {
+		t.Fatalf("GET /v1/records was served by the UI: %q", body)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.Contains(ct, "json") {
+		t.Errorf("content-type = %q, want JSON", ct)
 	}
 }
