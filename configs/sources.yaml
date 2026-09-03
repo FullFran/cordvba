@@ -738,39 +738,55 @@ sources:
 
   # ── Environment ───────────────────────────────────────────────────────────
   - id: aemet-warnings
-    authority: AEMET
+    authority: AEMET. Agencia Estatal de Meteorologia
     topic: weather
-    url: https://opendata.aemet.es/
-    format: rest-json-two-step
-    license: reuse-with-attribution
+    url: https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-spain
+    format: meteoalarm-atom
+    license: cc-by-4.0-equivalent-meteoalarm-terms
     access: documented_api
     automation: enabled
-    interval: 5m
-    options:
-      product: warnings
-      area: "61"
+    interval: 15m
+    published_every: 15m
     notes: >-
-      Meteorological warnings for Andalucía, as CAP 1.2. Area 61 is Andalucía
-      Occidental, which is where Córdoba is.
+      Meteorological warnings for the whole of Spain, as CAP 1.2 carried on an
+      Atom feed. NO CREDENTIAL NEEDED.
 
-      NEEDS A FREE KEY: set AEMET_API_KEY. The key is a JWT, requested by email
-      from https://opendata.aemet.es/centrodedescargas/altaUsuario, and it
-      travels in an `api_key` HEADER rather than the query string so it never
-      lands in a URL, a log line or a stored health row.
+      WHY NOT AEMET'"'"'S OWN API. AEMET publishes these through opendata.aemet.es,
+      which requires a JWT obtained by email registration. A source that only
+      works with the operator'"'"'s own credential is one nobody else running eye
+      can reproduce, and reproducibility is the value ADR-0008 exists to
+      protect. MeteoAlarm — the EUMETNET early-warning service — relays the
+      same warnings with no key at all.
 
-      TWO-STEP, AND THE FIRST STEP LIES WHEN IT IS UNHAPPY. The API answers
-      with metadata plus a `datos` URL, and the payload is at that URL. Two
-      traps, both verified and both covered by tests: without a key it answers
-      HTTP 200 with a ZERO-BYTE BODY, which a naive adapter reads as a
-      successful empty poll; and a `datos` URL that has aged out answers HTTP
-      200 carrying {"estado":404,"descripcion":"datos expirados"}.
+      IT IS STILL AEMET SPEAKING, and that is checkable rather than assumed:
+      the CAP document behind each entry carries
+      sender: http://www.aemet.es and
+      senderName: "AEMET. Agencia Estatal de Meteorología". Verified 2026-09-03.
+      The relay is recorded on every record — provenance points at the
+      MeteoAlarm URL, because that is what eye actually fetched, and the
+      payload keeps `issuing_authority` and `relayed_by` as the two separate
+      facts they are.
 
-      `product` exists because `rest-json-two-step` names a transport, not a
-      product. This entry and `aemet-observation` share the format, so without
-      it the registry cannot say which of the two an adapter should fetch, and
-      the adapter fails closed rather than guessing.
+      LICENCE, from the feed'"'"'s own <rights> element: "Copyright © 2026
+      MeteoAlarm.Org. Licensed under terms equivalent to CC BY 4.0, with
+      additional requirements for redistributing outlined in our Terms and
+      Conditions." The redistribution caveat is real and is recorded here
+      rather than rounded down to "CC BY".
 
-      Reuse is authorised with attribution to AEMET as the author.
+      CÓRDOBA IS COVERED. The feed uses AEMET'"'"'s own zone names, and at the time
+      this entry was written it carried live warnings for "Campiña cordobesa"
+      (Severe), "Subbética cordobesa" and "Sierra y Pedroches". Zones also
+      carry a stable EMMA_ID geocode.
+
+      NO GEOGRAPHIC FILTER AT INGESTION, for the same reason `dgt-incidents`
+      applies none: a warning dropped at ingestion is one no later query can
+      recover, and missing a red warning because a zone was renamed is not a
+      trade this source is willing to make. A `zones` option exists for anyone
+      who wants to narrow it.
+
+      Setting AEMET_API_KEY still works: change the format back to
+      rest-json-two-step with options {product: warnings, area: "61"} and eye
+      reads AEMET directly.
 
   - id: aemet-observation
     authority: AEMET

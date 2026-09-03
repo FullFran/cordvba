@@ -82,6 +82,9 @@ var builders = map[string]func(source.Source, *httpx.Client, Options) provider.P
 	},
 	// AEMET publishes several products behind one two-step contract, so the
 	// registry names the product rather than the protocol.
+	"meteoalarm-atom": func(s source.Source, c *httpx.Client, _ Options) provider.Provider {
+		return aemet.NewMeteoAlarm(s, c)
+	},
 	"aemet-warnings": func(s source.Source, c *httpx.Client, o Options) provider.Provider {
 		return aemet.NewWarnings(s, c, o.AEMETAPIKey)
 	},
