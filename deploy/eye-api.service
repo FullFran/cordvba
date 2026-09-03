@@ -1,0 +1,81 @@
+# eye — the read API, as a systemd unit.
+#
+#   sudo install -m 0644 deploy/eye-api.service /etc/systemd/system/
+#   sudo install -m 0755 -D bin/eye /usr/local/bin/eye
+#   sudo install -m 0600 -D /dev/null /etc/eye/api.env   # then edit it
+#   sudo systemctl daemon-reload && sudo systemctl enable --now eye-api
+#
+# It serves what eye-daemon collected. Run both, or run the daemon alone and
+# the store simply stops moving.
+
+[Unit]
+Description=eye read API
+Documentation=https://github.com/FullFran/eye
+After=network-online.target
+Wants=network-online.target
+# Not a hard dependency: the API serving a stale store is more useful than the
+# API refusing to start because the collector is down.
+After=eye-daemon.service
+
+[Service]
+Type=exec
+
+# No account to create, no uid to pick, nothing left behind on uninstall.
+# systemd allocates one for the lifetime of the service.
+DynamicUser=yes
+# /var/lib/eye, owned by that transient user and shared with eye-daemon
+# through the same StateDirectory name.
+StateDirectory=eye
+StateDirectoryMode=0750
+ConfigurationDirectory=eye
+
+Environment=EYE_DATA_DIR=/var/lib/eye
+Environment=EYE_CONFIG_DIR=/etc/eye
+Environment=EYE_LOG_LEVEL=info
+
+# The token lives here, not in the unit: a unit file is world-readable and
+# `systemctl show` prints Environment= lines to anyone who asks.
+#   EYE_API_TOKEN=...
+# chmod 0600. The dash means the service still starts if the file is absent —
+# and then `eye serve --public` refuses, which is the correct failure.
+EnvironmentFile=-/etc/eye/api.env
+
+# Loopback by default. Put a reverse proxy in front of it for TLS and a name;
+# to bind the network directly instead, change this to
+#   --public --addr 0.0.0.0:8787
+# which requires EYE_API_TOKEN to be set.
+ExecStart=/usr/local/bin/eye serve --addr 127.0.0.1:8787
+
+Restart=on-failure
+RestartSec=5s
+
+# ── Sandbox ─────────────────────────────────────────────────────────────────
+# eye needs no privileges and must never ask for any.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+# Outbound HTTP only; the API listens on TCP. No unix sockets, no raw packets.
+RestrictAddressFamilies=AF_INET AF_INET6
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources @obsolete
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

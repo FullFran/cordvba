@@ -34,6 +34,29 @@ type Config struct {
 	// FIRMSMapKey is empty when the NASA FIRMS provider is unavailable.
 	FIRMSMapKey string
 
+	// APIToken guards every /v1 endpoint of `eye serve` when it is set.
+	//
+	// An empty token leaves the API open, which is the right default for a
+	// loopback bind on somebody's own machine. It is not the right default
+	// for a public one, and `eye serve --public` refuses without it.
+	APIToken string
+	// CORSOrigin is what `eye serve` answers in
+	// Access-Control-Allow-Origin. It defaults to "*" because the API is
+	// read-only, and is narrowed by operators who front it with a browser
+	// application of their own.
+	CORSOrigin string
+
+	// ExtraCAFile is a PEM file of certificate authorities to trust in
+	// addition to the system pool.
+	//
+	// It exists because several Spanish public-sector servers send an
+	// incomplete certificate chain — MITECO's air-quality host omits the
+	// FNMT-RCM intermediate — and Go does not fetch the missing certificate
+	// the way a browser does. Pointing this at the published intermediate
+	// completes the chain. It is not a way to skip verification, and eye
+	// has no such option.
+	ExtraCAFile string
+
 	// AllowPersonalSources enables sources marked undocumented_personal.
 	//
 	// The registry saying "enabled" is not enough for these on purpose. They
@@ -56,7 +79,16 @@ func Load() (Config, error) {
 		AEMETAPIKey: os.Getenv("AEMET_API_KEY"),
 		FIRMSMapKey: os.Getenv("FIRMS_MAP_KEY"),
 
+		ExtraCAFile: strings.TrimSpace(os.Getenv("EYE_EXTRA_CA_FILE")),
+
+		APIToken:   strings.TrimSpace(os.Getenv("EYE_API_TOKEN")),
+		CORSOrigin: strings.TrimSpace(os.Getenv("EYE_CORS_ORIGIN")),
+
 		AllowPersonalSources: truthy(os.Getenv("EYE_ALLOW_PERSONAL_SOURCES")),
+	}
+
+	if cfg.CORSOrigin == "" {
+		cfg.CORSOrigin = "*"
 	}
 
 	if !validLogLevels[cfg.LogLevel] {

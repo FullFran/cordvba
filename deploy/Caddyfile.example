@@ -1,0 +1,65 @@
+# eye behind Caddy — TLS and a name in front of the loopback API.
+#
+#   sudo cp deploy/Caddyfile.example /etc/caddy/Caddyfile   # then edit it
+#   sudo systemctl reload caddy
+#
+# Caddy obtains and renews the certificate itself. Point the name at this host
+# first, or the ACME challenge fails and you get a confusing error about a
+# certificate rather than about DNS.
+#
+# The proxy does NOT authenticate anything. EYE_API_TOKEN is what makes this
+# deployment private, and `eye serve --public` refuses to start without it.
+# Putting TLS in front of an open API encrypts the theft, it does not stop it.
+
+eye.example.org {
+	# eye listens on loopback; only Caddy can reach it.
+	reverse_proxy 127.0.0.1:8787 {
+		# eye applies its own timeouts. These bound the proxy's own wait so
+		# a stalled upstream does not pile up connections here.
+		transport http {
+			dial_timeout 5s
+			response_header_timeout 30s
+		}
+	}
+
+	encode zstd gzip
+
+	header {
+		# HSTS. Remove it while testing with a self-signed certificate, or
+		# the browser will refuse the host for as long as the max-age says.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		# eye serves JSON, never HTML that should be framed.
+		X-Frame-Options "DENY"
+		# The server header is free information for anyone scanning.
+		-Server
+	}
+
+	# A published deployment gets scanned within the hour. This keeps a
+	# credential-stuffing loop from being free, without touching /health,
+	# which a monitor legitimately polls.
+	@guarded path /v1/*
+	rate_limit @guarded {
+		zone eye_v1 {
+			key {remote_host}
+			events 120
+			window 1m
+		}
+	}
+
+	log {
+		output file /var/log/caddy/eye.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+		# The token travels in the Authorization header. Caddy does not log
+		# headers by default; do not turn that on here.
+		format json
+	}
+}
+
+# The rate_limit directive needs the caddy-ratelimit module:
+#   xcaddy build --with github.com/mholt/caddy-ratelimit
+# On a stock Caddy binary, delete the @guarded matcher and the rate_limit
+# block above — everything else works as written.

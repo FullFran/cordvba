@@ -515,3 +515,77 @@ func TestSQLiteTextSearchAppliesLimitAfterFiltering(t *testing.T) {
 		t.Errorf("got %d records %v, want just the matching one", len(got), got)
 	}
 }
+
+// A total computed from a page of records is not a total. The aggregate is
+// pushed into SQL so a summary of a large store stays a summary and does not
+// become a full scan through the API.
+func TestSQLiteAggregate(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	s := openStore(t)
+	at := time.Date(2026, time.August, 28, 12, 0, 0, 0, time.UTC)
+
+	first := fullRecord("r1", at.Add(-48*time.Hour))
+	second := fullRecord("r2", at)
+	second.Topic = "traffic"
+	second.Kind = "incident"
+	second.Source = "dgt-incidents"
+	third := fullRecord("r3", at.Add(-time.Hour))
+	third.Topic = "traffic"
+
+	if _, err := s.Append(ctx, []domain.Record{first, second, third}); err != nil {
+		t.Fatalf("Append() = %v", err)
+	}
+	if _, err := s.Upsert(ctx, []domain.Entity{{
+		ID: "e1", Source: "test", Kind: "camera", Topic: "traffic",
+		Title: "A camera", FirstSeen: at, LastSeen: at,
+		Provenance: domain.Provenance{
+			Publisher: "Test", SourceURL: "https://example.org", License: "CC-BY-4.0", FetchedAt: at,
+		},
+	}}); err != nil {
+		t.Fatalf("Upsert() = %v", err)
+	}
+
+	got, err := s.Aggregate(ctx)
+	if err != nil {
+		t.Fatalf("Aggregate() = %v", err)
+	}
+
+	if got.Records != 3 || got.Entities != 1 {
+		t.Errorf("counts = %d records, %d entities", got.Records, got.Entities)
+	}
+	if got.ByTopic["press"] != 1 || got.ByTopic["traffic"] != 2 {
+		t.Errorf("by topic = %v", got.ByTopic)
+	}
+	if got.BySource["test"] != 2 || got.BySource["dgt-incidents"] != 1 {
+		t.Errorf("by source = %v", got.BySource)
+	}
+	if got.ByKind["news_item"] != 2 || got.ByKind["incident"] != 1 {
+		t.Errorf("by kind = %v", got.ByKind)
+	}
+	if !got.Oldest.Equal(at.Add(-48 * time.Hour)) {
+		t.Errorf("oldest = %v", got.Oldest)
+	}
+	if !got.Newest.Equal(at) {
+		t.Errorf("newest = %v", got.Newest)
+	}
+}
+
+// An empty store has no oldest observation, and a zero timestamp reported as
+// one is a lie with a date on it.
+func TestSQLiteAggregateOnAnEmptyStore(t *testing.T) {
+	t.Parallel()
+
+	got, err := openStore(t).Aggregate(context.Background())
+	if err != nil {
+		t.Fatalf("Aggregate() = %v", err)
+	}
+
+	if got.Records != 0 || len(got.ByTopic) != 0 {
+		t.Errorf("aggregate = %+v", got)
+	}
+	if !got.Oldest.IsZero() || !got.Newest.IsZero() {
+		t.Errorf("span = %v .. %v, want both absent", got.Oldest, got.Newest)
+	}
+}

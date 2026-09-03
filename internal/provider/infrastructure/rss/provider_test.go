@@ -204,3 +204,106 @@ func TestInfoReturnsTheRegistryEntry(t *testing.T) {
 }
 
 var _ = observation.Record{}
+
+// optionSource builds a registry entry that carries adapter options.
+func optionSource(url, topic string, options map[string]string) source.Source {
+	src := pressSource(url, topic)
+	src.Authority = "Instituto Geografico Nacional"
+	src.Options = options
+	return src
+}
+
+// TestPollHonoursTheRegistryKind checks that the registry, not the adapter,
+// decides what a feed's entries are called. An IGN earthquake filed as a
+// "news_item" is unfindable by anything looking for seismic events.
+func TestPollHonoursTheRegistryKind(t *testing.T) {
+	t.Parallel()
+
+	srv := serveFixture(t, "ign-sismologia.xml", "application/rss+xml; charset=utf-8")
+	src := optionSource(srv.URL, "geophysics", map[string]string{"kind": "seismic_event"})
+
+	records, err := rss.New(src, httpx.New()).Poll(context.Background())
+	if err != nil {
+		t.Fatalf("Poll() = %v", err)
+	}
+	if len(records) == 0 {
+		t.Fatal("expected records")
+	}
+	for _, r := range records {
+		if r.Kind != "seismic_event" {
+			t.Fatalf("kind = %q, want seismic_event", r.Kind)
+		}
+	}
+}
+
+// TestPollScalesSeverityByMagnitude checks that a magnitude 3.1 earthquake does
+// not rank identically to every press headline in the store. Severity is opt-in
+// per source, because only a feed that states a magnitude can be read this way.
+func TestPollScalesSeverityByMagnitude(t *testing.T) {
+	t.Parallel()
+
+	srv := serveFixture(t, "ign-sismologia.xml", "application/rss+xml; charset=utf-8")
+	src := optionSource(srv.URL, "geophysics", map[string]string{
+		"kind": "seismic_event", "severity": "magnitude",
+	})
+
+	records, err := rss.New(src, httpx.New()).Poll(context.Background())
+	if err != nil {
+		t.Fatalf("Poll() = %v", err)
+	}
+
+	var found bool
+	for _, r := range records {
+		var payload struct {
+			Magnitude *float64 `json:"magnitude"`
+		}
+		if err := json.Unmarshal(r.Payload, &payload); err != nil {
+			t.Fatalf("payload: %v", err)
+		}
+		if payload.Magnitude == nil {
+			continue
+		}
+		found = true
+
+		want := observation.SeverityInfo
+		switch m := *payload.Magnitude; {
+		case m >= 5:
+			want = observation.SeverityCritical
+		case m >= 4:
+			want = observation.SeverityHigh
+		case m >= 3:
+			want = observation.SeverityModerate
+		case m >= 2:
+			want = observation.SeverityLow
+		}
+		if r.Severity != want {
+			t.Errorf("magnitude %v: severity = %d, want %d", *payload.Magnitude, r.Severity, want)
+		}
+	}
+	if !found {
+		t.Fatal("no record carried a magnitude; the fixture states one for every earthquake")
+	}
+}
+
+// TestPollLeavesSeverityAloneWithoutTheOption checks the behaviour stays opt-in:
+// a press feed must not have its severity guessed from whatever number happens
+// to appear in a headline.
+func TestPollLeavesSeverityAloneWithoutTheOption(t *testing.T) {
+	t.Parallel()
+
+	srv := serveFixture(t, "ign-sismologia.xml", "application/rss+xml; charset=utf-8")
+	src := optionSource(srv.URL, "geophysics", nil)
+
+	records, err := rss.New(src, httpx.New()).Poll(context.Background())
+	if err != nil {
+		t.Fatalf("Poll() = %v", err)
+	}
+	if len(records) == 0 {
+		t.Fatal("expected records")
+	}
+	for _, r := range records {
+		if r.Severity != observation.SeverityInfo {
+			t.Errorf("severity = %d, want %d without the option", r.Severity, observation.SeverityInfo)
+		}
+	}
+}

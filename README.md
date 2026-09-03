@@ -161,7 +161,8 @@ Polled in 505ms · registry: (embedded)
 | `eye bus` | Live arrival estimates at a Córdoba stop, searched by name |
 | `eye changes` | What appeared, moved or stopped being published since eye last looked |
 | `eye watch` | A live board of the city, refreshing on screen |
-| `eye serve` | HTTP API, so other programs read the same records |
+| `eye tui` | A full-screen cockpit: dashboard, braille map, feed, sources, transit |
+| `eye serve` | HTTP API and the web console, so other programs and people read the same records |
 | `eye query` | `--topic --since --text --source --limit`, across everything |
 | `eye sources` | The registry: what eye may read, what it can read, and when each last answered |
 | `eye daemon` | Polls continuously and persists everything — the watching mode |
@@ -310,6 +311,58 @@ newest-first feed is a list of aircraft callsigns with the city pushed off the
 bottom. Every source gets a guaranteed share first; leftover rows are filled in
 time order, because on a quiet night more aircraft beats blank space.
 
+### The cockpit
+
+`eye watch` is a board you leave running. `eye tui` is the one you drive.
+
+```bash
+eye tui                      # tab or 1-5 to switch, ? for keys, q to leave
+eye tui --view map
+eye tui --interval 10s
+eye tui --once > frame.txt   # one frame, no keyboard — for a pipe or a log
+```
+
+Five screens over the same store: **DASHBOARD** (counts, per-source health, a
+records-per-hour histogram), **MAP**, **FEED** (newest first, `/` filters as you
+type, Enter opens the full record with its provenance), **SOURCES** (the whole
+registry, `r` polls the selected one), and **TRANSIT** (stop search, live
+arrivals, train departures).
+
+The map is drawn in braille. Each terminal cell holds a 2×4 dot grid, so an
+ordinary 100×30 terminal is a 200×120 pixel canvas — enough to see the shape of
+the city, over SSH, with no image protocol and no dependency. Arrows pan, `+`
+and `-` zoom, `f` fits to the data, and the status line reads out the cursor's
+coordinates and the nearest feature.
+
+Raw mode is entered through `stty` on `/dev/tty` and restored on every exit
+path, signals included. On a terminal that has neither, the cockpit says so and
+falls back to a refresh loop instead of failing.
+
+### The web console
+
+`eye serve` ships a web application compiled into the binary. There is nothing
+to build, nothing to deploy beside it, and no way for the two to drift apart.
+
+```bash
+eye serve                    # console on http://127.0.0.1:8787/
+eye serve --no-ui            # the JSON API alone
+```
+
+Five sections, the same five questions: a dashboard of counts and source health,
+a dark map of everything with a position, a transit board with bus stop search,
+live arrivals and train departures, a query explorer over every API filter with
+CSV and GeoJSON download, and the registry with the reasoning each entry carries.
+
+Clicking a feature on the map opens the full record **including its provenance** —
+publisher, licence, source URL, and both timestamps with the latency between
+them. That is the point of the whole project, so it is one click away rather
+than buried.
+
+The basemap is OpenStreetMap's own tiles, inverted in CSS rather than fetched
+dark: no API key, no watermark, and attribution on the map where its licence
+requires it. Leaflet loads from a pinned CDN with subresource integrity. If the
+CDN is blocked the map says so and every other section keeps working.
+
 ### Feeding other programs
 
 eye is a gateway: providers are written once, and anything that speaks HTTP,
@@ -388,25 +441,64 @@ make help       # every target
 
 ## Sources
 
-39 sources declared in [`configs/sources.yaml`](./configs/sources.yaml), across
+54 sources declared in [`configs/sources.yaml`](./configs/sources.yaml), across
 transport, air, weather, fire, hydrology, air quality, local press, events and
-civic documents.
+civic documents. `eye sources` reports which of them are live, which are held,
+and which are permitted but have no adapter yet — three different states, and
+none of them is a bug.
 
-**Live now (18):** the Córdoba press (Diario Córdoba, Cordópolis, El Día de
-Córdoba), BOE, UCO events, IMAE, the municipal CKAN catalog and its map layers,
-the DGT camera and VMS inventories, RENFE timetables and live delays, AUCORSA
-lines and stops, PLACSP, IGN, adsb.lol. One more — AUCORSA live arrivals — is
-live only on a machine that opted into personal sources.
+**Live:** the Córdoba press, BOE, PLACSP, UCO events, IMAE, the municipal CKAN
+catalog and eleven of its map layers (parking, zona azul, bike racks, EV
+chargers, taxi ranks, loading bays, cameras, buses), DGT incidents, VMS and
+cameras, RENFE timetables and live delays for both Cercanías and AV/LD/MD, the
+Córdoba transport consortium's timetable and service notices, AUCORSA lines and
+stops, OpenStreetMap bus stop positions, IGN seismic, adsb.lol. AUCORSA live
+arrivals is live only on a machine that opted into personal sources.
 
-**Held (16):** SAIH Guadalquivir, INFOCA, REDIAM, Agenda Única, Turismo de
-Córdoba, BOP, OpenSky, e-distribución and the Diputación. Held means the reuse
-terms are unresolved or there is no documented machine interface. That is a fact
-recorded in the registry, not a bug to work around.
+**Held:** SAIH Guadalquivir, INFOCA, REDIAM, Agenda Única, Turismo de Córdoba,
+BOP, OpenSky, e-distribución and the four municipal IDE layers. Held means the
+reuse terms are unresolved or there is no documented machine interface.
 
-**Awaiting an adapter (5):** AEMET, NASA FIRMS, MITECO ICA, the Diputación CKAN.
-Permitted, readable in principle, not yet written.
+**Two things do not work, and neither is code.** `aucorsa-lines` needs
+aucorsa.es, whose origin has been refusing TCP on both ports; and
+`aemet-observation` needs a free `AEMET_API_KEY`, which upgrades Córdoba's
+weather reading from an aerodrome METAR to the national met service's own
+station. Everything else answers.
 
-Those are three different states and `eye sources` reports all three. See
+**Three sources that used to need a credential no longer do**, and in each case
+the reason is the same. A source that only works with the operator's own key is
+one nobody else running `eye` can reproduce, and reproducibility is the value
+[ADR-0008](./docs/adr/0008-undocumented-personal-sources.md) exists to protect:
+
+- **NASA fire detections** read the public NRT archive instead of the
+  credentialed area API. The archive is continental, so the bounding box moved
+  from NASA's server into the adapter.
+- **AEMET's weather warnings** arrive through MeteoAlarm, the EUMETNET
+  early-warning service. It is still AEMET speaking — the CAP behind each entry
+  names `AEMET. Agencia Estatal de Meteorología` as its sender — and the relay
+  is recorded on every record rather than laundered into looking direct.
+- **Córdoba's weather** comes from the METAR at LEBA, the same airport
+  instrument AEMET publishes as station 5402, relayed by NOAA. Stored as
+  `preliminary`, never as an official declaration, with a note on every record
+  saying who is and is not speaking.
+
+One source needs a certificate rather than a key: MITECO's air-quality host
+sends an incomplete chain, and `EYE_EXTRA_CA_FILE` completes it. See
+[the deployment guide](./docs/deployment.md).
+
+An audit on 2026-09-03 re-probed every entry against its real endpoint, and
+three things it found are worth repeating here, because each had been recorded
+as fact and each was wrong:
+
+- **DGT was never blocked.** The 403 that held its incident and VMS feeds for
+  months applies to the CKAN discovery path, not to the published DATEX II
+  files, which serve 200 to any client with or without a User-Agent.
+- **RENFE does publish real time for AV/LD/MD** — the network that actually
+  serves Córdoba. Two CC-BY-4.0 feeds, refreshed every minute, that the
+  registry had recorded as non-existent.
+- **AUCORSA does publish a GTFS feed**, through the national access point. It
+  is login-gated and its service calendar expired in March 2026, which is a
+  different problem from the one previously written down. See
 [docs/legal/data-ethics.md](./docs/legal/data-ethics.md) for why a held source
 is a normal outcome rather than a failure.
 
@@ -424,7 +516,8 @@ exactly what you want to be told. It is per kind because one feed does both.
 | [Architecture overview](./docs/architecture/overview.md) | The shape of the system, with diagrams |
 | [Roadmap](./docs/roadmap.md) | Nine epics and their dependencies |
 | [Data ethics](./docs/legal/data-ethics.md) | Reuse, retention, the source checklist |
-| [ADRs](./docs/adr/README.md) | The seven decisions this is built on |
+| [ADRs](./docs/adr/README.md) | The ten decisions this is built on |
+| [Deployment](./docs/deployment.md) | Running the API privately: token, Docker, systemd |
 | [Getting started](./docs/development/getting-started.md) | Build, test, add a provider |
 | [AGENTS.md](./AGENTS.md) | Rules for AI agents working in this repo |
 

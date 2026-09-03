@@ -26,6 +26,8 @@ Do not write one for routine or easily reversible decisions.
 | [0006](./0006-source-registry-gates-automation.md) | The source registry gates automation, and fails closed | Accepted |
 | [0007](./0007-ethical-boundary.md) | eye observes public systems, never people | Accepted |
 | [0008](./0008-undocumented-personal-sources.md) | Allow undocumented sources, gated twice, for personal use only | Accepted |
+| [0009](./0009-identity-before-fusion.md) | Identity before fusion, and a change is an observation | Accepted |
+| [0010](./0010-three-surfaces-one-model.md) | Give eye three surfaces over one model, and buy none of them | Accepted |
 
 ## How to add one
 

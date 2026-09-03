@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:cap="urn:oasis:names:tc:emergency:cap:1.2">
+  <link rel="hub" href="https://pubsubhubbub.appspot.com/"/>
+  <link type="application/atom+xml" rel="self" href="https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-spain"/>
+  <link type="text/html" rel="alternate" href="https://meteoalarm.org"/>
+  <rights>Copyright © 2026 MeteoAlarm.Org. Licensed under terms equivalent to CC BY 4.0, with additional requirements for redistributing outlined in our Terms and Conditions.</rights>
+  <generator>MeteoAlarm Producer Server</generator>
+  <logo>https://feeds.meteoalarm.org/images/logo.svg</logo>
+  <author>
+    <name>meteoalarm.org</name>
+    <uri>https://meteoalarm.org</uri>
+    <email>meteoalarm@geosphere.at</email>
+  </author>
+  <id>tag:meteoalarm.org,2021-02-19:ES</id>
+  <title>MeteoAlarm - Alerting Europe for Extreme Weather</title>
+  <updated>2026-09-03T00:05:10.789065Z</updated>
+  <entry>
+    <cap:geocode>
+      <valueName>EMMA_ID</valueName>
+      <value>ES080</value>
+    </cap:geocode>
+    <link title="Subbética cordobesa" href="https://meteoalarm.org?geocode=EMMA_ID:ES080" hreflang="en"/>
+    <cap:areaDesc>Subbética cordobesa</cap:areaDesc>
+    <cap:event>Moderate high-temperature warning</cap:event>
+    <cap:sent>2026-09-02T09:36:10+00:00</cap:sent>
+    <cap:expires>2026-09-04T18:59:59+00:00</cap:expires>
+    <cap:effective>2026-09-02T09:32:00+00:00</cap:effective>
+    <cap:onset>2026-09-04T11:00:00+00:00</cap:onset>
+    <cap:certainty>Likely</cap:certainty>
+    <cap:severity>Moderate</cap:severity>
+    <cap:urgency>Future</cap:urgency>
+    <cap:scope>Public</cap:scope>
+    <cap:message_type>Update</cap:message_type>
+    <cap:status>Actual</cap:status>
+    <cap:identifier>2.49.0.0.724.0.ES.260902093610.611403ATTA041941770</cap:identifier>
+    <link type="application/cap+xml" href="https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/3a619a9b-60bb-4d7a-acea-2f2e21e35c13"/>
+    <link title="Spain" rel="related" href="https://meteoalarm.org?region=ES" hreflang="en"/>
+    <author>
+      <name>meteoalarm.org</name>
+      <uri>https://meteoalarm.org</uri>
+    </author>
+    <published>2026-09-02T09:36:10Z</published>
+    <id>https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/3a619a9b-60bb-4d7a-acea-2f2e21e35c13?index_info=1&amp;index_area=0&amp;index_geocode=0</id>
+    <title>Yellow High-temperature Warning issued for Spain - Subbética cordobesa</title>
+    <updated>2026-09-02T09:36:10Z</updated>
+  </entry>
+<entry>
+    <cap:geocode>
+      <valueName>EMMA_ID</valueName>
+      <value>ES079</value>
+    </cap:geocode>
+    <link title="Campiña cordobesa" href="https://meteoalarm.org?geocode=EMMA_ID:ES079" hreflang="en"/>
+    <cap:areaDesc>Campiña cordobesa</cap:areaDesc>
+    <cap:event>Severe high-temperature warning</cap:event>
+    <cap:sent>2026-09-02T09:36:10+00:00</cap:sent>
+    <cap:expires>2026-09-04T18:59:59+00:00</cap:expires>
+    <cap:effective>2026-09-02T09:32:00+00:00</cap:effective>
+    <cap:onset>2026-09-04T11:00:00+00:00</cap:onset>
+    <cap:certainty>Likely</cap:certainty>
+    <cap:severity>Severe</cap:severity>
+    <cap:urgency>Future</cap:urgency>
+    <cap:scope>Public</cap:scope>
+    <cap:message_type>Update</cap:message_type>
+    <cap:status>Actual</cap:status>
+    <cap:identifier>2.49.0.0.724.0.ES.260902093610.611402ATTA041941770</cap:identifier>
+    <link type="application/cap+xml" href="https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/30f7e864-56c1-4157-be60-16493c1661d2"/>
+    <link title="Spain" rel="related" href="https://meteoalarm.org?region=ES" hreflang="en"/>
+    <author>
+      <name>meteoalarm.org</name>
+      <uri>https://meteoalarm.org</uri>
+    </author>
+    <published>2026-09-02T09:36:10Z</published>
+    <id>https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/30f7e864-56c1-4157-be60-16493c1661d2?index_info=1&amp;index_area=0&amp;index_geocode=0</id>
+    <title>Orange High-temperature Warning issued for Spain - Campiña cordobesa</title>
+    <updated>2026-09-02T09:36:10Z</updated>
+  </entry>
+<entry>
+    <cap:geocode>
+      <valueName>EMMA_ID</valueName>
+      <value>ES078</value>
+    </cap:geocode>
+    <link title="Sierra y Pedroches" href="https://meteoalarm.org?geocode=EMMA_ID:ES078" hreflang="en"/>
+    <cap:areaDesc>Sierra y Pedroches</cap:areaDesc>
+    <cap:event>Moderate high-temperature warning</cap:event>
+    <cap:sent>2026-09-02T09:36:10+00:00</cap:sent>
+    <cap:expires>2026-09-04T18:59:59+00:00</cap:expires>
+    <cap:effective>2026-09-02T09:32:00+00:00</cap:effective>
+    <cap:onset>2026-09-04T11:00:00+00:00</cap:onset>
+    <cap:certainty>Likely</cap:certainty>
+    <cap:severity>Moderate</cap:severity>
+    <cap:urgency>Future</cap:urgency>
+    <cap:scope>Public</cap:scope>
+    <cap:message_type>Update</cap:message_type>
+    <cap:status>Actual</cap:status>
+    <cap:identifier>2.49.0.0.724.0.ES.260902093610.611401ATTA041941770</cap:identifier>
+    <link type="application/cap+xml" href="https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/b8bee013-b9f6-4c34-989f-59fa1e15bef9"/>
+    <link title="Spain" rel="related" href="https://meteoalarm.org?region=ES" hreflang="en"/>
+    <author>
+      <name>meteoalarm.org</name>
+      <uri>https://meteoalarm.org</uri>
+    </author>
+    <published>2026-09-02T09:36:10Z</published>
+    <id>https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/b8bee013-b9f6-4c34-989f-59fa1e15bef9?index_info=1&amp;index_area=0&amp;index_geocode=0</id>
+    <title>Yellow High-temperature Warning issued for Spain - Sierra y Pedroches</title>
+    <updated>2026-09-02T09:36:10Z</updated>
+  </entry>
+<entry>
+    <cap:geocode>
+      <valueName>EMMA_ID</valueName>
+      <value>ES249</value>
+    </cap:geocode>
+    <link title="Litoral sur de Valencia" href="https://meteoalarm.org?geocode=EMMA_ID:ES249" hreflang="en"/>
+    <cap:areaDesc>Litoral sur de Valencia</cap:areaDesc>
+    <cap:event>Moderate high-temperature warning</cap:event>
+    <cap:sent>2026-09-02T17:00:10+00:00</cap:sent>
+    <cap:expires>2026-09-04T18:59:59+00:00</cap:expires>
+    <cap:effective>2026-09-02T16:57:47+00:00</cap:effective>
+    <cap:onset>2026-09-04T11:00:00+00:00</cap:onset>
+    <cap:certainty>Likely</cap:certainty>
+    <cap:severity>Moderate</cap:severity>
+    <cap:urgency>Future</cap:urgency>
+    <cap:scope>Public</cap:scope>
+    <cap:message_type>Alert</cap:message_type>
+    <cap:status>Actual</cap:status>
+    <cap:identifier>2.49.0.0.724.0.ES.260902170010.774604ATTA041968410</cap:identifier>
+    <link type="application/cap+xml" href="https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/0f7d910d-2465-45fa-b557-9c44f02f4329"/>
+    <link title="Spain" rel="related" href="https://meteoalarm.org?region=ES" hreflang="en"/>
+    <author>
+      <name>meteoalarm.org</name>
+      <uri>https://meteoalarm.org</uri>
+    </author>
+    <published>2026-09-02T17:00:10Z</published>
+    <id>https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/0f7d910d-2465-45fa-b557-9c44f02f4329?index_info=1&amp;index_area=0&amp;index_geocode=0</id>
+    <title>Yellow High-temperature Warning issued for Spain - Litoral sur de Valencia</title>
+    <updated>2026-09-02T17:00:10Z</updated>
+  </entry>
+<entry>
+    <cap:geocode>
+      <valueName>EMMA_ID</valueName>
+      <value>ES184</value>
+    </cap:geocode>
+    <link title="Ampurdán" href="https://meteoalarm.org?geocode=EMMA_ID:ES184" hreflang="en"/>
+    <cap:areaDesc>Ampurdán</cap:areaDesc>
+    <cap:event>Moderate high-temperature warning</cap:event>
+    <cap:sent>2026-09-02T17:00:10+00:00</cap:sent>
+    <cap:expires>2026-09-04T18:59:59+00:00</cap:expires>
+    <cap:effective>2026-09-02T16:57:47+00:00</cap:effective>
+    <cap:onset>2026-09-04T11:00:00+00:00</cap:onset>
+    <cap:certainty>Likely</cap:certainty>
+    <cap:severity>Moderate</cap:severity>
+    <cap:urgency>Future</cap:urgency>
+    <cap:scope>Public</cap:scope>
+    <cap:message_type>Update</cap:message_type>
+    <cap:status>Actual</cap:status>
+    <cap:identifier>2.49.0.0.724.0.ES.260902170010.691703ATTA041968410</cap:identifier>
+    <link type="application/cap+xml" href="https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/c6723b5e-cb54-4a8c-8840-77fe899b62f8"/>
+    <link title="Spain" rel="related" href="https://meteoalarm.org?region=ES" hreflang="en"/>
+    <author>
+      <name>meteoalarm.org</name>
+      <uri>https://meteoalarm.org</uri>
+    </author>
+    <published>2026-09-02T17:00:10Z</published>
+    <id>https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/c6723b5e-cb54-4a8c-8840-77fe899b62f8?index_info=1&amp;index_area=0&amp;index_geocode=0</id>
+    <title>Yellow High-temperature Warning issued for Spain - Ampurdán</title>
+    <updated>2026-09-02T17:00:10Z</updated>
+  </entry>
+<entry>
+    <cap:geocode>
+      <valueName>EMMA_ID</valueName>
+      <value>ES187</value>
+    </cap:geocode>
+    <link title="Pirineo de Lleida" href="https://meteoalarm.org?geocode=EMMA_ID:ES187" hreflang="en"/>
+    <cap:areaDesc>Pirineo de Lleida</cap:areaDesc>
+    <cap:event>Severe high-temperature warning</cap:event>
+    <cap:sent>2026-09-02T17:00:10+00:00</cap:sent>
+    <cap:expires>2026-09-04T18:59:59+00:00</cap:expires>
+    <cap:effective>2026-09-02T16:57:47+00:00</cap:effective>
+    <cap:onset>2026-09-04T11:00:00+00:00</cap:onset>
+    <cap:certainty>Likely</cap:certainty>
+    <cap:severity>Severe</cap:severity>
+    <cap:urgency>Future</cap:urgency>
+    <cap:scope>Public</cap:scope>
+    <cap:message_type>Update</cap:message_type>
+    <cap:status>Actual</cap:status>
+    <cap:identifier>2.49.0.0.724.0.ES.260902170010.692502ATTA041968410</cap:identifier>
+    <link type="application/cap+xml" href="https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/58c5f611-1500-4f43-aa86-1a4f07062d38"/>
+    <link title="Spain" rel="related" href="https://meteoalarm.org?region=ES" hreflang="en"/>
+    <author>
+      <name>meteoalarm.org</name>
+      <uri>https://meteoalarm.org</uri>
+    </author>
+    <published>2026-09-02T17:00:10Z</published>
+    <id>https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/58c5f611-1500-4f43-aa86-1a4f07062d38?index_info=1&amp;index_area=0&amp;index_geocode=0</id>
+    <title>Orange High-temperature Warning issued for Spain - Pirineo de Lleida</title>
+    <updated>2026-09-02T17:00:10Z</updated>
+  </entry>
+</feed>

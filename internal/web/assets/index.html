@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>eye // Córdoba operations console</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"
+      integrity="sha512-Zcn6bjR/8RZbLEpLIeOwNtzREBAJnUKESxces60Mpoj+2okopSAcSUIUOseddDm0cxnGQzxIR7vJgsLZbdLE3w=="
+      crossorigin="anonymous" referrerpolicy="no-referrer">
+<link rel="stylesheet" href="/css/app.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"
+        integrity="sha512-BwHfrr4c9kmRkLw6iXFdzcdWV/PGkVgiIyIWLLlTSXzWQzxuSg4DiQUCpauz/EWjgk5TYQqX/kvn9pG1NpYfqg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script type="module" src="/js/main.js"></script>
+</head>
+<body>
+<div class="crt" aria-hidden="true"></div>
+
+<div class="shell">
+  <nav class="rail" aria-label="Sections">
+    <div class="brand">
+      <span class="brand-mark">&#9673;</span>
+      <span class="brand-name">eye</span>
+      <span class="brand-sub">C&Oacute;RDOBA</span>
+    </div>
+
+    <button type="button" class="rail-link" data-view="dashboard"><span class="rail-key">01</span> DASHBOARD</button>
+    <button type="button" class="rail-link" data-view="map"><span class="rail-key">02</span> MAP</button>
+    <button type="button" class="rail-link" data-view="transit"><span class="rail-key">03</span> TRANSIT</button>
+    <button type="button" class="rail-link" data-view="records"><span class="rail-key">04</span> RECORDS</button>
+    <button type="button" class="rail-link" data-view="sources"><span class="rail-key">05</span> SOURCES</button>
+
+    <div class="rail-foot">
+      <div class="conn" id="conn"><span class="dot dot-unknown"></span><span id="conn-text">connecting&hellip;</span></div>
+      <div class="conn-meta" id="conn-version"></div>
+      <button type="button" class="btn btn-quiet" id="sign-out" hidden>SIGN OUT</button>
+    </div>
+  </nav>
+
+  <main id="app">
+
+    <!-- 01 DASHBOARD -->
+    <section id="view-dashboard" class="view" hidden>
+      <header class="view-head">
+        <h1>DASHBOARD</h1>
+        <div class="view-tools">
+          <span class="stamp">last updated <span id="dash-stamp">never</span></span>
+          <button type="button" class="btn" id="dash-pause" aria-pressed="false">PAUSE</button>
+        </div>
+      </header>
+      <div class="notice notice-error" id="dash-error" hidden></div>
+      <div class="counters" id="dash-counters"></div>
+      <div class="grid-3">
+        <div class="panel"><h2>RECORDS BY TOPIC</h2><div class="bars" id="bars-topic"></div></div>
+        <div class="panel"><h2>RECORDS BY SOURCE</h2><div class="bars" id="bars-source"></div></div>
+        <div class="panel"><h2>RECORDS BY KIND</h2><div class="bars" id="bars-kind"></div></div>
+      </div>
+      <div class="panel">
+        <h2>SOURCE HEALTH</h2>
+        <p class="hint">
+          <span class="dot dot-ok"></span> fetched within the hour &middot;
+          <span class="dot dot-warn"></span> automated but stale, or never fetched &middot;
+          <span class="dot dot-bad"></span> last attempt failed &middot;
+          <span class="dot dot-off"></span> not automated, so nothing is expected
+        </p>
+        <div class="table-wrap">
+          <table class="grid">
+            <thead><tr>
+              <th>SOURCE</th><th>AUTOMATION</th><th>LAST SUCCESS</th><th>RECORDS</th><th>ERRORS</th><th>LAST ERROR</th>
+            </tr></thead>
+            <tbody id="health-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>STORE WINDOW</h2>
+        <dl class="kv" id="dash-window"></dl>
+      </div>
+    </section>
+
+    <!-- 02 MAP -->
+    <section id="view-map" class="view" hidden>
+      <header class="view-head">
+        <h1>MAP</h1>
+        <div class="view-tools">
+          <label class="check"><input type="checkbox" id="map-show-entities" checked> entities</label>
+          <span class="stamp" id="map-stamp">idle</span>
+        </div>
+      </header>
+      <div class="notice notice-error" id="map-error" hidden></div>
+      <div class="map-layout">
+        <div class="map-side">
+          <div class="panel">
+            <h2>LAYERS</h2>
+            <div class="layers" id="map-layers"><p class="hint">Move the map to load features.</p></div>
+            <p class="hint">Basemap: OpenStreetMap's own tiles, inverted in CSS rather than
+               fetched dark. No API key, no watermark. Everything drawn on top of them comes
+               from the sources listed under SOURCES, each with its own licence.</p>
+          </div>
+          <div class="panel panel-grow">
+            <h2>FEATURE</h2>
+            <div id="map-feature"><p class="hint">Click a feature to see the record and where it came from.</p></div>
+          </div>
+        </div>
+        <div class="map-canvas" id="map-canvas"></div>
+      </div>
+    </section>
+
+    <!-- 03 TRANSIT -->
+    <section id="view-transit" class="view" hidden>
+      <header class="view-head">
+        <h1>TRANSIT</h1>
+        <div class="view-tools tabs">
+          <button type="button" class="btn tab is-on" data-tab="bus">BUSES</button>
+          <button type="button" class="btn tab" data-tab="train">TRAINS</button>
+        </div>
+      </header>
+
+      <div class="transit-layout">
+        <div class="transit-main">
+
+          <div class="transit-pane" id="pane-bus">
+            <div class="panel">
+              <h2>STOP</h2>
+              <div class="row">
+                <input type="search" id="stop-search" placeholder="search a stop by name or pole number" autocomplete="off">
+                <button type="button" class="btn" id="stop-search-go">SEARCH</button>
+              </div>
+              <div id="stop-results" class="chips"></div>
+            </div>
+
+            <div class="panel">
+              <h2>ARRIVALS <span class="badge badge-stale" id="arrivals-stale" hidden>STALE</span></h2>
+              <div class="panel-tools">
+                <span class="stamp" id="arrivals-stamp">no stop selected</span>
+                <button type="button" class="btn" id="arrivals-pause" aria-pressed="false">PAUSE</button>
+              </div>
+              <div class="notice" id="arrivals-notice" hidden></div>
+              <div class="board" id="arrivals-board"></div>
+            </div>
+
+            <div class="panel">
+              <h2>LINES AND SERVICE HOURS</h2>
+              <div class="notice" id="lines-notice" hidden></div>
+              <div class="table-wrap">
+                <table class="grid">
+                  <thead><tr><th>LINE</th><th>NAME</th><th>STOPS</th><th>SERVICE HOURS</th></tr></thead>
+                  <tbody id="lines-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="transit-pane" id="pane-train" hidden>
+            <div class="panel">
+              <h2>STATION</h2>
+              <div class="row">
+                <input type="search" id="station-input" value="CORDOBA" autocomplete="off">
+                <button type="button" class="btn" id="station-go">LOAD</button>
+              </div>
+            </div>
+            <div class="panel">
+              <h2>DEPARTURES</h2>
+              <div class="panel-tools">
+                <span class="stamp" id="departures-stamp">not loaded</span>
+              </div>
+              <div class="notice" id="departures-notice" hidden></div>
+              <div class="board" id="departures-board"></div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="transit-side">
+          <div class="panel panel-grow">
+            <h2>LOCATION</h2>
+            <div class="map-canvas map-canvas-small" id="transit-map"></div>
+            <p class="hint" id="transit-map-note">Nothing selected.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 RECORDS -->
+    <section id="view-records" class="view" hidden>
+      <header class="view-head">
+        <h1>RECORDS</h1>
+        <div class="view-tools">
+          <span class="stamp" id="records-stamp">not run</span>
+        </div>
+      </header>
+
+      <div class="panel">
+        <h2>QUERY</h2>
+        <div class="filters">
+          <label>topic<input type="text" id="f-topic" autocomplete="off"></label>
+          <label>source<input type="text" id="f-source" autocomplete="off"></label>
+          <label>kind<input type="text" id="f-kind" autocomplete="off"></label>
+          <label>text<input type="search" id="f-text" autocomplete="off"></label>
+          <label>since<input type="text" id="f-since" placeholder="2026-09-01T00:00:00Z" autocomplete="off"></label>
+          <label>until<input type="text" id="f-until" placeholder="RFC3339" autocomplete="off"></label>
+          <label>min_severity
+            <select id="f-min-severity">
+              <option value="">any</option>
+              <option value="1">1 info</option>
+              <option value="2">2 low</option>
+              <option value="3">3 moderate</option>
+              <option value="4">4 high</option>
+              <option value="5">5 critical</option>
+            </select>
+          </label>
+          <label>bbox<input type="text" id="f-bbox" placeholder="minLon,minLat,maxLon,maxLat" autocomplete="off"></label>
+          <label>near<input type="text" id="f-near" placeholder="lat,lon" autocomplete="off"></label>
+          <label>radius_km<input type="text" id="f-radius" placeholder="5" autocomplete="off"></label>
+          <label>limit<input type="text" id="f-limit" value="200" autocomplete="off"></label>
+          <label>dataset
+            <select id="f-dataset">
+              <option value="records">records</option>
+              <option value="entities">entities</option>
+            </select>
+          </label>
+        </div>
+        <div class="row row-wrap">
+          <button type="button" class="btn btn-primary" id="records-run">RUN</button>
+          <button type="button" class="btn" id="records-curl">COPY AS CURL</button>
+          <button type="button" class="btn" id="records-csv">DOWNLOAD CSV</button>
+          <button type="button" class="btn" id="records-geojson">DOWNLOAD GEOJSON</button>
+          <button type="button" class="btn btn-quiet" id="records-reset">RESET</button>
+        </div>
+        <p class="hint" id="records-hint">The request is built from these fields only. Nothing is remembered between runs.</p>
+      </div>
+
+      <div class="notice notice-error" id="records-error" hidden></div>
+
+      <div class="panel">
+        <h2>RESULTS <span class="count" id="records-count"></span></h2>
+        <div class="table-wrap table-scroll" id="records-scroll">
+          <table class="grid grid-rows">
+            <thead><tr>
+              <th>OBSERVED</th><th>LATENCY</th><th>SOURCE</th><th>KIND</th><th>TOPIC</th><th>SEV</th><th>TITLE</th>
+            </tr></thead>
+            <tbody id="records-body"></tbody>
+          </table>
+          <div class="more" id="records-more" hidden></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 SOURCES -->
+    <section id="view-sources" class="view" hidden>
+      <header class="view-head">
+        <h1>SOURCES</h1>
+        <div class="view-tools">
+          <span class="stamp" id="sources-stamp">not loaded</span>
+        </div>
+      </header>
+      <div class="panel">
+        <h2>FILTER</h2>
+        <div class="row row-wrap">
+          <label>topic <select id="s-topic"><option value="">all</option></select></label>
+          <label>automation <select id="s-automation"><option value="">all</option></select></label>
+          <label>text <input type="search" id="s-text" placeholder="authority, id, notes" autocomplete="off"></label>
+        </div>
+      </div>
+      <div class="notice notice-error" id="sources-error" hidden></div>
+      <div class="cards" id="sources-cards"></div>
+    </section>
+
+  </main>
+</div>
+
+<div class="modal" id="token-gate" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="token-title">
+    <h2 id="token-title">API TOKEN REQUIRED</h2>
+    <p>This deployment sets <code>EYE_API_TOKEN</code>, so every <code>/v1</code> call needs it.
+       The token is kept in this browser under <code>eye.token</code> and sent as an
+       <code>Authorization: Bearer</code> header. It is never put in a URL and never
+       written into a downloaded file.</p>
+    <div class="row">
+      <input type="password" id="token-input" placeholder="token" autocomplete="off">
+      <button type="button" class="btn btn-primary" id="token-save">SAVE</button>
+    </div>
+    <p class="notice notice-error" id="token-error" hidden></p>
+  </div>
+</div>
+
+</body>
+</html>

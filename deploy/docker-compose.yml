@@ -1,0 +1,90 @@
+# eye — two processes over one store.
+#
+#   eye-daemon  polls the sources on their declared cadences and writes.
+#   eye-api     serves what the daemon collected, read-only.
+#
+# They are split because they fail differently: a provider that starts timing
+# out must not take the API down with it, and restarting the API must not lose
+# a poll. SQLite serialises the writes, and only the daemon writes.
+#
+#   cp deploy/.env.example deploy/.env    # then edit it
+#   docker compose -f deploy/docker-compose.yml up -d
+#
+# The API is published on 127.0.0.1 only. See the comment on the ports entry
+# before changing that.
+
+name: eye
+
+services:
+  eye-daemon:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: eye:latest
+    container_name: eye-daemon
+    restart: unless-stopped
+    command: ["daemon"]
+    env_file: [.env]
+    volumes:
+      - eye-data:/var/lib/eye
+    # The daemon serves nothing, so it needs no port and no health endpoint.
+    # Its own health is in the store, and `eye sources` reads it.
+    healthcheck:
+      disable: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  eye-api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: eye:latest
+    container_name: eye-api
+    restart: unless-stopped
+    command: ["serve", "--public", "--addr", "0.0.0.0:8787"]
+    env_file: [.env]
+    volumes:
+      - eye-data:/var/lib/eye
+    ports:
+      # Loopback only, on purpose. eye reads sources under licences that in
+      # several cases permit personal use only, and the store holds an
+      # aircraft position history.
+      #
+      # To expose it: put a reverse proxy in front of this port and let the
+      # proxy terminate TLS — see deploy/Caddyfile.example. Do NOT change this
+      # to "8787:8787" and call it done: that publishes the port on every
+      # interface AND punches a hole through the host firewall, because Docker
+      # writes its own iptables rules.
+      #
+      # Whatever you put in front of it, EYE_API_TOKEN must be set. `eye serve
+      # --public` refuses to start without one.
+      - "127.0.0.1:8787:8787"
+    depends_on:
+      - eye-daemon
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  # One store, written by the daemon and read by the API. Named rather than a
+  # bind mount so the uid inside the container owns it without a chown dance.
+  eye-data:

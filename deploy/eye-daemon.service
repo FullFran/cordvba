@@ -1,0 +1,72 @@
+# eye — the collector, as a systemd unit.
+#
+#   sudo install -m 0644 deploy/eye-daemon.service /etc/systemd/system/
+#   sudo install -m 0755 -D bin/eye /usr/local/bin/eye
+#   sudo install -m 0644 -D configs/sources.yaml /etc/eye/sources.yaml
+#   sudo install -m 0600 -D /dev/null /etc/eye/daemon.env   # then edit it
+#   sudo systemctl daemon-reload && sudo systemctl enable --now eye-daemon
+#
+# This is the process that polls. It serves nothing and needs no port.
+
+[Unit]
+Description=eye source collector
+Documentation=https://github.com/FullFran/eye
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+
+# No account to create, no uid to pick, nothing left behind on uninstall.
+DynamicUser=yes
+# /var/lib/eye, shared with eye-api through the same StateDirectory name.
+# Only this service writes to it; SQLite serialises the rest.
+StateDirectory=eye
+StateDirectoryMode=0750
+ConfigurationDirectory=eye
+
+Environment=EYE_DATA_DIR=/var/lib/eye
+Environment=EYE_CONFIG_DIR=/etc/eye
+Environment=EYE_LOG_LEVEL=info
+
+# API keys live here, not in the unit: a unit file is world-readable.
+#   AEMET_API_KEY=...
+#   FIRMS_MAP_KEY=...
+#   EYE_ALLOW_PERSONAL_SOURCES=0
+# chmod 0600. The dash means an absent file is not a startup failure: the
+# providers that need a key report themselves unavailable, and the rest run.
+EnvironmentFile=-/etc/eye/daemon.env
+
+ExecStart=/usr/local/bin/eye daemon
+
+Restart=on-failure
+RestartSec=30s
+
+# ── Sandbox ─────────────────────────────────────────────────────────────────
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictAddressFamilies=AF_INET AF_INET6
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources @obsolete
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

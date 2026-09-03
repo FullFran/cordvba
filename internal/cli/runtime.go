@@ -74,12 +74,25 @@ func newRuntime(opts runtimeOptions) (*runtime, error) {
 
 	cache := store.NewRawCache(cfg.RawCachePath())
 
+	// NewWithOptions rather than New: a bad EYE_EXTRA_CA_FILE has to stop the
+	// command with the path in the message. Silently falling back to the
+	// system pool would turn a typo into a source that fails at TLS for a
+	// reason nobody would think to look for.
+	client, err := httpx.NewWithOptions(
+		httpx.WithRecorder(cache),
+		httpx.WithExtraCAFile(cfg.ExtraCAFile),
+	)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+
 	return &runtime{
 		cfg:          cfg,
 		sources:      sources,
 		store:        db,
 		cache:        cache,
-		client:       httpx.New(httpx.WithRecorder(cache)),
+		client:       client,
 		registryPath: path,
 	}, nil
 }
@@ -116,6 +129,11 @@ func (r *runtime) pollable(topics ...string) ([]provider.Provider, []source.Sour
 	}
 	return providers.BuildPollable(selected, r.client, providers.Options{
 		AllowPersonal: r.cfg.AllowPersonalSources,
+		// The two sources that need a credential get it from the machine,
+		// never from the registry. An absent key does not hide the
+		// source; the adapter reports it by name on the first poll.
+		AEMETAPIKey: r.cfg.AEMETAPIKey,
+		FIRMSMapKey: r.cfg.FIRMSMapKey,
 	})
 }
 
