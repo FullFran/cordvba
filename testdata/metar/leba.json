@@ -1,0 +1,24 @@
+[
+    {
+        "icaoId": "LEBA",
+        "receiptTime": "2026-09-03T00:05:25.525Z",
+        "obsTime": 1788393600,
+        "reportTime": "2026-09-03T00:00:00.000Z",
+        "temp": 23,
+        "dewp": 12,
+        "wdir": 360,
+        "wspd": 3,
+        "visib": "6+",
+        "altim": 1019,
+        "qcField": 2,
+        "metarType": "METAR",
+        "rawOb": "METAR LEBA 030000Z AUTO 36003KT CAVOK 23/12 Q1019",
+        "lat": 37.842,
+        "lon": -4.849,
+        "elev": 88,
+        "name": "C\u00f3rdoba Arpt, AN, ES",
+        "cover": "CAVOK",
+        "clouds": [],
+        "fltCat": "VFR"
+    }
+]

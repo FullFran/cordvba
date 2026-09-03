@@ -788,6 +788,51 @@ sources:
       rest-json-two-step with options {product: warnings, area: "61"} and eye
       reads AEMET directly.
 
+  - id: metar-cordoba
+    authority: NOAA Aviation Weather Center
+    topic: weather
+    url: https://aviationweather.gov/api/data/metar
+    format: metar-json
+    license: us-government-public-domain
+    access: documented_api
+    automation: enabled
+    interval: 20m
+    published_every: 30m
+    sampled_kinds: [weather_observation]
+    options:
+      stations: LEBA
+      kind: weather_station
+      ttl: 720h
+    notes: >-
+      Live surface weather for Córdoba, with no credential. LEBA is the ICAO
+      identifier of Córdoba Airport. Verified 2026-09-03: 23 °C, dew point 12,
+      wind 360° at 3 kt, QNH 1019, reported at 00:00Z and received at 00:05Z.
+
+      THIS IS THE SAME PHYSICAL STATION AEMET PUBLISHES AS 5402, reported
+      through a different channel, and the differences matter more than the
+      similarity:
+
+        · The publisher is NOAA, not AEMET. NOAA is not the competent
+          meteorological authority for Spain, so this is stored as
+          quality=preliminary and never as an official declaration. Every
+          record carries a payload note saying so.
+        · METAR is written for pilots. It reports temperature, dew point,
+          wind, visibility, cloud and pressure — not the fuller variable set
+          AEMET publishes.
+        · The cadence is the aerodrome's, roughly half-hourly.
+
+      It exists because until it did, eye knew nothing at all about the
+      weather outside: `aemet-observation` has never once run, because it
+      needs a key nobody had set. A reading from the right instrument under
+      the wrong letterhead, clearly labelled, beats no reading.
+
+      Licence: works of the US federal government are in the public domain.
+      Attribution is courtesy rather than obligation, and eye records the
+      publisher anyway.
+
+      sampled_kinds: a surface reading is a sample of a moving signal, not a
+      statement. Diffing two of them would report the weather back as news.
+
   - id: aemet-observation
     authority: AEMET
     topic: weather

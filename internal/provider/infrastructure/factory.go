@@ -20,6 +20,7 @@ import (
 	"github.com/FullFran/eye/internal/provider/infrastructure/firms"
 	"github.com/FullFran/eye/internal/provider/infrastructure/gtfs"
 	"github.com/FullFran/eye/internal/provider/infrastructure/gtfsrt"
+	"github.com/FullFran/eye/internal/provider/infrastructure/metar"
 	"github.com/FullFran/eye/internal/provider/infrastructure/overpass"
 	"github.com/FullFran/eye/internal/provider/infrastructure/rss"
 	"github.com/FullFran/eye/internal/provider/infrastructure/wfs"
@@ -82,6 +83,9 @@ var builders = map[string]func(source.Source, *httpx.Client, Options) provider.P
 	},
 	// AEMET publishes several products behind one two-step contract, so the
 	// registry names the product rather than the protocol.
+	"metar-json": func(s source.Source, c *httpx.Client, _ Options) provider.Provider {
+		return metar.New(s, c)
+	},
 	"meteoalarm-atom": func(s source.Source, c *httpx.Client, _ Options) provider.Provider {
 		return aemet.NewMeteoAlarm(s, c)
 	},
