@@ -126,6 +126,35 @@ func (p *Provider) Poll(ctx context.Context) ([]observation.Record, error) {
 	return records, nil
 }
 
+// withinDeclaredBox keeps a detection only if it falls inside the bounding box
+// the registry declared.
+//
+// The area API filters server-side, so this is a no-op there. The NRT archive
+// does not: it is one continental file, and without this a source declaring
+// Cordoba would quietly fill the store with fires in Poland. The filter runs in
+// both modes on purpose — a source that says it watches a box must never hold a
+// record outside it, whichever endpoint it happened to read.
+//
+// A malformed or absent box keeps everything rather than dropping everything.
+// Poll already refuses a source with no bbox, so reaching here without one means
+// the box was unparseable, and silently discarding every detection is the worse
+// of the two failures.
+func (p *Provider) withinDeclaredBox(pos observation.Point) bool {
+	parts := strings.Split(strings.TrimSpace(p.src.Option("bbox", "")), ",")
+	if len(parts) != 4 {
+		return true
+	}
+
+	west, okW := parseFloat(parts[0])
+	south, okS := parseFloat(parts[1])
+	east, okE := parseFloat(parts[2])
+	north, okN := parseFloat(parts[3])
+	if !okW || !okS || !okE || !okN {
+		return true
+	}
+	return pos.Lon >= west && pos.Lon <= east && pos.Lat >= south && pos.Lat <= north
+}
+
 // toRecord normalizes one detection. A row eye cannot place in space or time is
 // dropped rather than stored at a made-up position.
 func (p *Provider) toRecord(row map[string]string, fetchedAt time.Time, ttl time.Duration,
@@ -138,6 +167,9 @@ func (p *Provider) toRecord(row map[string]string, fetchedAt time.Time, ttl time
 	}
 	pos := observation.Point{Lat: lat, Lon: lon}
 	if !pos.Valid() {
+		return observation.Record{}, false
+	}
+	if !p.withinDeclaredBox(pos) {
 		return observation.Record{}, false
 	}
 
@@ -185,16 +217,33 @@ func (p *Provider) toRecord(row map[string]string, fetchedAt time.Time, ttl time
 	return rec, true
 }
 
-// endpoint builds the documented area request.
+// archive is the keyless NRT file the registry named, if it named one.
+//
+// NASA publishes the same detections twice. The area API filters server-side
+// and needs a credential; the NRT archive is a continental CSV that needs none.
+// eye prefers the archive when the registry declares it, because a source a
+// second person cannot reproduce without their own key is a source this project
+// cannot honestly say it reads — see the reproducibility argument in ADR-0008.
+func (p *Provider) archive() string {
+	return strings.TrimSpace(p.src.Option("archive", ""))
+}
+
+// endpoint builds the request, from the archive when one is declared and from
+// the documented area API otherwise.
 func (p *Provider) endpoint() (string, error) {
-	key := strings.TrimSpace(p.mapKey)
-	if key == "" {
-		return "", fmt.Errorf("poll %s: %w", p.src.ID, ErrMissingMapKey)
-	}
 	bbox := strings.TrimSpace(p.src.Option("bbox", ""))
 	if bbox == "" {
 		return "", fmt.Errorf("%w: source %s needs a \"bbox\" option (west,south,east,north)",
 			ErrFIRMS, p.src.ID)
+	}
+
+	if archive := p.archive(); archive != "" {
+		return archive, nil
+	}
+
+	key := strings.TrimSpace(p.mapKey)
+	if key == "" {
+		return "", fmt.Errorf("poll %s: %w", p.src.ID, ErrMissingMapKey)
 	}
 	return p.base() + "csv/" + key + "/" + p.product() + "/" + bbox + "/" + p.days(), nil
 }
@@ -202,6 +251,11 @@ func (p *Provider) endpoint() (string, error) {
 // publicURL is the same request with the credential replaced by its placeholder,
 // so provenance can be read and replayed without leaking the key.
 func (p *Provider) publicURL() string {
+	// The archive carries no credential, so it IS the public URL. Writing a
+	// [MAP_KEY] placeholder here would describe a request eye never made.
+	if archive := p.archive(); archive != "" {
+		return archive
+	}
 	return p.base() + "csv/[MAP_KEY]/" + p.product() + "/" +
 		strings.TrimSpace(p.src.Option("bbox", "")) + "/" + p.days()
 }

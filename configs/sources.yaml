@@ -806,24 +806,35 @@ sources:
     automation: enabled
     interval: 10m
     options:
+      archive: https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Europe_24h.csv
       bbox: "-5.8,37.2,-4.0,38.8"
       source: VIIRS_SNPP_NRT
       days: "1"
     notes: >-
       Active-fire detections over Córdoba province and its approaches.
 
-      NEEDS A FREE KEY: set FIRMS_MAP_KEY, requested at
-      https://firms.modaps.eosdis.nasa.gov/api/area/. Without it the endpoint
-      answers 400 "Invalid MAP_KEY." — the literal placeholder in this URL is
-      the placeholder, not a working key.
+      NO CREDENTIAL NEEDED, and that is a deliberate choice between two things
+      NASA publishes. The area API filters server-side and requires a personal
+      FIRMS_MAP_KEY; the NRT archive named in `archive` is a plain CSV that
+      requires none. Verified 2026-09-03: HTTP 200, 180 KB, 2,239 detections
+      across Europe, 6 of them inside this bounding box, newest acquisition the
+      same day.
 
-      THE KEY IS IN THE URL PATH, which FIRMS chose and eye has to live with.
-      Since a failed fetch quotes the URL into an error, and errors are
-      persisted as source health, the adapter redacts it to [MAP_KEY] before
-      it can reach the store.
+      The archive wins because a source that only works with the operator's own
+      credential is one nobody else running eye can reproduce, and
+      reproducibility is the value ADR-0008 was written to protect. Setting
+      FIRMS_MAP_KEY still works: remove `archive` and the adapter goes back to
+      the area API, which is narrower and fresher.
 
-      bbox is required by the adapter rather than defaulted, because the
-      alternative to a bounding box here is asking NASA for the planet.
+      THE ARCHIVE IS CONTINENTAL, so the bounding box is applied by the adapter
+      rather than by NASA. Without that filter this source would quietly store
+      fires in Poland under a Córdoba heading. bbox is required, never
+      defaulted: the alternative to a bounding box here is the whole continent.
+
+      When a key IS configured, it travels in the URL PATH, which FIRMS chose
+      and eye has to live with. Since a failed fetch quotes the URL into an
+      error and errors are persisted as source health, the adapter redacts it
+      to [MAP_KEY] before it can reach the store.
 
       Latency is orbital, not network. Polling faster changes nothing. The
       FIRMS `confidence` field is product metadata and must not be copied into

@@ -48,7 +48,12 @@ func src(base string, opts map[string]string) source.Source {
 		opts = map[string]string{}
 	}
 	if _, ok := opts["bbox"]; !ok {
-		opts["bbox"] = "-7.6,36.0,-2.0,38.9"
+		// Wide enough to contain every row of the recorded fixture, which
+		// reaches 38.96. These tests are about PARSING, and coupling them
+		// to the bounding box would make a filtering change look like a
+		// parsing regression. TestArchiveFiltersToTheBoundingBox is where
+		// the box itself is tested.
+		opts["bbox"] = "-7.6,36.0,-2.0,39.2"
 	}
 	return source.Source{
 		ID: "nasa-firms", Authority: "NASA FIRMS", Topic: "fire", URL: base + "/api/area/",
@@ -100,7 +105,7 @@ func TestPoll(t *testing.T) {
 
 	records, gotPath := detections(t)
 
-	if !strings.Contains(gotPath, "VIIRS_SNPP_NRT") || !strings.Contains(gotPath, "-7.6,36.0,-2.0,38.9") {
+	if !strings.Contains(gotPath, "VIIRS_SNPP_NRT") || !strings.Contains(gotPath, "-7.6,36.0,-2.0,39.2") {
 		t.Errorf("request path = %q, want the product and the bounding box", gotPath)
 	}
 
@@ -383,5 +388,115 @@ func TestTransportErrorsDoNotLeakTheMapKey(t *testing.T) {
 	}
 	if !errors.Is(err, httpx.ErrStatus) {
 		t.Errorf("redaction broke the error chain: %v", err)
+	}
+}
+
+// archiveSource points the adapter at NASA's keyless NRT archive rather than
+// the credentialed area API.
+func archiveSource(url string, opts map[string]string) source.Source {
+	if opts == nil {
+		opts = map[string]string{}
+	}
+	opts["archive"] = url
+	s := src(url, opts)
+	s.URL = url
+	return s
+}
+
+// TestArchiveNeedsNoMapKey is the point of the archive mode.
+//
+// NASA publishes the same detections twice: through an area API that needs a
+// credential, and through a public NRT archive that needs none. The archive is
+// the one a second person running eye can actually reproduce, which is worth
+// more to this project than the area API's server-side filtering.
+func TestArchiveNeedsNoMapKey(t *testing.T) {
+	t.Parallel()
+
+	body, err := os.ReadFile("../../../../testdata/firms/andalucia_24h.csv")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/csv")
+		_, _ = w.Write(body)
+	}))
+	t.Cleanup(srv.Close)
+
+	// No map key at all — the third argument is empty.
+	records, err := firms.New(archiveSource(srv.URL, nil), httpx.New(), "").
+		Poll(context.Background())
+	if err != nil {
+		t.Fatalf("Poll() = %v", err)
+	}
+	if len(records) == 0 {
+		t.Fatal("the keyless archive produced no records")
+	}
+	for _, r := range records {
+		if err := r.Validate(); err != nil {
+			t.Errorf("record invalid: %v", err)
+		}
+	}
+}
+
+// The archive is continental, so the bounding box has to be applied here. The
+// area API filters server-side; asking NASA's static file to do that is not an
+// option, and storing every fire in Europe under a Cordoba source would be a
+// quiet lie about what eye is watching.
+func TestArchiveFiltersToTheBoundingBox(t *testing.T) {
+	t.Parallel()
+
+	const continental = "latitude,longitude,bright_ti4,scan,track,acq_date,acq_time,satellite,confidence,version,bright_ti5,frp,daynight\n" +
+		"37.9,-4.8,300.1,0.4,0.4,2026-09-02,1427,N,n,2.0NRT,290.0,5.2,D\n" + // Cordoba
+		"52.5,13.4,310.0,0.4,0.4,2026-09-02,1427,N,n,2.0NRT,295.0,7.1,D\n" + // Berlin
+		"41.9,12.5,305.0,0.4,0.4,2026-09-02,1427,N,n,2.0NRT,292.0,6.0,D\n" // Rome
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(continental))
+	}))
+	t.Cleanup(srv.Close)
+
+	records, err := firms.New(
+		archiveSource(srv.URL, map[string]string{"bbox": "-5.8,37.2,-4.0,38.8"}),
+		httpx.New(), "",
+	).Poll(context.Background())
+	if err != nil {
+		t.Fatalf("Poll() = %v", err)
+	}
+	if len(records) != 1 {
+		t.Fatalf("records = %d, want only the one inside the box", len(records))
+	}
+	if got := records[0].Position; got == nil || got.Lat != 37.9 {
+		t.Errorf("kept the wrong detection: %+v", got)
+	}
+}
+
+// Provenance must name the archive file, not the area API with a placeholder
+// key: a reader has to be able to fetch exactly what eye fetched.
+func TestArchiveProvenanceNamesTheFile(t *testing.T) {
+	t.Parallel()
+
+	body, err := os.ReadFile("../../../../testdata/firms/andalucia_24h.csv")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(body)
+	}))
+	t.Cleanup(srv.Close)
+
+	records, err := firms.New(archiveSource(srv.URL, nil), httpx.New(), "").
+		Poll(context.Background())
+	if err != nil {
+		t.Fatalf("Poll() = %v", err)
+	}
+	if len(records) == 0 {
+		t.Fatal("expected records")
+	}
+	if got := records[0].Provenance.SourceURL; got != srv.URL {
+		t.Errorf("source URL = %q, want the archive file %q", got, srv.URL)
+	}
+	if strings.Contains(records[0].Provenance.SourceURL, "MAP_KEY") {
+		t.Error("the archive provenance mentions a credential it never used")
 	}
 }
