@@ -441,7 +441,7 @@ make help       # every target
 
 ## Sources
 
-53 sources declared in [`configs/sources.yaml`](./configs/sources.yaml), across
+54 sources declared in [`configs/sources.yaml`](./configs/sources.yaml), across
 transport, air, weather, fire, hydrology, air quality, local press, events and
 civic documents. `eye sources` reports which of them are live, which are held,
 and which are permitted but have no adapter yet — three different states, and
@@ -459,9 +459,32 @@ arrivals is live only on a machine that opted into personal sources.
 BOP, OpenSky, e-distribución and the four municipal IDE layers. Held means the
 reuse terms are unresolved or there is no documented machine interface.
 
-**Needs a free key:** AEMET (warnings and observations) and NASA FIRMS. Set
-`AEMET_API_KEY` and `FIRMS_MAP_KEY` and they start working; without them the
-adapters say so by name rather than polling empty.
+**Two things do not work, and neither is code.** `aucorsa-lines` needs
+aucorsa.es, whose origin has been refusing TCP on both ports; and
+`aemet-observation` needs a free `AEMET_API_KEY`, which upgrades Córdoba's
+weather reading from an aerodrome METAR to the national met service's own
+station. Everything else answers.
+
+**Three sources that used to need a credential no longer do**, and in each case
+the reason is the same. A source that only works with the operator's own key is
+one nobody else running `eye` can reproduce, and reproducibility is the value
+[ADR-0008](./docs/adr/0008-undocumented-personal-sources.md) exists to protect:
+
+- **NASA fire detections** read the public NRT archive instead of the
+  credentialed area API. The archive is continental, so the bounding box moved
+  from NASA's server into the adapter.
+- **AEMET's weather warnings** arrive through MeteoAlarm, the EUMETNET
+  early-warning service. It is still AEMET speaking — the CAP behind each entry
+  names `AEMET. Agencia Estatal de Meteorología` as its sender — and the relay
+  is recorded on every record rather than laundered into looking direct.
+- **Córdoba's weather** comes from the METAR at LEBA, the same airport
+  instrument AEMET publishes as station 5402, relayed by NOAA. Stored as
+  `preliminary`, never as an official declaration, with a note on every record
+  saying who is and is not speaking.
+
+One source needs a certificate rather than a key: MITECO's air-quality host
+sends an incomplete chain, and `EYE_EXTRA_CA_FILE` completes it. See
+[the deployment guide](./docs/deployment.md).
 
 An audit on 2026-09-03 re-probed every entry against its real endpoint, and
 three things it found are worth repeating here, because each had been recorded
