@@ -231,13 +231,14 @@ func (p *Provider) archive() string {
 // endpoint builds the request, from the archive when one is declared and from
 // the documented area API otherwise.
 func (p *Provider) endpoint() (string, error) {
-	bbox := strings.TrimSpace(p.src.Option("bbox", ""))
-	if bbox == "" {
-		return "", fmt.Errorf("%w: source %s needs a \"bbox\" option (west,south,east,north)",
-			ErrFIRMS, p.src.ID)
-	}
-
+	// Order matters here, and it is about which error the operator reads
+	// first. On the area path a missing key is the actionable problem, so it
+	// is reported before anything else; the archive path has no key to be
+	// missing, and its only requirement is the box.
 	if archive := p.archive(); archive != "" {
+		if err := p.requireBBox(); err != nil {
+			return "", err
+		}
 		return archive, nil
 	}
 
@@ -245,7 +246,23 @@ func (p *Provider) endpoint() (string, error) {
 	if key == "" {
 		return "", fmt.Errorf("poll %s: %w", p.src.ID, ErrMissingMapKey)
 	}
-	return p.base() + "csv/" + key + "/" + p.product() + "/" + bbox + "/" + p.days(), nil
+	if err := p.requireBBox(); err != nil {
+		return "", err
+	}
+	return p.base() + "csv/" + key + "/" + p.product() + "/" + p.src.Option("bbox", "") + "/" + p.days(), nil
+}
+
+// requireBBox refuses a source that names no bounding box.
+//
+// It is required rather than defaulted in both modes: the area API would
+// otherwise be asked for the planet, and the archive already contains a
+// continent that has to be narrowed here.
+func (p *Provider) requireBBox() error {
+	if strings.TrimSpace(p.src.Option("bbox", "")) == "" {
+		return fmt.Errorf("%w: source %s needs a \"bbox\" option (west,south,east,north)",
+			ErrFIRMS, p.src.ID)
+	}
+	return nil
 }
 
 // publicURL is the same request with the credential replaced by its placeholder,
