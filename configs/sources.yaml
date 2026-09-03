@@ -212,6 +212,19 @@ sources:
       It answers 200 with the body "-1" when it refuses, so a status code is
       not enough to tell whether a poll worked.
 
+      LOCKED OUT OF ITS OWN KEY, 2026-09-03. These two things are true at the
+      same time: lightapi.aucorsa.es is UP — it answers 200 and lists its 20
+      routes, though it takes about 20 seconds against eye's 30-second
+      timeout — and this source still cannot poll, because the token above
+      comes from aucorsa.es, whose origin has been refusing connections since
+      30 August. /estimations/stop answers "-1" without it, and lightapi's own
+      root 301-redirects to the dead host.
+
+      So an arrivals failure here is worth reading carefully. "Token page
+      unreachable" and "the arrivals endpoint refused" are different faults
+      with different owners, and during this outage the first one is what is
+      happening even though the second is what a casual glance would assume.
+
       Estimates are recorded as quality=preliminary: they are the operator's
       own prediction, not a measurement.
 
@@ -243,12 +256,25 @@ sources:
       in March 2026, so these pages remain the only current source of a
       Córdoba city timetable.
 
-      OUTAGE 2026-09-03: aucorsa.es was unreachable for the whole session.
-      DNS resolves (18.101.44.203, AWS eu-south-2) and TCP 443 and 80 both
-      refuse, while Cloudflare-fronted hosts on the same network answer
-      normally. That is an origin outage, not a countermeasure, and it takes
-      `aucorsa-arrivals` down with it because the CSRF token is read from
-      this same host.
+      OUTAGE. Last successful poll 2026-08-30 14:18 UTC; still down when
+      re-probed 2026-09-03 08:30 UTC, so roughly four days and counting.
+
+      The origin is what is dead, and only the origin. aucorsa.es and
+      www.aucorsa.es both resolve to 18.101.44.203 (AWS eu-south-2) and to
+      2a05:d011:d2e:e700::/64, and TCP 443 and 80 refuse on BOTH families.
+      No alternative host exists: CTAN's operator record for AUCORSA declares
+      no URL, and the municipal mobility page links none.
+
+      MIND WHICH NUMBER YOU READ when this happens again. `eye sources` shows
+      LAST OK, which is the age of the last SUCCESS. A dashboard showing the
+      last ATTEMPT will read a few hours old however long the outage has run,
+      because eye keeps trying. The two are different questions and only one
+      of them is "how long has this been broken".
+
+      WHAT STILL WORKS. The 32 lines and 690 stops from the last good poll are
+      in the store and keep being served, stamped with their real age. A
+      timetable four days old is worth more than no timetable, as long as
+      nobody is told it is fresh.
 
       Ordinary public HTML, fetched the way a browser fetches it. The pages
       carry no coordinates; the municipal cartography layer does, and matching
