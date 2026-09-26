@@ -153,7 +153,7 @@ func (r *storeReader) Read(ctx context.Context) (tui.Data, error) {
 		row := tui.SourceRow{
 			ID: s.ID, Authority: s.Authority, Topic: s.Topic, Format: s.Format,
 			License: s.License, Access: string(s.Access), Automation: string(s.Automation),
-			Pollable:   pollableNow(s, r.rt.cfg.AllowPersonalSources),
+			Pollable:   pollableNow(s, r.rt.cfg.AllowPersonalSources, r.rt.overrides),
 			HasAdapter: providers.Supported(s.Format),
 			Interval:   s.Interval,
 		}

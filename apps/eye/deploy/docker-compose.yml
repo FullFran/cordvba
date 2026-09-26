@@ -12,6 +12,12 @@
 #
 # The API is published on 127.0.0.1 only. See the comment on the ports entry
 # before changing that.
+#
+# Optional: restrict what this deployment collects and retains (#125). Copy
+# deploy/overrides.example.yaml to deploy/overrides.yaml, edit it, then
+# uncomment the bind mount below on BOTH services and EYE_OVERRIDES_FILE in
+# .env. deploy/overrides.yaml is gitignored (operator configuration, not
+# registry content) and must never be committed.
 
 name: eye
 
@@ -27,6 +33,9 @@ services:
     env_file: [.env]
     volumes:
       - eye-data:/var/lib/eye
+      # Optional per-deployment overrides (#125) — read-only, see the note at
+      # the top of this file and deploy/overrides.example.yaml.
+      # - ./overrides.yaml:/etc/eye/overrides.yaml:ro
     # The daemon serves nothing, so it needs no port and no health endpoint.
     # Its own health is in the store, and `eye sources` reads it.
     healthcheck:
@@ -55,6 +64,10 @@ services:
     env_file: [.env]
     volumes:
       - eye-data:/var/lib/eye
+      # Same optional overrides file as eye-daemon, so /v1/sources reports an
+      # operator-excluded source accurately too. See the note at the top of
+      # this file.
+      # - ./overrides.yaml:/etc/eye/overrides.yaml:ro
     ports:
       # Loopback only, on purpose. eye reads sources under licences that in
       # several cases permit personal use only, and the store holds an

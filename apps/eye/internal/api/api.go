@@ -105,6 +105,9 @@ type Server struct {
 	// allowPersonalSources mirrors EYE_ALLOW_PERSONAL_SOURCES. The live
 	// arrivals endpoint needs it AND a token: see ADR-0008.
 	allowPersonalSources bool
+	// overrides is the operator's optional per-deployment overrides (#125).
+	// Its zero value restricts nothing, matching an absent overrides file.
+	overrides source.Overrides
 	// arrivals caches live estimates for a few seconds, so a browser on a
 	// refresh loop cannot turn one reader into a load generator against
 	// somebody else's server.
@@ -167,6 +170,13 @@ func WithTransit(t Transit) Option {
 // a configured token.
 func WithPersonalSources(allowed bool) Option {
 	return func(s *Server) { s.allowPersonalSources = allowed }
+}
+
+// WithOverrides records the operator's optional per-deployment overrides
+// (#125), so /v1/sources can report a source they excluded as its own
+// distinct state rather than folding it into the registry's own reasons.
+func WithOverrides(overrides source.Overrides) Option {
+	return func(s *Server) { s.overrides = overrides }
 }
 
 // New builds a server over a store and the registry.
@@ -384,6 +394,11 @@ func (s *Server) handleSources(w http.ResponseWriter, r *http.Request) {
 		URL             string `json:"url"`
 		Notes           string `json:"notes,omitempty"`
 
+		// OperatorDisabled is true when the operator's deployment overrides
+		// (#125) are the reason this source is not pollable — never when the
+		// registry or the personal-source opt-in already held it back.
+		OperatorDisabled bool `json:"operator_disabled,omitempty"`
+
 		// Stored health. Absent rather than zero when eye has never polled
 		// the source: a zero timestamp is a lie with a date on it.
 		LastAttempt       *string `json:"last_attempt,omitempty"`
@@ -400,8 +415,9 @@ func (s *Server) handleSources(w http.ResponseWriter, r *http.Request) {
 		entry := view{
 			ID: src.ID, Authority: src.Authority, Topic: src.Topic, Format: src.Format,
 			License: src.License, Access: string(src.Access), Automation: string(src.Automation),
-			Pollable: src.Automation.Pollable(), Redistributable: src.Redistributable(),
+			Pollable: s.overrides.Schedulable(src, s.allowPersonalSources), Redistributable: src.Redistributable(),
 			URL: src.URL, Notes: src.Notes,
+			OperatorDisabled: s.overrides.DisabledByOperator(src, s.allowPersonalSources),
 		}
 		if state, known := health[src.ID]; known {
 			entry.LastAttempt = timestamp(state.LastAttempt)

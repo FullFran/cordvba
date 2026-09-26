@@ -12,6 +12,10 @@ coverage.out
 .env
 .env.local
 
+# eye's optional per-deployment overrides file (#125) — operator
+# configuration, not registry content. The commented example stays tracked.
+apps/eye/deploy/overrides.yaml
+
 # Node/TypeScript build artifacts (apps/web and more to come).
 node_modules/
 dist/
