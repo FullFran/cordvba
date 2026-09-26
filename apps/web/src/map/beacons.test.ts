@@ -16,19 +16,27 @@ describe("categoryShape", () => {
   });
 });
 
-describe("windArrowRotation", () => {
-  it("rotates the arrow to the reported direction in degrees, unchanged (issue 102's convention, kept as-is)", () => {
-    expect(windArrowRotation(0)).toBe(0);
-    expect(windArrowRotation(250)).toBe(250);
+describe("windArrowRotation (issue #138: points where the wind blows TO, corrected for the map's own bearing — supersedes issue #102's original 'no flip' convention)", () => {
+  it("rotates the arrow to the flow-TO bearing (direction + 180°) when the map bearing is 0", () => {
+    expect(windArrowRotation(0)).toBe(180); // from the north -> blows south
+    expect(windArrowRotation(250)).toBe(70); // from the WSW -> blows ENE
+  });
+
+  it("subtracts the map's current bearing, since the arrow is drawn in fixed screen space, not rotated with the map canvas", () => {
+    // 310° wind blows TO 130°; the page's own initial bearing is -35°.
+    expect(windArrowRotation(310, -35)).toBeCloseTo(165, 5);
+    expect(windArrowRotation(310, 90)).toBeCloseTo(40, 5);
+    expect(windArrowRotation(310, 0)).toBeCloseTo(130, 5);
   });
 
   it("wraps into [0, 360)", () => {
-    expect(windArrowRotation(370)).toBe(10);
-    expect(windArrowRotation(-10)).toBe(350);
+    expect(windArrowRotation(370)).toBe(190);
+    expect(windArrowRotation(-10)).toBe(170);
   });
 
-  it("returns 0 for a null direction rather than NaN", () => {
+  it("returns 0 for a null direction rather than NaN, regardless of map bearing", () => {
     expect(windArrowRotation(null)).toBe(0);
+    expect(windArrowRotation(null, 90)).toBe(0);
   });
 });
 
@@ -70,7 +78,7 @@ describe("createBeaconElement", () => {
     expect(el.getAttribute("aria-label")).toMatch(/calidad del aire/i);
   });
 
-  it("renders a wind beacon with the rotated arrow and formatted speed/direction", () => {
+  it("renders a wind beacon with the arrow pointing where the wind blows TO and formatted speed/direction", () => {
     const el = createBeaconElement({
       kind: "wind",
       name: "Córdoba Airport",
@@ -81,7 +89,22 @@ describe("createBeaconElement", () => {
     expect(el.textContent).toContain("WSW");
     expect(el.textContent).toContain("4.1");
     const arrow = el.querySelector<HTMLElement>(".beacon__arrow");
-    expect(arrow?.style.transform).toContain("250deg");
+    // 250° (from the WSW) blows TO 70° (ENE); no map bearing given, so no correction.
+    expect(arrow?.style.transform).toContain("70deg");
+  });
+
+  it("corrects the wind arrow for the map's current bearing (issue #138)", () => {
+    const el = createBeaconElement({
+      kind: "wind",
+      name: "Córdoba Airport",
+      directionDeg: 250,
+      speedMs: 4.1,
+      mapBearingDeg: -35,
+    });
+
+    const arrow = el.querySelector<HTMLElement>(".beacon__arrow");
+    // blows-TO 70°, minus a -35° map bearing = 105°.
+    expect(arrow?.style.transform).toContain("105deg");
   });
 });
 

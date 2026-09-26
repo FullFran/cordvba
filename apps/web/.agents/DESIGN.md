@@ -125,10 +125,14 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   show individual stations only — no interpolated surface") as a small
   overlay chip, not layout-height text.
 - **WindParticles** (`WindParticles.tsx`) — an illustrative canvas particle
-  field over the map, driven by the single METAR reading
-  (`src/map/wind.ts`'s pure velocity math). Always shows its honesty label
-  when on ("Illustrative wind: one station, not spatially varied"),
-  toggleable, frozen to one static frame under `prefers-reduced-motion`.
+  field over the map, driven by the single METAR reading. Particles are
+  advected in longitude/latitude (`src/map/wind.ts`'s pure geographic
+  math, issue #138) and only turned into a screen position through the
+  live `map.project()`, so the field stays correct whatever the map's
+  current bearing/pitch/pan/zoom is. Always shows its honesty label when
+  on ("Illustrative wind: one station, not spatially varied"), toggleable,
+  frozen to one static frame (which still re-projects on `move`, never
+  re-advects) under `prefers-reduced-motion`.
 - **TimelineView** (`TimelineView.tsx`) — past/now/future points as real
   `<button>`s (keyboard-native, unlike a custom slider widget would need to
   be), each carrying its epistemic symbol (●/■/▲/◌/◇) and a texture class
@@ -263,10 +267,11 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   is a documented gap, not a silent one: self-hosting the named pairing is
   the natural next step if the maintainer wants it.
 - **2026-09-26 — Wind arrow rotation kept as issue #102's original
-  convention.** The arrow rotates directly to the reported degree value
-  (no 180° flip). Meteorological arrow conventions vary by source and the
-  brief did not ask for a change here; only the missing cardinal-direction
-  *label* was a named defect (issue #119).
+  convention.** *(Superseded below, issue #138.)* The arrow rotates
+  directly to the reported degree value (no 180° flip). Meteorological
+  arrow conventions vary by source and the brief did not ask for a change
+  here; only the missing cardinal-direction *label* was a named defect
+  (issue #119).
 - **2026-09-26 — Beacon shape ramp: circle (good) → star (extremely
   poor).** Rounder = softer = better; more vertices = sharper = worse. An
   intuitive, colour-independent severity gradient (AC-2), rather than six
@@ -453,3 +458,25 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   under a loose `/26/` regex match — caught when it actually flaked
   during this round's verification. Fixed with an explicit `now` and
   exact-string assertions ("26 °C", not `/26/`).
+- **2026-09-26 — Wind particles and the wind arrow made geographic, not
+  screen-space (issue #138, bug report; supersedes the entry above).**
+  `WindParticles.tsx` moved particles in fixed canvas pixels computed once
+  from the raw wind reading, so the whole field silently ignored the map's
+  own -35° initial bearing and 58° pitch, and any rotation the visitor
+  applied. Fixed at the source: `src/map/wind.ts` now advects particles in
+  longitude/latitude (`geographicWindStep`, `wrapWithinBounds`,
+  `advectParticle`), exactly like a real drifting parcel of air, and the
+  component only ever turns a particle into a screen position through the
+  live `map.project()` at draw time — the map's bearing/pitch/pan/zoom
+  live entirely inside that one call, never duplicated by hand. The same
+  fix retired issue #102's "rotate straight to the reported degree, no
+  flip" convention for the airport's wind-arrow beacon: `windArrowRotation`
+  now points the arrow where the wind blows *to* (`direction + 180°`) and
+  subtracts the map's current bearing (`MapView.tsx` listens for `rotate`
+  and recomputes it), since that arrow is a plain DOM element MapLibre
+  never rotates with the map canvas on its own. Both particles and the
+  arrow are covered by pure-function tests independent of a live WebGL
+  context: `geographicWindStep`/`wrapWithinBounds` for the geometry, and a
+  small bearing-aware `project()` mock at 0°/-35°/90° proving the
+  geographic step never itself depends on bearing (`wind.test.ts`), plus
+  `windArrowRotation`'s own bearing-corrected cases (`beacons.test.ts`).

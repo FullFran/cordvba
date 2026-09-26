@@ -5,7 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useLocale } from "../i18n/LocaleContext";
 import { prefersReducedMotion } from "../lib/motion";
 import { formatAirQualityCategory } from "../lib/format";
-import { createBeaconElement, createEdgeIndicatorElement } from "../map/beacons";
+import { createBeaconElement, createEdgeIndicatorElement, windArrowRotation } from "../map/beacons";
 import { loadDarkStyle } from "../map/darkStyle";
 import { clampToEdge, haversineDistanceKm } from "../map/geo";
 import type { EnvironmentResponse } from "../types/environment";
@@ -151,10 +151,29 @@ export function MapView({ environment, highlightStationId }: MapViewProps) {
         : null;
 
     const beaconElement = createBeaconElement(
-      { kind: "wind", name: airport.name, directionDeg: windDirectionDeg, speedMs: environment.weather.wind_speed.value },
+      {
+        kind: "wind",
+        name: airport.name,
+        directionDeg: windDirectionDeg,
+        speedMs: environment.weather.wind_speed.value,
+        mapBearingDeg: map.getBearing(),
+      },
       locale,
     );
     const marker = new maplibregl.Marker({ element: beaconElement }).setLngLat([airport.lon, airport.lat]).addTo(map);
+
+    // The arrow is a plain DOM element, not something MapLibre rotates with
+    // the map canvas, so it must be re-corrected every time the visitor
+    // rotates the map (issue #138) — otherwise a bearing change silently
+    // rotates the arrow's *meaning* along with the view.
+    function updateWindArrowRotation() {
+      if (!map) return;
+      const arrow = beaconElement.querySelector<HTMLElement>(".beacon__arrow");
+      if (arrow) {
+        arrow.style.transform = `rotate(${windArrowRotation(windDirectionDeg, map.getBearing())}deg)`;
+      }
+    }
+    map.on("rotate", updateWindArrowRotation);
 
     const distanceKm = haversineDistanceKm(
       { lat: CORDOBA_HISTORIC_CENTRE[1], lon: CORDOBA_HISTORIC_CENTRE[0] },
@@ -198,6 +217,7 @@ export function MapView({ environment, highlightStationId }: MapViewProps) {
     return () => {
       map.off("move", updateEdgeIndicator);
       map.off("resize", updateEdgeIndicator);
+      map.off("rotate", updateWindArrowRotation);
       marker.remove();
       edgeElement.remove();
     };
