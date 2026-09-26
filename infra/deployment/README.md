@@ -153,3 +153,36 @@ the public entry point (the `edge` service can then either keep fronting
 web/api, or be dropped in favor of Dokploy's proxy talking to web and api
 directly, once its routing supports the `/api` path split this Caddyfile
 does).
+
+## Public host name through Traefik (recommended)
+
+Tailscale Funnel's host name resolves to a private tailnet address on devices
+that belong to the tailnet, and browsers block a public page (GitHub Pages)
+from calling a private address. Publishing the edge on a public host name
+through the host's Traefik works for every visitor (issue #120).
+
+Prerequisites: a Traefik that watches Docker labels on `dokploy-network` (the
+Dokploy Traefik does), a Let's Encrypt resolver named `letsencrypt`, and a DNS
+record for the host name pointing at the server (a DNS-only wildcard such as
+`*.<your-domain>` is enough).
+
+1. In `infra/compose/.env` set `CORDVBA_PUBLIC_HOST=cordvba.<your-domain>` and
+   add `https://cordvba.<your-domain>` to `PUBLIC_ORIGIN` if the page is also
+   opened from that host.
+2. Start the stack with the overlay:
+
+   ```bash
+   docker compose -p cordvba-mvp -f infra/compose/compose.yml \
+     -f infra/compose/compose.traefik.yml up -d
+   ```
+
+3. Check `curl -sI https://cordvba.<your-domain>/api/health` returns 200 once
+   Traefik has obtained the certificate (usually under a minute).
+4. Point the Pages build at it: set the repository variable
+   `CORDVBA_PUBLIC_API_BASE_URL=https://cordvba.<your-domain>/api` and re-run
+   the Pages workflow.
+
+Entry points, resolver, redirect middleware and network can be overridden with
+`TRAEFIK_HTTPS_ENTRYPOINT`, `TRAEFIK_HTTP_ENTRYPOINT`, `TRAEFIK_CERT_RESOLVER`,
+`TRAEFIK_REDIRECT_MIDDLEWARE` and `TRAEFIK_NETWORK`. Funnel can stay on as a
+secondary entry point or be turned off with `tailscale funnel --https=443 off`.
