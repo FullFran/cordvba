@@ -2,6 +2,7 @@ import { DICTIONARIES } from "../i18n/dictionaries";
 import { formatTemplate } from "../i18n/template";
 import type { Locale } from "../i18n/types";
 import { formatAirQualityCategory, formatValue, formatWindDirection } from "../lib/format";
+import { windBearingTo } from "./wind";
 
 /**
  * A shape per ICA category, softest (a circle) for "good" and sharpest (a
@@ -24,12 +25,22 @@ export function categoryShape(category: string): BeaconShape {
   return SHAPES[category] ?? "circle";
 }
 
-/** Wraps a wind-direction degree value into [0, 360); null (no reading) becomes 0. */
-export function windArrowRotation(deg: number | null): number {
+/**
+ * The wind arrow's on-screen rotation, in degrees (issue #138 — supersedes
+ * issue #102's original "rotate straight to the reported degree" decision,
+ * see DESIGN.md's decision log): it must point where the wind blows TO,
+ * not the meteorological direction it is reported FROM, and — since the
+ * arrow is a plain DOM element in fixed screen space, not something
+ * MapLibre rotates with the map canvas — the map's own current bearing has
+ * to be subtracted back out, or rotating the map would silently rotate
+ * the arrow's *meaning* along with it. `null` (no reading) stays a neutral
+ * 0°, regardless of bearing: there is no direction to correct.
+ */
+export function windArrowRotation(deg: number | null, mapBearingDeg: number = 0): number {
   if (deg === null) {
     return 0;
   }
-  return ((deg % 360) + 360) % 360;
+  return ((windBearingTo(deg) - mapBearingDeg) % 360 + 360) % 360;
 }
 
 export interface AirQualityBeaconSpec {
@@ -45,6 +56,8 @@ export interface WindBeaconSpec {
   name: string;
   directionDeg: number | null;
   speedMs: number | string | null;
+  /** The map's current bearing (issue #138), so the arrow — a plain DOM element, not map-rotated — can be corrected to still point the right way on screen. Defaults to 0. */
+  mapBearingDeg?: number;
 }
 
 export type BeaconSpec = AirQualityBeaconSpec | WindBeaconSpec;
@@ -112,7 +125,7 @@ export function createBeaconElement(spec: BeaconSpec, locale: Locale = "en"): HT
   );
 
   const arrow = el("span", "beacon__arrow", "↑");
-  arrow.style.transform = `rotate(${windArrowRotation(spec.directionDeg)}deg)`;
+  arrow.style.transform = `rotate(${windArrowRotation(spec.directionDeg, spec.mapBearingDeg ?? 0)}deg)`;
   root.appendChild(arrow);
 
   const core = el("span", "beacon__core beacon__core--wind");

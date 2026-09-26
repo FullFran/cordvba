@@ -2,7 +2,8 @@ import { useEffect, useRef } from "react";
 import type maplibregl from "maplibre-gl";
 
 import { prefersReducedMotion } from "../lib/motion";
-import { windVelocity } from "../map/wind";
+import { advectParticle } from "../map/wind";
+import type { GeoPoint } from "../map/wind";
 
 export interface WindParticlesProps {
   map: maplibregl.Map;
@@ -13,19 +14,39 @@ export interface WindParticlesProps {
 }
 
 const PARTICLE_COUNT = 140;
+/** Clamps the animation's per-frame time delta (issue #138): a tab returning from the background can report a multi-second gap, which would otherwise fling every particle far past the viewport in one jump. */
+const MAX_DT_SECONDS = 0.1;
 
-interface Particle {
-  x: number;
-  y: number;
+function randomPointInBounds(bounds: maplibregl.LngLatBounds): GeoPoint {
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
+  return {
+    lng: sw.lng + Math.random() * (ne.lng - sw.lng),
+    lat: sw.lat + Math.random() * (ne.lat - sw.lat),
+  };
+}
+
+function toGeoBounds(bounds: maplibregl.LngLatBounds) {
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
+  return { west: sw.lng, east: ne.lng, south: sw.lat, north: ne.lat };
 }
 
 /**
- * The canvas half of the illustrative wind layer (issue #119): driven by
- * the single METAR reading, frozen to one static frame under
- * `prefers-reduced-motion`. Its honesty label and on/off toggle live in
- * `MapView`'s merged legend, not here, so they can never be covered by
- * (or cover) the extrusion-heights caption, and stay visible regardless
- * of whether this canvas is animating.
+ * The canvas half of the illustrative wind layer (issue #119; geographic
+ * advection fixed in issue #138): driven by the single METAR reading.
+ * Particles are stored and stepped in longitude/latitude
+ * (`src/map/wind.ts`'s pure `advectParticle`), exactly like a drifting
+ * parcel of air, and only ever turned into a screen position through the
+ * live `map.project()` at draw time — never through this component's own
+ * trigonometry. That is the fix for the original bug: the field now stays
+ * geographically correct (and re-projects itself automatically) whatever
+ * the map's current bearing, pitch, pan or zoom is, instead of moving in
+ * fixed screen-space pixels that silently ignored all four. Frozen to one
+ * static frame under `prefers-reduced-motion`, which still re-projects
+ * (but never re-advects) on `move` so a rotated/panned camera never leaves
+ * a stale frame on screen. Its honesty label and on/off toggle live in
+ * `MapView`'s merged legend, not here (issue #119, maintainer review).
  */
 export function WindParticles({ map, directionDeg, speedMs, enabled }: WindParticlesProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -41,56 +62,54 @@ export function WindParticles({ map, directionDeg, speedMs, enabled }: WindParti
     }
 
     const container = map.getContainer();
-    const resize = () => {
-      canvas.width = container.clientWidth;
-      canvas.height = container.clientHeight;
-    };
-    resize();
-    map.on("resize", resize);
-
-    if (!enabled) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      return () => {
-        map.off("resize", resize);
-      };
-    }
-
-    const { vx, vy } = windVelocity(directionDeg, speedMs);
-    let particles: Particle[] = Array.from({ length: PARTICLE_COUNT }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-    }));
+    let particles: GeoPoint[] = [];
 
     function draw() {
-      if (!ctx || !canvas) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "rgba(125, 211, 252, 0.75)";
-      for (const p of particles) {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 1.4, 0, Math.PI * 2);
-        ctx.fill();
+      canvas!.width = container.clientWidth;
+      canvas!.height = container.clientHeight;
+      ctx!.clearRect(0, 0, canvas!.width, canvas!.height);
+      if (!enabled) {
+        return;
+      }
+      ctx!.fillStyle = "rgba(125, 211, 252, 0.75)";
+      for (const particle of particles) {
+        const { x, y } = map.project([particle.lng, particle.lat]);
+        ctx!.beginPath();
+        ctx!.arc(x, y, 1.4, 0, Math.PI * 2);
+        ctx!.fill();
       }
     }
 
-    if (prefersReducedMotion()) {
-      draw(); // one static frame; no animation loop under reduced motion
+    if (!enabled) {
+      draw(); // clears the canvas
+      map.on("resize", draw);
       return () => {
-        map.off("resize", resize);
+        map.off("resize", draw);
       };
     }
 
+    particles = Array.from({ length: PARTICLE_COUNT }, () => randomPointInBounds(map.getBounds()));
+    draw();
+
+    if (prefersReducedMotion()) {
+      // One static frame; no rAF loop, but still re-project (never
+      // re-advect) whenever the camera moves, rotates or tilts, so the
+      // frame never goes stale relative to the current view (issue #138).
+      map.on("move", draw);
+      map.on("resize", draw);
+      return () => {
+        map.off("move", draw);
+        map.off("resize", draw);
+      };
+    }
+
+    let lastTimeMs = performance.now();
     let frameHandle = 0;
-    function step() {
-      if (!canvas) return;
-      particles = particles.map((p) => {
-        let x = p.x + vx / 30;
-        let y = p.y + vy / 30;
-        if (x < 0) x += canvas.width;
-        if (x > canvas.width) x -= canvas.width;
-        if (y < 0) y += canvas.height;
-        if (y > canvas.height) y -= canvas.height;
-        return { x, y };
-      });
+    function step(nowMs: number) {
+      const dtSeconds = Math.min(MAX_DT_SECONDS, Math.max(0, (nowMs - lastTimeMs) / 1000));
+      lastTimeMs = nowMs;
+      const bounds = toGeoBounds(map.getBounds());
+      particles = particles.map((particle) => advectParticle(particle, directionDeg, speedMs, dtSeconds, bounds));
       draw();
       frameHandle = requestAnimationFrame(step);
     }
@@ -98,7 +117,6 @@ export function WindParticles({ map, directionDeg, speedMs, enabled }: WindParti
 
     return () => {
       cancelAnimationFrame(frameHandle);
-      map.off("resize", resize);
     };
   }, [map, enabled, directionDeg, speedMs]);
 

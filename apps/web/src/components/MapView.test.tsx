@@ -41,6 +41,12 @@ vi.mock("maplibre-gl", () => {
     off = vi.fn();
     fitBounds = vi.fn();
     project = vi.fn().mockReturnValue({ x: 400, y: 200 });
+    // Matches the page's own initial bearing (issue #138's `INITIAL_BEARING`).
+    getBearing = vi.fn(() => -35);
+    getBounds = vi.fn(() => ({
+      getSouthWest: () => ({ lng: -4.82, lat: 37.86 }),
+      getNorthEast: () => ({ lng: -4.74, lat: 37.92 }),
+    }));
     getContainer = vi.fn(() => {
       const div = document.createElement("div");
       // jsdom's clientWidth/clientHeight are read-only getters; shadow them
@@ -183,6 +189,34 @@ describe("MapView (issue 119: MapLibre dark 3D map + beacons)", () => {
 
     expect(screen.queryByText(/Illustrative wind: /i)).not.toBeInTheDocument();
     expect(screen.getByText(/no interpolated surface/i)).toBeInTheDocument();
+  });
+
+  it("rotates the wind arrow to where the wind blows TO, corrected for the map's current bearing, and re-corrects it on rotate (issue #138)", async () => {
+    render(<MapView environment={environment} />);
+    await waitFor(() => expect(mapInstances).toHaveLength(1));
+    // The FakeMarker mock never appends its element into the DOM (that's
+    // MapLibre's own job in the real library), so the airport beacon's
+    // element is reached through the marker instance itself, the same way
+    // the "carries the category as visible text" test above does.
+    await waitFor(() => expect(markerInstances.length).toBeGreaterThan(0));
+    const airportBeacon = markerInstances[markerInstances.length - 1]!.element;
+    const arrow = () => airportBeacon.querySelector<HTMLElement>(".beacon__arrow");
+
+    const instance = mapInstances[0] as unknown as {
+      getBearing: ReturnType<typeof vi.fn>;
+      on: ReturnType<typeof vi.fn>;
+    };
+
+    // Fixture wind_direction is 250° (from the WSW) -> blows TO 70°;
+    // mocked initial bearing -35° -> screen rotation 70 - (-35) = 105°.
+    expect(arrow()?.style.transform).toContain("105deg");
+
+    instance.getBearing.mockReturnValue(90);
+    const rotateHandler = instance.on.mock.calls.find((call) => call[0] === "rotate")?.[1] as () => void;
+    rotateHandler?.();
+
+    // 70 - 90 = -20 -> wraps to 340.
+    expect(arrow()?.style.transform).toContain("340deg");
   });
 
   it("shows an edge-clamped distance indicator for the airport when it projects outside the viewport", async () => {
