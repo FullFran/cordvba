@@ -1,6 +1,6 @@
 # contracts
 
-**Status:** planned, no code yet.
+**Status:** first contract in place: [`environment/v1`](./environment/v1/README.md), the payloads the API serves to the web for the v0.1 environment twin.
 
 ## Responsibility
 
