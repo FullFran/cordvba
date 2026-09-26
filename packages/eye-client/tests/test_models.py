@@ -6,6 +6,7 @@ CC BY 4.0).
 """
 
 import json
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -71,6 +72,61 @@ def test_ica_record_exposes_index_reported_false_for_stations_without_data():
 
     assert record.payload["index_reported"] is False
     assert record.payload["index"] == 0
+
+
+def test_record_parses_valid_from_and_valid_until_as_datetimes():
+    """A warning (aemet-warnings) or any other forecast/scheduled-window
+    record carries valid_from/valid_until on eye's own Record type, as
+    served over HTTP. This payload mirrors the real Campina cordobesa
+    warning in apps/eye's recorded MeteoAlarm fixture, mapped through
+    eye's own aemet warnings adapter, not a live eye response (no deployed
+    instance carries a Cordoba warning on demand).
+    """
+    raw = {
+        "id": "aemet-warnings:2.49.0.0.724.0.ES.260902093610.611402ATTA041941770",
+        "source": "aemet-warnings",
+        "kind": "weather_warning",
+        "topic": "weather",
+        "title": "Orange High-temperature Warning issued for Spain - Campiña cordobesa",
+        "description": "Severe high-temperature warning · Campiña cordobesa",
+        "observed_at": "2026-09-02T09:36:10Z",
+        "fetched_at": "2026-09-26T09:40:00Z",
+        "valid_from": "2026-09-04T11:00:00Z",
+        "valid_until": "2026-09-04T18:59:59Z",
+        "quality": "official",
+        "severity": 4,
+        "confidence": 1,
+        "dedupe_key": "aemet-warnings:2.49.0.0.724.0.ES.260902093610.611402ATTA041941770",
+        "payload": {
+            "issuing_authority": "AEMET. Agencia Estatal de Meteorología",
+            "relayed_by": "meteoalarm.org",
+            "zone": "ES079",
+            "area": "Campiña cordobesa",
+        },
+        "provenance": {
+            "publisher": "AEMET. Agencia Estatal de Meteorologia",
+            "source_url": "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-spain",
+            "license": "cc-by-4.0-equivalent-meteoalarm-terms",
+            "fetched_at": "2026-09-26T09:40:00Z",
+            "raw_hash": "hash",
+        },
+    }
+
+    record = Record.model_validate(raw)
+
+    assert isinstance(record.valid_from, datetime)
+    assert isinstance(record.valid_until, datetime)
+    assert record.valid_from < record.valid_until
+
+
+def test_record_valid_from_and_valid_until_default_to_none_when_absent():
+    raw = _load("records_metar.json")["records"][0]
+    assert "valid_from" not in raw and "valid_until" not in raw
+
+    record = Record.model_validate(raw)
+
+    assert record.valid_from is None
+    assert record.valid_until is None
 
 
 def test_source_parses_registry_fixture():

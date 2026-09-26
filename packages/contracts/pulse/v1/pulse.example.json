@@ -1,0 +1,124 @@
+{
+  "generated_at": "2026-09-26T09:40:00Z",
+  "window_hours": 24,
+  "items": [
+    {
+      "kind": "event",
+      "id": "uco-events:9f68ea057ab15ed8",
+      "title": "Congreso Internacional sobre Investigación en Lenguas, Tecnología y Educación",
+      "observed_at": "2026-09-26T09:40:00Z",
+      "valid_from": "2026-10-07T07:00:00Z",
+      "severity": "info",
+      "url": "http://eventos.uco.es/event_detail/153815.html",
+      "label": "PUBLISHED",
+      "provenance": {
+        "source": "uco-events",
+        "publisher": "Universidad de Cordoba",
+        "licence": "unspecified",
+        "fetched_at": "2026-09-26T09:38:00Z"
+      },
+      "attribution": "Event: Universidad de Córdoba"
+    },
+    {
+      "kind": "headline",
+      "id": "cordopolis:15858163d5dd9665",
+      "title": "Córdoba celebra la Noche Blanca del Flamenco con actuaciones en cinco escenarios",
+      "observed_at": "2026-09-26T08:15:00Z",
+      "severity": "info",
+      "url": "https://cordopolis.eldiario.es/2026/09/26/cordoba-celebra-la-noche-blanca-del-flamenco",
+      "label": "PUBLISHED",
+      "provenance": {
+        "source": "cordopolis",
+        "publisher": "Cordopolis (eldiario.es)",
+        "licence": "unspecified",
+        "fetched_at": "2026-09-26T09:31:00Z"
+      },
+      "attribution": "News: Cordópolis (eldiario.es)"
+    },
+    {
+      "kind": "headline",
+      "id": "eldiadecordoba:c475ea7802dc4124",
+      "title": "El Ayuntamiento activa el plan especial de calor con puntos de agua en el centro",
+      "observed_at": "2026-09-26T07:50:00Z",
+      "severity": "info",
+      "url": "https://www.eldiadecordoba.es/cordoba/plan-especial-calor-mesitas-2026.html",
+      "label": "PUBLISHED",
+      "provenance": {
+        "source": "eldiadecordoba",
+        "publisher": "El Dia de Cordoba (Grupo Joly)",
+        "licence": "unspecified",
+        "fetched_at": "2026-09-26T09:29:00Z"
+      },
+      "attribution": "News: El Día de Córdoba (Grupo Joly)"
+    },
+    {
+      "kind": "quake",
+      "id": "ign-seismic:8204c80cf007c802",
+      "title": "-Info.terremoto: 26/09/2026 3:15:00",
+      "observed_at": "2026-09-26T03:15:00Z",
+      "position": { "lat": 37.95, "lon": -4.90 },
+      "severity": "low",
+      "url": "http://www.ign.es/web/ign/portal/sis-catalogo-terremotos/-/catalogo-terremotos/detailTerremoto?evid=es2026illustrative",
+      "label": "OBSERVED",
+      "provenance": {
+        "source": "ign-seismic",
+        "publisher": "Instituto Geografico Nacional",
+        "licence": "official-cite-ign",
+        "fetched_at": "2026-09-26T09:36:00Z"
+      },
+      "attribution": "Earthquake: Instituto Geográfico Nacional (official citation required)"
+    },
+    {
+      "kind": "fire",
+      "id": "nasa-firms:37.9:-4.8:2026-09-25:1427",
+      "title": "Thermal anomaly, 5.2 MW (VIIRS_SNPP_NRT)",
+      "observed_at": "2026-09-25T14:27:00Z",
+      "position": { "lat": 37.9, "lon": -4.8 },
+      "severity": "low",
+      "url": null,
+      "label": "OBSERVED",
+      "provenance": {
+        "source": "nasa-firms",
+        "publisher": "NASA FIRMS",
+        "licence": "nasa-open-data",
+        "fetched_at": "2026-09-26T09:33:00Z"
+      },
+      "attribution": "Fire detection: NASA FIRMS (NASA open data)"
+    },
+    {
+      "kind": "warning",
+      "id": "aemet-warnings:2.49.0.0.724.0.ES.260902093610.611402ATTA041941770",
+      "title": "Orange High-temperature Warning issued for Spain - Campiña cordobesa",
+      "observed_at": "2026-09-25T10:36:10Z",
+      "valid_from": "2026-09-26T11:00:00Z",
+      "valid_until": "2026-09-26T19:00:00Z",
+      "area": "Campiña cordobesa",
+      "severity": "high",
+      "url": "https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/30f7e864-56c1-4157-be60-16493c1661d2?index_info=1&index_area=0&index_geocode=0",
+      "label": "OBSERVED",
+      "provenance": {
+        "source": "aemet-warnings",
+        "publisher": "AEMET. Agencia Estatal de Meteorologia",
+        "licence": "cc-by-4.0-equivalent-meteoalarm-terms",
+        "fetched_at": "2026-09-26T09:37:00Z"
+      },
+      "attribution": "Weather warning: AEMET, relayed by MeteoAlarm.org (terms equivalent to CC BY 4.0)"
+    },
+    {
+      "kind": "bulletin",
+      "id": "boe:45e0c390f2f7f8ab",
+      "title": "Sumario",
+      "observed_at": "2026-09-26T00:00:00Z",
+      "severity": "info",
+      "url": "https://www.boe.es/boe/dias/2026/09/26/",
+      "label": "PUBLISHED",
+      "provenance": {
+        "source": "boe",
+        "publisher": "Agencia Estatal BOE",
+        "licence": "aebo-reuse-terms",
+        "fetched_at": "2026-09-26T08:05:00Z"
+      },
+      "attribution": "Official bulletin: Agencia Estatal Boletín Oficial del Estado"
+    }
+  ]
+}

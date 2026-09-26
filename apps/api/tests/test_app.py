@@ -284,6 +284,7 @@ def test_openapi_json_describes_every_endpoint():
         "/v1/environment/timeline",
         "/v1/environment/simulate",
         "/v1/sources",
+        "/v1/pulse",
     ):
         assert expected in paths
 

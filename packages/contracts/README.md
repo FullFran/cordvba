@@ -1,6 +1,6 @@
 # contracts
 
-**Status:** first contract in place: [`environment/v1`](./environment/v1/README.md), the payloads the API serves to the web for the v0.1 environment twin.
+**Status:** two contracts in place: [`environment/v1`](./environment/v1/README.md), the payloads the API serves to the web for the v0.1 environment twin, and [`pulse/v1`](./pulse/v1/README.md), the city's pulse — warnings, fires, quakes, agenda and headlines (#141).
 
 ## Responsibility
 

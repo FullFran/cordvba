@@ -166,3 +166,53 @@ class SourceEntry(BaseModel):
 
 class SourcesResponse(BaseModel):
     sources: list[SourceEntry]
+
+
+PulseKind = Literal["warning", "fire", "quake", "event", "headline", "bulletin"]
+PulseLabel = Literal["OBSERVED", "PUBLISHED"]
+PulseSeverity = Literal["none", "info", "low", "moderate", "high", "critical"]
+
+
+class Position(BaseModel):
+    lat: float
+    lon: float
+
+
+class PulseProvenance(BaseModel):
+    """Deliberately smaller than environment/v1's Provenance: enough to
+    trust and cite an item (who published it, under what licence, how
+    fresh) without exposing eye's own record shape.
+    """
+
+    source: str
+    publisher: str
+    licence: str
+    fetched_at: datetime
+
+
+class PulseItem(BaseModel):
+    """One thing happening around Cordoba. `position`/`area` are both
+    optional and never both filled: a source gives coordinates, a named
+    place, or (a national BOE bulletin) neither. See
+    packages/contracts/pulse/v1/README.md for the OBSERVED/PUBLISHED split.
+    """
+
+    kind: PulseKind
+    id: str
+    title: str
+    observed_at: datetime
+    valid_from: datetime | None = None
+    valid_until: datetime | None = None
+    position: Position | None = None
+    area: str | None = None
+    severity: PulseSeverity
+    url: str | None = None
+    label: PulseLabel
+    provenance: PulseProvenance
+    attribution: str
+
+
+class PulseResponse(BaseModel):
+    generated_at: datetime
+    window_hours: int
+    items: list[PulseItem]

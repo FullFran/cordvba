@@ -12,6 +12,7 @@ def make_eye_source(
     authority: str = "Some Authority",
     last_success: str = "2026-09-26T09:35:40Z",
     consecutive_errors: int = 0,
+    redistributable: bool = True,
 ) -> Source:
     return Source.model_validate(
         {
@@ -22,7 +23,7 @@ def make_eye_source(
             "access": "documented_api",
             "automation": "enabled",
             "pollable": True,
-            "redistributable": True,
+            "redistributable": redistributable,
             "url": f"https://example.invalid/{source_id}",
             "last_attempt": last_success,
             "last_success": last_success,
