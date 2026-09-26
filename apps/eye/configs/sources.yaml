@@ -822,13 +822,13 @@ sources:
     license: us-government-public-domain
     access: documented_api
     automation: enabled
+    retention: historical
     interval: 20m
     published_every: 30m
     sampled_kinds: [weather_observation]
     options:
       stations: LEBA
       kind: weather_station
-      ttl: 720h
     notes: >-
       Live surface weather for Córdoba, with no credential. LEBA is the ICAO
       identifier of Córdoba Airport. Verified 2026-09-03: 23 °C, dew point 12,
@@ -867,11 +867,11 @@ sources:
     license: reuse-with-attribution
     access: documented_api
     automation: enabled
+    retention: historical
     interval: 10m
     options:
       product: observation
       station: "5402"
-      ttl: 720h
     notes: >-
       Automatic station readings. 5402 is Córdoba Aeropuerto.
 
@@ -970,6 +970,7 @@ sources:
     license: CC-BY-4.0
     access: documented_api
     automation: enabled
+    retention: historical
     interval: 20m
     published_every: 1h
     options:

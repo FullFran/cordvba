@@ -67,6 +67,43 @@ const (
 // one, fails closed.
 func (a AutomationStatus) Pollable() bool { return a == AutomationEnabled }
 
+// Retention decides whether a source's records expire on the adapter's own
+// TTL or are kept as history, regardless of what any single adapter computes.
+//
+// This is the single field the whole registry uses to say "this is an
+// environmental series", so the seam that applies it lives in one place —
+// see Collector in observation/application — rather than in every adapter
+// that currently sets Record.ExpiresAt.
+type Retention string
+
+// The retention kinds eye distinguishes.
+const (
+	// RetentionEphemeral is today's behaviour: the adapter's own TTL
+	// applies. It is also the zero value, so a registry entry that never
+	// mentions retention keeps behaving exactly as it always has.
+	RetentionEphemeral Retention = "ephemeral"
+	// RetentionHistorical stores records with no ExpiresAt: an
+	// environmental series (weather, hydrology, air quality) that eye
+	// cannot re-fetch once the retention window has passed.
+	RetentionHistorical Retention = "historical"
+	// RetentionCompact is reserved for #22 (movement retention and
+	// aggregate compaction) and is rejected by Validate until that lands.
+	RetentionCompact Retention = "compact"
+)
+
+// Effective resolves the zero value to RetentionEphemeral, so callers never
+// have to special-case an entry that left retention unset.
+func (r Retention) Effective() Retention {
+	if r == "" {
+		return RetentionEphemeral
+	}
+	return r
+}
+
+// Historical reports whether records carrying this retention should be
+// stored without an expiry.
+func (r Retention) Historical() bool { return r.Effective() == RetentionHistorical }
+
 // Personal reports whether a source is an operator's own undocumented one.
 //
 // These carry two consequences everywhere they are used: they need a runtime
@@ -92,6 +129,11 @@ func (s Source) SamplesKind(kind string) bool {
 	return false
 }
 
+// Historical reports whether this source's records should be stored without
+// an expiry. It is the one predicate the storage seam needs; everything else
+// about retention stays inside the Retention type.
+func (s Source) Historical() bool { return s.Retention.Historical() }
+
 // Source is one entry of the registry in configs/sources.yaml.
 type Source struct {
 	ID        string `json:"id"`
@@ -112,6 +154,11 @@ type Source struct {
 
 	Access     Access           `json:"access"`
 	Automation AutomationStatus `json:"automation"`
+
+	// Retention says whether this source's records are an environmental
+	// series kept as history, or ephemeral data the adapter's own TTL
+	// still governs. Empty means ephemeral: today's behaviour, unchanged.
+	Retention Retention `json:"retention,omitempty"`
 
 	// Interval is the engineering poll interval, which is eye's decision.
 	Interval time.Duration `json:"interval"`
@@ -164,6 +211,23 @@ func (s Source) Validate() error {
 		// An undocumented source has to say what it is and why it is here.
 		// A registry entry nobody can explain is one nobody can review.
 		return errors.Join(ErrInvalidSource, errors.New("an undocumented_personal source must carry notes explaining what it is"))
+	}
+	return s.validateRetention()
+}
+
+// validateRetention enforces the invariants specific to Retention, split out
+// of Validate so the two independent checks it Joins don't inflate one
+// function's branching.
+func (s Source) validateRetention() error {
+	switch {
+	case s.Retention.Effective() == RetentionCompact:
+		// #22 owns aggregate compaction; nothing implements it yet, so a
+		// registry entry that claims it would be a promise eye cannot keep.
+		return errors.Join(ErrInvalidSource, errors.New("retention: compact is reserved for #22"))
+	case s.Retention.Historical() && s.Option("ttl", "") != "":
+		// The two would otherwise disagree silently: a ttl option nobody
+		// reads is worse than one the registry never lets in.
+		return errors.Join(ErrInvalidSource, errors.New("retention: historical must not also carry a ttl option"))
 	}
 	return nil
 }
