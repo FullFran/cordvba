@@ -51,8 +51,13 @@ Edit `.env`:
   shell you don't control, and never commit it.
 - `EYE_NETWORK` — leave as `cordvba-eye_default` unless eye was deployed
   under a different compose project name.
-- `PUBLIC_ORIGIN` — the `https://` origin this stack will be reachable at
-  once Funnel is on (see below).
+- `PUBLIC_ORIGIN` — the api's CORS allow-list (`WEB_ORIGIN`, see
+  `apps/api/README.md`): the `https://` origin this stack will be reachable
+  at once Funnel is on (see below), plus, since the page is now also
+  published on GitHub Pages (issue #115), the Pages origin,
+  `https://www.fullfran.com` — comma-separated, e.g.
+  `https://<machine>.<tailnet>.ts.net,https://www.fullfran.com`. A single
+  origin still works exactly as before.
 - `EDGE_PORT` — leave as `8088` unless that loopback port is already taken
   on this host.
 

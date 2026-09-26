@@ -56,6 +56,7 @@ VITE_USE_FIXTURES=1 pnpm dev
 |---|---|---|
 | `VITE_API_BASE_URL` | `/api` | Base URL the page calls; never eye or the twin directly. |
 | `VITE_USE_FIXTURES` | unset | `1` serves `packages/contracts/environment/v1`'s example JSONs instead of calling the API. |
+| `VITE_BASE_PATH` | `/` | Vite's `base` (`vite.config.ts`, via the pure `resolveBase` in `src/lib/base.ts`). Set it when the built assets are served from a sub-path, e.g. `/cordvba/` for the GitHub Pages deploy below. |
 
 ## Testing
 
@@ -75,6 +76,34 @@ pnpm typecheck
 pnpm build                       # against a real API
 VITE_USE_FIXTURES=1 pnpm build   # a static, API-free build using fixtures
 ```
+
+### Building for a sub-path
+
+Set `VITE_BASE_PATH` to build assets that resolve correctly when the page
+is served from a sub-path rather than the domain root, e.g. behind
+`https://www.fullfran.com/cordvba/`:
+
+```bash
+VITE_BASE_PATH=/cordvba/ pnpm build
+```
+
+Every script, stylesheet and asset URL emitted into `dist/index.html` and
+the built JS is then rooted at `/cordvba/`. The API base URL is unrelated
+and stays absolute (`VITE_API_BASE_URL`), since Pages only serves static
+files and the real API runs elsewhere (see the Pages workflow below).
+
+## GitHub Pages deploy
+
+`.github/workflows/pages.yml` builds and deploys the page to GitHub Pages
+on every push to `main` that touches `apps/web/**`, `packages/contracts/**`
+or the workflow file itself, and on manual dispatch. It builds with
+`VITE_BASE_PATH: /cordvba/` and `VITE_API_BASE_URL` set from the repository
+variable `CORDVBA_PUBLIC_API_BASE_URL` (Settings → Secrets and variables →
+Actions → Variables), so no host name is committed. Set that variable to
+the deployed API's public base URL (the Funnel origin) before the workflow
+can produce a working deploy; the job fails with a clear error if it is
+empty. Pages must be enabled for the repository with the "GitHub Actions"
+source.
 
 ## Docker
 
