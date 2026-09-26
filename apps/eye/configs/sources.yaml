@@ -773,16 +773,21 @@ sources:
     automation: enabled
     interval: 15m
     published_every: 15m
+    options:
+      zones: "ES078,ES079,ES080"
     notes: >-
-      Meteorological warnings for the whole of Spain, as CAP 1.2 carried on an
-      Atom feed. NO CREDENTIAL NEEDED.
+      Meteorological warnings for Cordoba province, as CAP 1.2 carried on
+      AEMET's whole-of-Spain MeteoAlarm Atom feed. NO CREDENTIAL NEEDED.
 
       WHY NOT AEMET'"'"'S OWN API. AEMET publishes these through opendata.aemet.es,
       which requires a JWT obtained by email registration. A source that only
       works with the operator'"'"'s own credential is one nobody else running eye
       can reproduce, and reproducibility is the value ADR-0008 exists to
       protect. MeteoAlarm — the EUMETNET early-warning service — relays the
-      same warnings with no key at all.
+      same warnings with no key at all. AEMET'"'"'s own warnings API is also no
+      finer-grained: `area` selects a whole autonomous community (Andalucia is
+      "61", eight provinces), never a province, so it buys nothing here that
+      MeteoAlarm does not already carry.
 
       IT IS STILL AEMET SPEAKING, and that is checkable rather than assumed:
       the CAP document behind each entry carries
@@ -799,20 +804,28 @@ sources:
       Conditions." The redistribution caveat is real and is recorded here
       rather than rounded down to "CC BY".
 
-      CÓRDOBA IS COVERED. The feed uses AEMET'"'"'s own zone names, and at the time
-      this entry was written it carried live warnings for "Campiña cordobesa"
-      (Severe), "Subbética cordobesa" and "Sierra y Pedroches". Zones also
-      carry a stable EMMA_ID geocode.
+      SCOPED TO CORDOBA BY EMMA_ID (issue #142). This feed had been ingesting
+      warnings for the whole country: live records on 2026-09-26 included
+      "Llanada alavesa" and "Rioja alavesa", nowhere near Cordoba. AEMET'"'"'s CAP
+      documents give each zone a stable EMMA_ID geocode that survives a
+      description being renamed, unlike the area name itself. Cordoba
+      province is exactly three AEMET zones, confirmed from the recorded CAP
+      fixtures in testdata/aemet/cap and the MeteoAlarm fixture in
+      testdata/meteoalarm: ES078 Sierra y Pedroches (AEMET zone 611401), ES079
+      Campiña cordobesa (611402) and ES080 Subbética cordobesa (611403). The
+      `zones` option already existed as an opt-in filter, matched by EMMA_ID or
+      by a folded substring of the area name; this registry entry is what
+      turns it on, the same shape as `province: "14"` on miteco-ica (#98).
 
-      NO GEOGRAPHIC FILTER AT INGESTION, for the same reason `dgt-incidents`
-      applies none: a warning dropped at ingestion is one no later query can
-      recover, and missing a red warning because a zone was renamed is not a
-      trade this source is willing to make. A `zones` option exists for anyone
-      who wants to narrow it.
+      This narrows at ingestion, unlike `dgt-incidents`: that feed has no
+      stable per-item geocode to filter on, so dropping anything there risks
+      losing a renamed zone for good. AEMET'"'"'s EMMA_ID is exactly the stable
+      key that makes narrowing safe here instead.
 
       Setting AEMET_API_KEY still works: change the format back to
       rest-json-two-step with options {product: warnings, area: "61"} and eye
-      reads AEMET directly.
+      reads AEMET directly, still for the whole of Andalucia — the `zones`
+      option is MeteoAlarm-specific and would need re-narrowing downstream.
 
   - id: metar-cordoba
     authority: NOAA Aviation Weather Center

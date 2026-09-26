@@ -14,6 +14,7 @@ import (
 	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 	"github.com/FullFran/cordvba/apps/eye/internal/provider/infrastructure/aemet"
 	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
+	registry "github.com/FullFran/cordvba/apps/eye/internal/source/infrastructure"
 )
 
 // serveMeteoAlarm returns the recorded Spanish warning feed.
@@ -192,6 +193,71 @@ func TestMeteoAlarmZonesFilterIsOptIn(t *testing.T) {
 	for _, r := range records {
 		if !strings.Contains(r.Description, "Subbética cordobesa") {
 			t.Errorf("record %q leaked past the zone filter", r.Description)
+		}
+	}
+}
+
+// TestShippedRegistryScopesWarningsToCordoba checks the actual production
+// entry, not just the provider's generic opt-in filter: the opt-in mechanism
+// tested above is worthless if configs/sources.yaml never turns it on. Any
+// Cordoba surface built on aemet-warnings must never see a warning for the
+// rest of Spain — see issue #142.
+func TestShippedRegistryScopesWarningsToCordoba(t *testing.T) {
+	t.Parallel()
+
+	sources, err := registry.LoadFile("../../../../configs/sources.yaml")
+	if err != nil {
+		t.Fatalf("LoadFile() = %v", err)
+	}
+
+	var src source.Source
+	var found bool
+	for _, s := range sources {
+		if s.ID == "aemet-warnings" {
+			src, found = s, true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("aemet-warnings is missing from the shipped registry")
+	}
+
+	// The shipped entry keeps its own URL and options; only the address is
+	// redirected to the recorded fixture so the test never reaches the
+	// network.
+	srv := serveMeteoAlarm(t)
+	src.URL = srv.URL
+
+	records, err := aemet.NewMeteoAlarm(src, httpx.New()).Poll(context.Background())
+	if err != nil {
+		t.Fatalf("Poll() = %v", err)
+	}
+
+	// The fixture carries three Cordoba-province zones (Campiña cordobesa,
+	// Sierra y Pedroches, Subbética cordobesa) and three unrelated ones
+	// (Valencia, Ampurdán, Pirineo de Lleida). Only the first three may
+	// survive.
+	wantAreas := map[string]bool{
+		"Campiña cordobesa":   false,
+		"Sierra y Pedroches":  false,
+		"Subbética cordobesa": false,
+	}
+	for _, r := range records {
+		var pay struct {
+			Area string `json:"area"`
+		}
+		if err := json.Unmarshal(r.Payload, &pay); err != nil {
+			t.Fatalf("payload: %v", err)
+		}
+		if _, ok := wantAreas[pay.Area]; !ok {
+			t.Errorf("record for %q is outside Cordoba province and leaked past the shipped registry filter", pay.Area)
+			continue
+		}
+		wantAreas[pay.Area] = true
+	}
+	for area, seen := range wantAreas {
+		if !seen {
+			t.Errorf("Cordoba zone %q was filtered out by the shipped registry entry", area)
 		}
 	}
 }
