@@ -120,6 +120,55 @@ func TestBuildPollableGatesPersonalSourcesOnTheMachineToo(t *testing.T) {
 	}
 }
 
+// #125: an operator's overrides.yaml can narrow the schedule further than the
+// registry alone, e.g. "only metar-cordoba" on a VPS that has no use for the
+// national DGT feeds.
+func TestBuildPollableAppliesOverrides(t *testing.T) {
+	t.Parallel()
+
+	list := []source.Source{
+		src("metar-cordoba", "rss", source.AutomationEnabled),
+		src("dgt-incidents", "rss", source.AutomationEnabled),
+	}
+
+	built, skipped := providers.BuildPollable(list, httpx.New(), providers.Options{
+		Overrides: source.Overrides{Sources: source.SourceOverrides{Only: []string{"metar-cordoba"}}},
+	})
+
+	if len(built) != 1 || built[0].Info().ID != "metar-cordoba" {
+		t.Fatalf("built = %v, want only metar-cordoba", ids(built))
+	}
+	if len(skipped) != 1 || skipped[0].ID != "dgt-incidents" {
+		t.Errorf("skipped = %v, want dgt-incidents excluded by the override", skipped)
+	}
+}
+
+// The restrict-only rule, proven at the seam that actually builds adapters:
+// an override naming a held or not-yet-opted-in personal source must never
+// cause it to be built.
+func TestBuildPollableOverridesCannotEnableAHeldOrPersonalSource(t *testing.T) {
+	t.Parallel()
+
+	held := src("saih-guadalquivir", "web", source.AutomationReviewTerms)
+
+	personal := src("adif-live", "rss", source.AutomationEnabled)
+	personal.Access = source.AccessUndocumentedPersonal
+	personal.Notes = "Undocumented endpoint the operator reads for themselves."
+
+	list := []source.Source{held, personal}
+	overrides := source.Overrides{Sources: source.SourceOverrides{Only: []string{"saih-guadalquivir", "adif-live"}}}
+
+	built, _ := providers.BuildPollable(list, httpx.New(), providers.Options{Overrides: overrides})
+	if len(built) != 0 {
+		t.Errorf("built = %v, want none: overrides can only restrict, never enable", ids(built))
+	}
+
+	built, _ = providers.BuildPollable(list, httpx.New(), providers.Options{Overrides: overrides, AllowPersonal: true})
+	if len(built) != 1 || built[0].Info().ID != "adif-live" {
+		t.Errorf("built = %v, want only adif-live once the machine also opts in", ids(built))
+	}
+}
+
 // A source nobody can explain is one nobody can review.
 func TestPersonalSourceMustExplainItself(t *testing.T) {
 	t.Parallel()

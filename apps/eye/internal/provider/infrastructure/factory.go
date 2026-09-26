@@ -148,15 +148,25 @@ type Options struct {
 	// eye cannot read and one it silently pretends is quiet.
 	AEMETAPIKey string
 	FIRMSMapKey string
+
+	// Overrides is the operator's optional per-deployment overrides (#125).
+	// Its zero value permits everything, so an absent overrides file changes
+	// nothing here.
+	Overrides source.Overrides
 }
 
-// BuildPollable returns adapters for every source the registry permits polling
-// and this build can read.
+// BuildPollable returns adapters for every source the registry permits
+// polling, this build can read, and the operator's overrides do not exclude.
 //
-// Three filters, and they are different questions. A source can be permitted
+// Four filters, and they are different questions. A source can be permitted
 // and unreadable (no adapter yet), readable and not permitted (licence
-// unresolved), or both and still held back because it is an undocumented
-// personal source and this machine has not opted in.
+// unresolved), both and still held back because it is an undocumented
+// personal source this machine has not opted into, or all of that and still
+// excluded by overrides.yaml. The overrides check runs last and only after
+// the registry (and personal-source) gates already passed, which is what
+// keeps it a restriction: an override naming a held or not-yet-opted-in
+// source never reaches Build, because an earlier `continue` already skipped
+// it — see source/domain.Overrides.Schedulable for the same composition.
 func BuildPollable(sources []source.Source, client *httpx.Client, opts Options) ([]provider.Provider, []source.Source) {
 	var (
 		providers []provider.Provider
@@ -168,6 +178,10 @@ func BuildPollable(sources []source.Source, client *httpx.Client, opts Options) 
 			continue
 		}
 		if src.Access.Personal() && !opts.AllowPersonal {
+			skipped = append(skipped, src)
+			continue
+		}
+		if !opts.Overrides.Permits(src) {
 			skipped = append(skipped, src)
 			continue
 		}

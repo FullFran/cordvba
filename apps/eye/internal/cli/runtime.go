@@ -32,6 +32,11 @@ type runtime struct {
 	// tell whether they are running against their own file or the one
 	// compiled into the binary.
 	registryPath string
+
+	// overrides is the operator's optional per-deployment overrides (#125).
+	// Its zero value means no overrides file was present, which behaves
+	// exactly like today: nothing here restricts anything.
+	overrides source.Overrides
 }
 
 // runtimeOptions are the per-invocation overrides a command may pass.
@@ -67,6 +72,11 @@ func newRuntime(opts runtimeOptions) (*runtime, error) {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 
+	overrides, err := registry.LoadOverridesFile(cfg.OverridesPath, sources)
+	if err != nil {
+		return nil, err
+	}
+
 	db, err := store.OpenSQLite(cfg.StorePath())
 	if err != nil {
 		return nil, err
@@ -94,6 +104,7 @@ func newRuntime(opts runtimeOptions) (*runtime, error) {
 		cache:        cache,
 		client:       client,
 		registryPath: path,
+		overrides:    overrides,
 	}, nil
 }
 
@@ -134,6 +145,9 @@ func (r *runtime) pollable(topics ...string) ([]provider.Provider, []source.Sour
 		// source; the adapter reports it by name on the first poll.
 		AEMETAPIKey: r.cfg.AEMETAPIKey,
 		FIRMSMapKey: r.cfg.FIRMSMapKey,
+		// The operator's overrides (#125) restrict this set further; they
+		// never widen it.
+		Overrides: r.overrides,
 	})
 }
 
@@ -148,6 +162,9 @@ func (r *runtime) collect(ctx context.Context, ps []provider.Provider) []observa
 	// command that polls feeds it, so whichever one ran last, the next knows
 	// what moved.
 	collector.Snapshots = r.store
+	// The operator's overrides (#125) compose with the registry's own
+	// retention here, the single seam every source's records pass through.
+	collector.Overrides = r.overrides
 
 	results := collector.Collect(ctx, ps)
 	r.saveStates(ctx, results)

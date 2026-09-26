@@ -62,3 +62,40 @@ func TestDaemonSinkStoreAppliesSourceRetention(t *testing.T) {
 		t.Errorf("ExpiresAt = %v, want nil: the daemon's own store path must apply retention exactly like the collector", got[0].ExpiresAt)
 	}
 }
+
+// The composed retention flows through the daemon path too: an operator's
+// overrides.yaml (#125) pinning a registry-ephemeral source to historical
+// must be honoured here, not only in the collector.
+func TestDaemonSinkStoreAppliesOverriddenRetention(t *testing.T) {
+	t.Parallel()
+
+	rt, err := newRuntime(runtimeOptions{registry: minimalRegistry(t), dataDir: t.TempDir()})
+	if err != nil {
+		t.Fatalf("newRuntime() = %v", err)
+	}
+	defer func() { _ = rt.Close() }()
+	rt.overrides = source.Overrides{Retention: map[string]source.RetentionOverride{
+		"renfe-positions": {Kind: source.RetentionHistorical},
+	}}
+
+	sink := newDaemonSink(rt, logging.Discard())
+
+	staleExpiry := time.Now().UTC().Add(24 * time.Hour)
+	rec := testRecord("override-1", "", &staleExpiry)
+	p := fakeSinkProvider{
+		info:    source.Source{ID: "renfe-positions", Topic: "transport", Format: "fake"}, // ephemeral in the registry
+		records: []domain.Record{rec},
+	}
+
+	if _, err := sink.Store(context.Background(), p, p.records); err != nil {
+		t.Fatalf("Store() = %v", err)
+	}
+
+	got, err := rt.store.Query(context.Background(), domain.Filter{})
+	if err != nil {
+		t.Fatalf("Query() = %v", err)
+	}
+	if len(got) != 1 || got[0].ExpiresAt != nil {
+		t.Errorf("got %+v, want one record with ExpiresAt nil once the override pins it to historical", got)
+	}
+}

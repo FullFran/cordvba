@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"sort"
 	"time"
 
 	"github.com/FullFran/cordvba/apps/eye/internal/logging"
@@ -14,6 +15,7 @@ import (
 	store "github.com/FullFran/cordvba/apps/eye/internal/observation/infrastructure"
 	provider "github.com/FullFran/cordvba/apps/eye/internal/provider/domain"
 	"github.com/FullFran/cordvba/apps/eye/internal/scheduler"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 )
 
 // daemonCommand runs the scheduler until interrupted.
@@ -56,6 +58,7 @@ func daemonCommand() Command {
 				"store", rt.store.Path(),
 				"raw_cache", rt.cache.Root(),
 				"registry", rt.registryPath)
+			logEffectiveSet(log, ps, rt.sources, rt.overrides, rt.cfg.AllowPersonalSources)
 			reconcileHistoricalRetention(ctx, rt, log)
 
 			if *once {
@@ -112,19 +115,22 @@ func daemonCommand() Command {
 }
 
 // reconcileHistoricalRetention clears ExpiresAt on already-stored records of
-// every source whose retention is historical.
+// every source whose composed retention (registry ∘ overrides, #125) is
+// historical.
 //
-// #132: a record can predate that policy applying to its source, because the
-// daemon's own persistence path (daemonSink.Store) never composed retention
-// before this fix while Collector.collectOne already did. Such a record
-// still carries the expiry an earlier poll (or adapter) computed for it.
-// This is reconciliation, not re-derivation: it only ever clears an expiry,
-// and only for the ids given; it never sets one, so it can never turn a live
-// record into an expired one.
+// #132: a record can predate that policy applying to its source — the
+// registry always said historical but the daemon's own persistence path
+// (daemonSink.Store) never composed retention before that fix while
+// Collector.collectOne already did, or an operator's overrides.yaml now pins
+// a previously-ephemeral source to historical — and such a record still
+// carries the expiry an earlier poll (or adapter) computed for it. This is
+// reconciliation, not re-derivation: it only ever clears an expiry, and only
+// for the ids given; it never sets one, so it can never turn a live record
+// into an expired one.
 func reconcileHistoricalRetention(ctx context.Context, rt *runtime, log *loggerAlias) {
 	var historical []string
 	for _, s := range rt.sources {
-		if s.Historical() {
+		if kind, _, _ := rt.overrides.EffectiveRetention(s); kind == source.RetentionHistorical {
 			historical = append(historical, s.ID)
 		}
 	}
@@ -138,6 +144,49 @@ func reconcileHistoricalRetention(ctx context.Context, rt *runtime, log *loggerA
 		return
 	}
 	log.Info("retention reconciliation", "cleared_expiry", cleared, "sources", historical)
+}
+
+// logEffectiveSet reports, once, what the daemon actually resolved to poll
+// and retain: the registry composed with the operator's overrides (#125).
+//
+// An operator who mounts overrides.yaml should be able to confirm what took
+// effect from the log alone, without reading the file back against the
+// registry by hand — collected is what will be polled, disabled_by_operator
+// is what the overrides removed from an otherwise-live registry entry (never
+// a source the registry or a personal-source opt-in already held back — see
+// Overrides.DisabledByOperator), and retention is the composed retention of
+// every source actually being collected.
+func logEffectiveSet(log *loggerAlias, ps []provider.Provider, sources []source.Source, overrides source.Overrides, allowPersonal bool) {
+	collected := make([]string, 0, len(ps))
+	retention := make(map[string]string, len(ps))
+	for _, p := range ps {
+		info := p.Info()
+		collected = append(collected, info.ID)
+
+		kind, ttl, overridden := overrides.EffectiveRetention(info)
+		switch {
+		case kind == source.RetentionHistorical:
+			retention[info.ID] = string(source.RetentionHistorical)
+		case overridden:
+			retention[info.ID] = ttl.String()
+		default:
+			retention[info.ID] = string(source.RetentionEphemeral)
+		}
+	}
+	sort.Strings(collected)
+
+	var disabled []string
+	for _, s := range sources {
+		if overrides.DisabledByOperator(s, allowPersonal) {
+			disabled = append(disabled, s.ID)
+		}
+	}
+	sort.Strings(disabled)
+
+	log.Info("effective set",
+		"collected", collected,
+		"disabled_by_operator", disabled,
+		"retention", retention)
 }
 
 // runOnce polls every source a single time. It is what a systemd timer or a
@@ -243,12 +292,13 @@ func newDaemonSink(rt *runtime, log *loggerAlias) *daemonSink {
 //
 // #132: this is the daemon's OWN persistence path, separate from
 // Collector.collectOne, and it used to skip retention entirely — a registry
-// entry marked retention: historical still expired after whatever TTL its
-// adapter computed, because nothing here ever applied that decision.
-// ApplyRetention is the single function both paths now call, so there is
-// exactly one place left to get this right.
+// entry marked retention: historical (or an operator's overrides pinning
+// one, #125) still expired after whatever TTL its adapter computed, because
+// nothing here ever composed that decision. ApplyRetention is the single
+// function both paths now call, so there is exactly one place left to get
+// this right.
 func (s *daemonSink) Store(ctx context.Context, p provider.Provider, records []observation.Record) (int, error) {
-	application.ApplyRetention(p.Info(), records)
+	application.ApplyRetention(p.Info(), records, s.rt.overrides)
 
 	stored, err := s.rt.store.Append(ctx, records)
 	if err != nil {

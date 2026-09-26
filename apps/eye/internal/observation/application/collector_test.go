@@ -294,3 +294,111 @@ func TestHistoricalRecordsSurvivePruneAlongsideEphemeralOnes(t *testing.T) {
 		t.Fatalf("after prune the store holds %+v, want only historical-1", got)
 	}
 }
+
+// #125: an operator's overrides.yaml can pin a source's retention to
+// "historical", even though the registry itself says ephemeral. The
+// collector is the single seam every source's records pass through — see
+// applyRetention — so this is where the composition (registry ∘ overrides)
+// has to happen, exactly once, for every source there is or ever will be.
+func TestCollectRetentionOverrideHistoricalWinsOverRegistryEphemeral(t *testing.T) {
+	t.Parallel()
+
+	s := store.NewMemStore()
+	c := application.NewCollector(s, s)
+	c.Overrides = source.Overrides{Retention: map[string]source.RetentionOverride{
+		"metar-cordoba": {Kind: source.RetentionHistorical},
+	}}
+
+	expires := time.Now().UTC().Add(24 * time.Hour)
+	results := c.Collect(context.Background(), []provider.Provider{
+		&fakeProvider{
+			id: "metar-cordoba", topic: "weather", // ephemeral in the registry
+			records: []domain.Record{sampleRecordWithExpiry("1", expires)},
+		},
+	})
+	if !results[0].OK() {
+		t.Fatalf("result error: %v", results[0].Err)
+	}
+
+	got, err := s.Query(context.Background(), domain.Filter{})
+	if err != nil {
+		t.Fatalf("Query() = %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("stored = %d records, want 1", len(got))
+	}
+	if got[0].ExpiresAt != nil {
+		t.Errorf("ExpiresAt = %v, want nil once the override pins this source to historical", got[0].ExpiresAt)
+	}
+}
+
+// The opposite composition: a historical registry entry, pinned back to a
+// specific ephemeral TTL by the operator. The override's TTL must replace
+// whatever the adapter itself computed, not merely coexist with it.
+func TestCollectRetentionOverrideEphemeralReplacesAdapterTTL(t *testing.T) {
+	t.Parallel()
+
+	s := store.NewMemStore()
+	c := application.NewCollector(s, s)
+	c.Overrides = source.Overrides{Retention: map[string]source.RetentionOverride{
+		"renfe-positions": {Kind: source.RetentionEphemeral, TTL: 24 * time.Hour},
+	}}
+	c.Now = func() time.Time { return time.Date(2026, 9, 26, 12, 0, 0, 0, time.UTC) }
+
+	adapterComputedExpiry := time.Now().UTC().Add(30 * 24 * time.Hour)
+	rec := sampleRecordWithExpiry("1", adapterComputedExpiry)
+	rec.FetchedAt = c.Now()
+
+	results := c.Collect(context.Background(), []provider.Provider{
+		&fakeProvider{
+			id: "renfe-positions", topic: "transport", retention: source.RetentionHistorical,
+			records: []domain.Record{rec},
+		},
+	})
+	if !results[0].OK() {
+		t.Fatalf("result error: %v", results[0].Err)
+	}
+
+	got, err := s.Query(context.Background(), domain.Filter{})
+	if err != nil {
+		t.Fatalf("Query() = %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("stored = %d records, want 1", len(got))
+	}
+	want := rec.FetchedAt.Add(24 * time.Hour)
+	if got[0].ExpiresAt == nil || !got[0].ExpiresAt.Equal(want) {
+		t.Errorf("ExpiresAt = %v, want %v (the override's TTL from FetchedAt)", got[0].ExpiresAt, want)
+	}
+}
+
+// A source with no matching entry in Overrides.Retention keeps behaving
+// exactly as it did before #125: the registry's own retention decides.
+func TestCollectRetentionWithoutOverrideUnaffected(t *testing.T) {
+	t.Parallel()
+
+	s := store.NewMemStore()
+	c := application.NewCollector(s, s)
+	c.Overrides = source.Overrides{Retention: map[string]source.RetentionOverride{
+		"some-other-source": {Kind: source.RetentionHistorical},
+	}}
+
+	expires := time.Now().UTC().Add(24 * time.Hour)
+	results := c.Collect(context.Background(), []provider.Provider{
+		&fakeProvider{
+			id: "adsb-lol", topic: "aviation",
+			records: []domain.Record{sampleRecordWithExpiry("1", expires)},
+		},
+	})
+	if !results[0].OK() {
+		t.Fatalf("result error: %v", results[0].Err)
+	}
+
+	got, err := s.Query(context.Background(), domain.Filter{})
+	if err != nil {
+		t.Fatalf("Query() = %v", err)
+	}
+	if len(got) != 1 || got[0].ExpiresAt == nil || !got[0].ExpiresAt.Equal(expires) {
+		t.Errorf("an unrelated override entry must not touch adsb-lol's ExpiresAt: got %+v", got)
+	}
+}
