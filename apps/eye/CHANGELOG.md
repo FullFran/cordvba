@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.4.0](https://github.com/FullFran/cordvba/compare/v0.3.0...v0.4.0) (2026-09-26)
+
+
+### Features
+
+* **scheduler:** compose deployment overrides into scheduling and retention ([#135](https://github.com/FullFran/cordvba/issues/135)) ([7881f1f](https://github.com/FullFran/cordvba/commit/7881f1f84559c2a1d84e524f69d009902d3e765d))
+* **source:** parse and validate optional deployment overrides ([#134](https://github.com/FullFran/cordvba/issues/134)) ([1083765](https://github.com/FullFran/cordvba/commit/108376502251ee82fe3906bac01103cfb48d75dc))
+* **source:** surface operator-disabled sources and document overrides ([#136](https://github.com/FullFran/cordvba/issues/136)) ([43217d6](https://github.com/FullFran/cordvba/commit/43217d65fd9957024c367be651eb470e1186ce34)), closes [#125](https://github.com/FullFran/cordvba/issues/125)
+
+
+### Bug Fixes
+
+* **cli:** apply source retention on the daemon path ([#133](https://github.com/FullFran/cordvba/issues/133)) ([46b34f6](https://github.com/FullFran/cordvba/commit/46b34f68f718b3cffb13d4c602ba991e53e42a30)), closes [#132](https://github.com/FullFran/cordvba/issues/132)
+* **provider:** filter miteco-ica by province code instead of a bounding box ([#107](https://github.com/FullFran/cordvba/issues/107)) ([e2459ac](https://github.com/FullFran/cordvba/commit/e2459acc72bc3d344fa9a02f7c5ad26d1afcccef)), closes [#98](https://github.com/FullFran/cordvba/issues/98)
+* **provider:** read aemet observation timestamps with a numeric offset ([#144](https://github.com/FullFran/cordvba/issues/144)) ([13ba9da](https://github.com/FullFran/cordvba/commit/13ba9daec095462ebb28d3457f7194b2bb49867b)), closes [#143](https://github.com/FullFran/cordvba/issues/143)
+* **provider:** scope aemet-warnings to Cordoba province ([#145](https://github.com/FullFran/cordvba/issues/145)) ([29a80f5](https://github.com/FullFran/cordvba/commit/29a80f50efab82f300ed4875ce15736e03df4935)), closes [#142](https://github.com/FullFran/cordvba/issues/142)
+* **source:** keep environmental series as history instead of expiring them ([#126](https://github.com/FullFran/cordvba/issues/126)) ([ec9d37b](https://github.com/FullFran/cordvba/commit/ec9d37bf351ee4fff87f3999f8ff2b2177a4ad4f)), closes [#73](https://github.com/FullFran/cordvba/issues/73)
+* **store:** prune raw payloads no surviving record references ([#127](https://github.com/FullFran/cordvba/issues/127)) ([d3c2652](https://github.com/FullFran/cordvba/commit/d3c265201d4ad8d4984d4dcda63425d9d59fc421)), closes [#74](https://github.com/FullFran/cordvba/issues/74)
+
+
+### Refactoring
+
+* **build:** move eye into apps/eye of the cordvba monorepo ([#97](https://github.com/FullFran/cordvba/issues/97)) ([c4dbae1](https://github.com/FullFran/cordvba/commit/c4dbae12a1e4d028863c4f45cd40a5e79891743b))
+
 ## [0.3.0](https://github.com/FullFran/eye/compare/v0.2.0...v0.3.0) (2026-08-28)
 
 
