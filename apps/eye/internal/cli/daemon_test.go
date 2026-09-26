@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -118,7 +119,7 @@ func TestDaemonLogsAreStructuredJSON(t *testing.T) {
 
 // #132: a record already in the store, stored before its source became
 // historical (the registry always said so, but the daemon's own persistence
-// path skipped retention entirely until this fix), must have its stale
+// path skipped retention entirely until that fix), must have its stale
 // expiry cleared at start-up. This is reconciliation, not re-computation: it
 // only ever clears an expiry, it never sets one.
 func TestDaemonReconcilesExpiryForHistoricalSourcesAtStartup(t *testing.T) {
@@ -140,7 +141,7 @@ sources:
 `, portal.URL))
 	dataDir := t.TempDir()
 
-	// Seed a record as if it had been stored before this fix: a stale
+	// Seed a record as if it had been stored before the fix: a stale
 	// expiry, computed by whatever TTL the adapter used at the time.
 	db, err := store.OpenSQLite(filepath.Join(dataDir, "eye.db"))
 	if err != nil {
@@ -181,6 +182,44 @@ sources:
 		if r.ID == "pre-existing" && r.ExpiresAt != nil {
 			t.Errorf("pre-existing's expiry was not reconciled: %v", r.ExpiresAt)
 		}
+	}
+}
+
+// #125: the daemon logs the effective set it computed from the registry and
+// the operator's overrides — collected ids, ids the overrides disabled, and
+// each source's retention — so an operator can confirm what will actually run
+// without reading overrides.yaml back against the registry by hand.
+func TestDaemonLogsTheEffectiveSetAtStartup(t *testing.T) {
+	// t.Setenv (EYE_OVERRIDES_FILE) cannot be combined with t.Parallel.
+	registry := setup(t)
+	overridesPath := filepath.Join(t.TempDir(), "overrides.yaml")
+	if err := os.WriteFile(overridesPath, []byte(`
+sources:
+  disable: [test-cameras]
+retention:
+  test-press: historical
+`), 0o600); err != nil {
+		t.Fatalf("write overrides fixture: %v", err)
+	}
+	t.Setenv("EYE_OVERRIDES_FILE", overridesPath)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	var stdout, stderr bytes.Buffer
+	cli.New().Run(ctx,
+		[]string{"daemon", "--registry", registry, "--data-dir", t.TempDir()},
+		&stdout, &stderr)
+
+	logs := stderr.String()
+	if !strings.Contains(logs, `"msg":"effective set"`) {
+		t.Fatalf("daemon did not log the effective set:\n%s", logs)
+	}
+	if !strings.Contains(logs, `"disabled_by_operator":["test-cameras"]`) {
+		t.Errorf("effective set does not name the operator-disabled source:\n%s", logs)
+	}
+	if !strings.Contains(logs, `"test-press":"historical"`) {
+		t.Errorf("effective set does not report the overridden retention:\n%s", logs)
 	}
 }
 

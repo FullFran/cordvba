@@ -26,6 +26,11 @@ type Collector struct {
 	// still collects, it just cannot say what moved since last time.
 	Snapshots domain.SnapshotStore
 
+	// Overrides is the operator's optional per-deployment overrides (#125).
+	// Its zero value composes exactly like an absent overrides file: every
+	// source keeps the registry's own retention, unchanged.
+	Overrides source.Overrides
+
 	// Concurrency bounds parallel polls. Zero means DefaultConcurrency.
 	Concurrency int
 	// Now is injectable so tests do not depend on the wall clock.
@@ -104,7 +109,7 @@ func (c *Collector) collectOne(ctx context.Context, p provider.Provider) Result 
 		return res
 	}
 
-	ApplyRetention(info, records)
+	ApplyRetention(info, records, c.Overrides)
 
 	if stored, err := c.records.Append(ctx, records); err == nil {
 		res.Records = stored
@@ -129,12 +134,14 @@ func (c *Collector) collectOne(ctx context.Context, p provider.Provider) Result 
 	return res
 }
 
-// ApplyRetention overrides ExpiresAt for a historical source's freshly polled
-// records, in place.
+// ApplyRetention overrides ExpiresAt for a freshly polled source's records, in
+// place, from the composed retention: the registry's own decision, narrowed
+// or replaced by the operator's overrides.yaml (#125) when it names this
+// source's id.
 //
 // Every adapter still computes its own ExpiresAt from its own TTL — that code
-// is unchanged, on purpose: rewriting three adapters to each ask the registry
-// "am I historical?" would mean the same policy re-implemented three times,
+// is unchanged, on purpose: rewriting adapters to each ask the registry "am I
+// historical?" would mean the same policy re-implemented once per adapter,
 // with a fourth mistake waiting the next time a source is added. This
 // function is instead meant to be the single seam every source's Poll()
 // result passes through before it reaches the store, regardless of adapter OR
@@ -145,16 +152,39 @@ func (c *Collector) collectOne(ctx context.Context, p provider.Provider) Result 
 // possible instead of a second, easily-forgotten reimplementation that #132
 // found had already happened once.
 //
+// Without an override, behaviour is exactly what it was before #125: nil the
+// expiry for a historical source, leave an ephemeral one untouched. With an
+// override, its Kind decides in the same way, but an ephemeral override also
+// carries its own TTL, which REPLACES whatever the adapter computed — that is
+// what lets an operator pin a source to a TTL of their own choosing rather
+// than only being able to make it historical.
+//
 // Change records never reach this function: in the collector they are
 // produced by detectChanges below, through a separate Append call, and keep
 // their own fixed 30-day TTL untouched — that belongs to the change-feed ADR,
 // not to a source's retention policy.
-func ApplyRetention(info source.Source, records []domain.Record) {
-	if !info.Historical() {
+func ApplyRetention(info source.Source, records []domain.Record, overrides source.Overrides) {
+	kind, ttl, overridden := overrides.EffectiveRetention(info)
+
+	if !overridden {
+		if !kind.Historical() {
+			return
+		}
+		for i := range records {
+			records[i].ExpiresAt = nil
+		}
+		return
+	}
+
+	if kind.Historical() {
+		for i := range records {
+			records[i].ExpiresAt = nil
+		}
 		return
 	}
 	for i := range records {
-		records[i].ExpiresAt = nil
+		expires := records[i].FetchedAt.Add(ttl)
+		records[i].ExpiresAt = &expires
 	}
 }
 
