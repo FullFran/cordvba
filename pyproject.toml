@@ -6,7 +6,7 @@ requires-python = ">=3.12"
 dependencies = []
 
 [tool.uv.workspace]
-members = ["packages/eye-client", "services/twin"]
+members = ["packages/eye-client", "services/twin", "apps/api"]
 
 [tool.uv]
 package = false

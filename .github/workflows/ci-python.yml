@@ -35,4 +35,12 @@ jobs:
         run: uv run --all-packages ruff check .
 
       - name: Pytest
-        run: uv run --all-packages pytest
+        # One pytest process per member: several members share test file
+        # basenames (test_app.py, test_config.py, ...), which collide in
+        # sys.modules inside a single cross-package pytest run.
+        run: |
+          set -euo pipefail
+          for m in packages/eye-client services/twin apps/api; do
+            echo "==> pytest $m"
+            uv run --directory "$m" pytest
+          done
