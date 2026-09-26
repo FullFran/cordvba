@@ -284,6 +284,38 @@ func (s *SQLiteStore) Prune(ctx context.Context, now time.Time) (int, error) {
 	return int(n), nil
 }
 
+// ClearExpiryForSources nils ExpiresAt on every stored record of the given
+// source ids that currently carries one.
+//
+// It exists for #132: a source whose retention is historical may already
+// hold records an earlier poll stored with an adapter-computed expiry, from
+// before that policy applied to them (the daemon's own persistence path
+// skipped it entirely until this fix). This is a one-way, start-up-time
+// reconciliation, never a general update: it only ever clears an expiry, it
+// never sets one, so it can never delete data by giving a record a deadline
+// it did not already have. An empty sourceIDs is a no-op rather than a query
+// with an empty IN (), which some SQL dialects reject and which would match
+// nothing meaningfully anyway.
+func (s *SQLiteStore) ClearExpiryForSources(ctx context.Context, sourceIDs []string) (int, error) {
+	if len(sourceIDs) == 0 {
+		return 0, nil
+	}
+
+	args := make([]any, 0, len(sourceIDs))
+	for _, id := range sourceIDs {
+		args = append(args, id)
+	}
+
+	// #nosec G202 -- clause built from a package literal and placeholders; every interpolated value is bound as an arg
+	query := `UPDATE records SET expires_at = NULL WHERE expires_at IS NOT NULL AND source IN (` + placeholders(len(sourceIDs)) + `)`
+	res, err := s.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return 0, fmt.Errorf("%w: clear expiry for sources: %w", ErrStore, err)
+	}
+	n, _ := res.RowsAffected()
+	return int(n), nil
+}
+
 // rawHashLookup is the query the raw cache prune loop runs once per cached
 // payload: is this hash still referenced by a surviving record, or by an
 // entity (entities carry Provenance.RawHash too, for the inventory refresh
