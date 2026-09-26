@@ -43,6 +43,7 @@ vi.mock("maplibre-gl", () => {
     on = vi.fn();
     off = vi.fn();
     fitBounds = vi.fn();
+    flyTo = vi.fn();
     project = vi.fn().mockReturnValue({ x: 400, y: 200 });
     // Matches the page's own initial bearing (issue #138's `INITIAL_BEARING`).
     getBearing = vi.fn(() => -35);
@@ -138,7 +139,7 @@ vi.mock("../map/darkStyle", () => ({
   // ds-allow-hardcode:end
 }));
 
-import { MapView } from "./MapView";
+import { MapView, resolveFitPadding } from "./MapView";
 
 describe("MapView (issue 119: MapLibre dark 3D map + beacons)", () => {
   afterEach(() => {
@@ -371,6 +372,42 @@ describe("MapView: air quality as columns of light (issue #140)", () => {
     expect(lastCall![0].features).toHaveLength(environment.air_quality.stations.length);
   });
 
+  it("renders the column hero-scale: vertical gradient, high opacity (parent review)", async () => {
+    render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: 40 }} />);
+    await waitFor(() => expect(mapInstances).toHaveLength(1));
+    const instance = mapInstances[0] as unknown as { addLayer: ReturnType<typeof vi.fn> };
+
+    const columnsCall = instance.addLayer.mock.calls.find((call) => call[0]?.id === "air-quality-columns-layer");
+    expect(columnsCall).toBeDefined();
+    const paint = columnsCall![0].paint;
+    expect(paint["fill-extrusion-vertical-gradient"]).toBe(true);
+    expect(paint["fill-extrusion-opacity"]).toBeGreaterThanOrEqual(0.85);
+  });
+
+  it("adds a breathing glow circle layer, blurred, at the same source points as the columns (parent review)", async () => {
+    render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: 40 }} />);
+    await waitFor(() => expect(mapInstances).toHaveLength(1));
+    const instance = mapInstances[0] as unknown as {
+      addLayer: ReturnType<typeof vi.fn>;
+      addSource: ReturnType<typeof vi.fn>;
+      getSource: ReturnType<typeof vi.fn>;
+    };
+
+    expect(instance.addSource).toHaveBeenCalledWith("air-quality-glow", expect.objectContaining({ type: "geojson" }));
+    const glowCall = instance.addLayer.mock.calls.find((call) => call[0]?.id === "air-quality-glow-layer");
+    expect(glowCall).toBeDefined();
+    expect(glowCall![0].type).toBe("circle");
+    expect(glowCall![0].paint["circle-blur"]).toBeGreaterThan(0);
+
+    const source = instance.getSource("air-quality-glow") as { setData: ReturnType<typeof vi.fn> };
+    await waitFor(() => expect(source.setData).toHaveBeenCalled());
+    const lastCall = source.setData.mock.calls[source.setData.mock.calls.length - 1];
+    const [feature] = lastCall![0].features;
+    expect(feature.geometry.type).toBe("Point");
+    expect(typeof feature.properties.opacity).toBe("number");
+    expect(typeof feature.properties.radiusScale).toBe("number");
+  });
+
   it("shows the columns-are-not-interpolated legend line, always (not conditional on the sun)", () => {
     render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: -5 }} />);
     expect(screen.getByText(/nothing is interpolated between stations/i)).toBeInTheDocument();
@@ -383,5 +420,124 @@ describe("MapView: air quality as columns of light (issue #140)", () => {
     const dueTo = environment.air_quality.stations.find((s) => s.index.due_to)?.index.due_to;
     expect(dueTo).toBeTruthy();
     expect(markerInstances.some((m) => m.element.textContent?.includes(dueTo!))).toBe(true);
+  });
+});
+
+describe("resolveFitPadding (polish: the mobile beacon-clipping bug)", () => {
+  // The desktop padding's right:340 accounts for the fixed-position state
+  // dock, which only exists at >=48rem (768px) — DESIGN.md §3. Below that,
+  // the HUD reverts to normal document flow above/below the map, so
+  // applying that same padding squeezed a 390px-wide viewport's usable
+  // fitBounds area down to ~2px, zooming out to fit the whole country
+  // instead of Córdoba (the reported bug: "the left beacon is cut at the
+  // screen edge").
+  it("uses the generous HUD-aware padding at/above the 768px breakpoint", () => {
+    const padding = resolveFitPadding(1440);
+    expect(padding.right).toBeGreaterThan(200);
+  });
+
+  it("uses a small, symmetric padding below the 768px breakpoint — no fixed-position HUD to clear", () => {
+    const padding = resolveFitPadding(390);
+    expect(padding.right).toBeLessThan(100);
+    expect(padding.left).toBeLessThan(100);
+    // Symmetric, unlike desktop's HUD-shaped asymmetry: nothing on mobile
+    // singles out one edge over another.
+    expect(padding.left).toBe(padding.right);
+    expect(padding.top).toBe(padding.bottom);
+  });
+
+  it("leaves enough room on a 390px-wide viewport for an actual map area to fit bounds into", () => {
+    const padding = resolveFitPadding(390);
+    expect(padding.left + padding.right).toBeLessThan(390 * 0.5);
+  });
+});
+
+describe("MapView: historic-centre camera preset (parent review: 'shadows are invisible at city zoom')", () => {
+  afterEach(() => {
+    mapInstances.length = 0;
+    markerInstances.length = 0;
+  });
+
+  it("flies to the historic centre at a close, steeply pitched zoom when the preset is chosen", async () => {
+    render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: 40 }} />);
+    await waitFor(() => expect(mapInstances).toHaveLength(1));
+    const instance = mapInstances[0] as unknown as { flyTo: ReturnType<typeof vi.fn> };
+
+    await userEvent.click(screen.getByRole("button", { name: /historic/i }));
+
+    expect(instance.flyTo).toHaveBeenCalledTimes(1);
+    const [options] = instance.flyTo.mock.calls[0]!;
+    expect(options.zoom).toBeGreaterThanOrEqual(16);
+    expect(options.pitch).toBeGreaterThanOrEqual(55);
+    expect(options.center).toEqual([-4.7794, 37.8789]); // the Mezquita / historic-centre point
+  });
+
+  it("flies back to the station overview via fitBounds when 'overview' is chosen again", async () => {
+    render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: 40 }} />);
+    await waitFor(() => expect(mapInstances).toHaveLength(1));
+    const instance = mapInstances[0] as unknown as {
+      fitBounds: ReturnType<typeof vi.fn>;
+      flyTo: ReturnType<typeof vi.fn>;
+    };
+    instance.fitBounds.mockClear(); // clear the initial-mount call
+
+    await userEvent.click(screen.getByRole("button", { name: /historic/i }));
+    await userEvent.click(screen.getByRole("button", { name: /overview|general/i }));
+
+    expect(instance.fitBounds).toHaveBeenCalledTimes(1);
+  });
+
+  it("marks the active preset with aria-pressed, toggle-group style", async () => {
+    render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: 40 }} />);
+    await waitFor(() => expect(mapInstances).toHaveLength(1));
+
+    const overviewButton = screen.getByRole("button", { name: /overview|general/i });
+    const historicButton = screen.getByRole("button", { name: /historic/i });
+    expect(overviewButton).toHaveAttribute("aria-pressed", "true");
+    expect(historicButton).toHaveAttribute("aria-pressed", "false");
+
+    await userEvent.click(historicButton);
+
+    expect(overviewButton).toHaveAttribute("aria-pressed", "false");
+    expect(historicButton).toHaveAttribute("aria-pressed", "true");
+  });
+});
+
+describe("MapView: collapsible legend (parent review: 'the bottom-left legend is clipped by the timeline bar')", () => {
+  afterEach(() => {
+    mapInstances.length = 0;
+    markerInstances.length = 0;
+  });
+
+  it("renders the legend body as a native <details>/<summary> disclosure", () => {
+    render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: 40 }} />);
+
+    const details = document.querySelector(".map-legend__disclosure");
+    expect(details?.tagName.toLowerCase()).toBe("details");
+    expect(screen.getByText(/legend|leyenda/i)).toBeInTheDocument();
+  });
+
+  it("toggles open/closed when the summary is activated", async () => {
+    render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: 40 }} />);
+
+    const summary = screen.getByText(/legend|leyenda/i);
+    const details = summary.closest("details")!;
+    const initiallyOpen = details.hasAttribute("open");
+
+    await userEvent.click(summary);
+
+    expect(details.hasAttribute("open")).toBe(!initiallyOpen);
+  });
+
+  it("keeps the camera-preset controls visible regardless of the legend's open/closed state", async () => {
+    render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: 40 }} />);
+
+    const summary = screen.getByText(/legend|leyenda/i);
+    const details = summary.closest("details")!;
+    if (details.hasAttribute("open")) {
+      await userEvent.click(summary); // force closed
+    }
+
+    expect(screen.getByRole("button", { name: /historic/i })).toBeVisible();
   });
 });

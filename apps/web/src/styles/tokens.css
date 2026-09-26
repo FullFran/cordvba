@@ -75,27 +75,39 @@
      ~0.33) — verified in DESIGN.md §8. */
   --map-bg: #060a12;
   --map-water: #0c1c33;
-  /* --- Sun-driven day/dusk/night base-map palette (issue #139) ---------
-     Only the sky/water tint shifts with the sun's altitude
-     (`src/lib/sun.ts`'s `sunPhase`); buildings/roads/labels stay the same
-     token regardless of phase — "night" above (unsuffixed) is this app's
-     original, unchanged default. Still the Void Signal dark aesthetic at
-     every phase (never a light theme): "day" only lightens/cools the
-     void, "dusk" only warms it. */
+  /* --- Sun-driven day/golden/blue/night base-map palette (issue #139;
+     four phases not three — parent review: "noon vs dusk differ by a
+     faint tint") -----------------------------------------------------
+     Only the sky/water tint shifts with the sun's phase
+     (`src/lib/sun.ts`'s `sunPhase`); buildings/roads/labels stay the
+     same token regardless of phase — "night" above (unsuffixed) is this
+     app's original, unchanged default. Still the Void Signal dark
+     aesthetic at every phase (never a light theme): each phase only
+     retints the void, deliberately vivid enough to read at a glance —
+     "golden" (low sun, warm amber) and "blue" (sun near the horizon,
+     cool blue-hour tone) are two genuinely different states, not one
+     blurred "dusk" in between. */
   --map-bg-day: #141b2e;
   --map-water-day: #1c3a5e;
-  --map-bg-dusk: #1a1210;
-  --map-water-dusk: #241a12;
+  --map-bg-golden: #3d2410;
+  --map-water-golden: #5a3410;
+  --map-bg-blue: #141233;
+  --map-water-blue: #1a1f52;
   /* Extrusion-light colour per phase (`src/map/sunLight.ts`), read
-     straight through with no literal in JS. */
+     straight through with no literal in JS. Paired with that module's
+     own per-phase *intensity* (day near MapLibre's maximum, night near
+     its minimum) so building faces visibly change, not just tint. */
   --map-light-day: #cfe0f5;
-  --map-light-dusk: #f2b783;
-  --map-light-night: #6b7ba8;
+  --map-light-golden: #ffb066;
+  --map-light-blue: #7b93e0;
+  --map-light-night: #2a3550;
   /* The historic-centre building-shadow layer (issue #139): always a
      plain dark translucent tint, regardless of phase — a shadow is a
      shadow at any time of day; it simply is not drawn once the sun is
-     down (see `shadowLengthM`/AC-3). */
-  --map-shadow-fill: rgba(3, 6, 12, 0.4);
+     down (see `shadowLengthM`/AC-3). Raised from 0.4 to 0.6 (parent
+     review: "shadows are invisible at city zoom") — legible at the new
+     historic-centre camera preset without reading as solid black. */
+  --map-shadow-fill: rgba(3, 6, 12, 0.6);
   --map-park: #0f2418;
   --map-building-low: #171d2b;
   --map-building-high: #3a4a63;

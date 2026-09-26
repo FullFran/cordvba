@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { discPolygonCoordinates, icaColumnHeightM, stationColumnFeature } from "./airQualityColumns";
+import {
+  AQ_COLUMN_RADIUS_M,
+  discPolygonCoordinates,
+  icaColumnHeightM,
+  stationColumnFeature,
+  stationGlowFeature,
+} from "./airQualityColumns";
 
-describe("icaColumnHeightM (issue #140: column height encodes the ICA index, nothing interpolated)", () => {
+describe("icaColumnHeightM (issue #140/parent review: hero-scale height, index × ~250-300m, so columns actually read at the app's initial fitted zoom)", () => {
   it("gives a taller column to a worse (higher) ICA index", () => {
     expect(icaColumnHeightM(6)).toBeGreaterThan(icaColumnHeightM(1));
   });
@@ -14,9 +20,22 @@ describe("icaColumnHeightM (issue #140: column height encodes the ICA index, not
     }
   });
 
+  it("scales at roughly 250-300m per ICA level, not the original ~18-25m 'stub' scale", () => {
+    const perLevel = icaColumnHeightM(2) - icaColumnHeightM(1);
+    expect(perLevel).toBeGreaterThanOrEqual(250);
+    expect(perLevel).toBeLessThanOrEqual(300);
+  });
+
   it("gives a modest, non-zero height for a missing/non-numeric index, rather than vanishing", () => {
     expect(icaColumnHeightM(null)).toBeGreaterThan(0);
     expect(icaColumnHeightM("unknown")).toBeGreaterThan(0);
+  });
+});
+
+describe("AQ_COLUMN_RADIUS_M (parent review: a base radius the column actually reads at, not an invisible 14m sliver)", () => {
+  it("is within the requested 100-150m hero range", () => {
+    expect(AQ_COLUMN_RADIUS_M).toBeGreaterThanOrEqual(100);
+    expect(AQ_COLUMN_RADIUS_M).toBeLessThanOrEqual(150);
   });
 });
 
@@ -62,5 +81,28 @@ describe("stationColumnFeature (issue #140: one GeoJSON Feature per station, nev
     const a = stationColumnFeature({ lat: 37.9, lon: -4.78, category: "good", index: 1 });
     const b = stationColumnFeature({ lat: 37.89, lon: -4.76, category: "good", index: 1 });
     expect(a.geometry.coordinates).not.toEqual(b.geometry.coordinates);
+  });
+
+  it("sits at the exact same coordinate as the disc's own centre (parent review: 'stubs look offset from the pills')", () => {
+    const station = { lat: 37.9, lon: -4.78, category: "poor", index: 4 };
+    const column = stationColumnFeature(station);
+    // The disc's vertices are all AQ_COLUMN_RADIUS_M away from the true
+    // station point; their own centroid must still land on it exactly —
+    // proof the footprint is not accidentally built around some other
+    // point (no coordinate-order swap, no stray offset).
+    const ring = column.geometry.coordinates[0]!.slice(0, -1); // drop the closing repeat
+    const centroidLon = ring.reduce((sum, p) => sum + p[0]!, 0) / ring.length;
+    const centroidLat = ring.reduce((sum, p) => sum + p[1]!, 0) / ring.length;
+    expect(centroidLon).toBeCloseTo(station.lon, 5);
+    expect(centroidLat).toBeCloseTo(station.lat, 5);
+  });
+});
+
+describe("stationGlowFeature (parent review: the breathing glow sits at the exact same point as the column and the beacon marker)", () => {
+  it("is a Point at the station's true coordinate", () => {
+    const feature = stationGlowFeature({ lat: 37.9, lon: -4.78, category: "poor", index: 4 });
+    expect(feature.geometry.type).toBe("Point");
+    expect(feature.geometry.coordinates).toEqual([-4.78, 37.9]);
+    expect(feature.properties?.category).toBe("poor");
   });
 });

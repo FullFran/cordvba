@@ -1,6 +1,6 @@
 import { useLocale } from "../i18n/LocaleContext";
 import { symbolForLabel } from "../lib/labels";
-import { pointLabel, splitTimeline, textureForLabel } from "../lib/timeline";
+import { pointHorizonLabel, pointLabel, splitTimeline, textureForLabel } from "../lib/timeline";
 import type { TimelinePoint } from "../types/environment";
 
 export interface TimelineViewProps {
@@ -31,6 +31,9 @@ export function TimelineView({ points, now, onSelectPoint, scenarioPoint }: Time
             onClick={() => onSelectPoint?.(point)}
           >
             <span aria-hidden="true">{symbolForLabel(point.label)}</span> {pointLabel(point)}
+            {pointHorizonLabel(point) ? (
+              <span className="timeline__point-horizon"> ({pointHorizonLabel(point)})</span>
+            ) : null}
           </button>
         </li>
       ))}
@@ -43,6 +46,9 @@ export function TimelineView({ points, now, onSelectPoint, scenarioPoint }: Time
             onClick={() => onSelectPoint?.(point)}
           >
             <span aria-hidden="true">{symbolForLabel(point.label)}</span> {pointLabel(point)}
+            {pointHorizonLabel(point) ? (
+              <span className="timeline__point-horizon"> ({pointHorizonLabel(point)})</span>
+            ) : null}
           </button>
         </li>
       ))}

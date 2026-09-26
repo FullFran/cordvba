@@ -49,4 +49,14 @@ describe("SunWidget (issue #139: sunrise, solar noon, sunset, current altitude)"
     expect(screen.getByText("Mediodía solar")).toBeInTheDocument();
     expect(screen.getByText("Atardecer")).toBeInTheDocument();
   });
+
+  it("compacts into a single flowing row, not four stacked block lines (parent review: the dock must never clip)", () => {
+    const { container } = render(
+      <SunWidget sunrise={SUNRISE} solarNoon={SOLAR_NOON} sunset={SUNSET} altitudeDeg={42.3} />,
+    );
+
+    // Four inline items, none of them a block-level <p> (the old one-per-line shape).
+    expect(container.querySelectorAll(".sun-widget__item")).toHaveLength(4);
+    expect(container.querySelectorAll(".sun-widget p")).toHaveLength(0);
+  });
 });

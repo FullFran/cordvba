@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { pointLabel, splitTimeline, textureForLabel } from "./timeline";
+import { pointHorizonLabel, pointLabel, splitTimeline, textureForLabel } from "./timeline";
 import type { TimelinePoint } from "../types/environment";
 
 function point(at: string, label: TimelinePoint["label"], horizon_h?: number): TimelinePoint {
@@ -50,8 +50,16 @@ describe("splitTimeline", () => {
   });
 });
 
-describe("pointLabel", () => {
-  it("labels an observed point (no horizon_h) by its time of day, never '+nullh' (issue 119)", () => {
+describe("pointLabel (polish: always the clock time — see pointHorizonLabel for the secondary '+Nh' text)", () => {
+  // The historical "+1h before now/ahora" confusion: persistence horizons
+  // anchor on the last ICA observation, which is published with a 1-2h
+  // lag, so a "+1h" prediction's own `at` can still fall before `now` and
+  // render in the timeline's *past* section — showing only "+1h" there,
+  // with no clock time, read as nonsensical ("a future-sounding label in
+  // the past list"). Always showing the clock time first fixes the
+  // meaning regardless of which section it lands in; the horizon becomes
+  // secondary, explanatory text instead of the only label.
+  it("labels an observed point by its time of day, never '+nullh' (issue 119)", () => {
     expect(pointLabel(point("2026-09-26T08:00:00Z", "OBSERVED"))).toBe("08:00");
   });
 
@@ -63,12 +71,34 @@ describe("pointLabel", () => {
     expect(pointLabel(withNullHorizon)).toBe("08:00");
   });
 
-  it("labels a predicted point by its forecast horizon", () => {
-    expect(pointLabel(point("2026-09-26T10:00:00Z", "PREDICTED", 1))).toBe("+1h");
+  it("labels a predicted point by its clock time too, not just its forecast horizon", () => {
+    expect(pointLabel(point("2026-09-26T10:00:00Z", "PREDICTED", 1))).toBe("10:00");
   });
 
-  it("labels horizon_h 0 as '+0h' rather than falling back to the clock time", () => {
-    expect(pointLabel(point("2026-09-26T09:00:00Z", "PREDICTED", 0))).toBe("+0h");
+  it("labels a predicted point with horizon_h 0 by its clock time as well", () => {
+    expect(pointLabel(point("2026-09-26T09:00:00Z", "PREDICTED", 0))).toBe("09:00");
+  });
+});
+
+describe("pointHorizonLabel (polish: the forecast horizon as secondary text, alongside the clock time)", () => {
+  it("returns null for an observed point (no horizon at all)", () => {
+    expect(pointHorizonLabel(point("2026-09-26T08:00:00Z", "OBSERVED"))).toBeNull();
+  });
+
+  it("returns null for an explicit null horizon_h, same as a missing one", () => {
+    const withNullHorizon = {
+      ...point("2026-09-26T08:00:00Z", "OBSERVED"),
+      horizon_h: null,
+    } as unknown as TimelinePoint;
+    expect(pointHorizonLabel(withNullHorizon)).toBeNull();
+  });
+
+  it("returns '+1h' for a predicted point one hour out", () => {
+    expect(pointHorizonLabel(point("2026-09-26T10:00:00Z", "PREDICTED", 1))).toBe("+1h");
+  });
+
+  it("returns '+0h' for horizon_h 0, rather than treating it as falsy/missing", () => {
+    expect(pointHorizonLabel(point("2026-09-26T09:00:00Z", "PREDICTED", 0))).toBe("+0h");
   });
 });
 

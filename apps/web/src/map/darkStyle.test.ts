@@ -306,7 +306,7 @@ describe("buildDarkStyle: road network muted to neutral slate (issue 119, mainta
 });
 
 // ds-allow-hardcode:start (test fixture: arbitrary literal colours, distinct per phase, exercising readMapPalette's own token-reading logic — not this app's own design decisions)
-describe("readMapPalette phase support (issue #139: a day/dusk/night base-map palette driven by sun altitude, tokens not hardcoded colours)", () => {
+describe("readMapPalette phase support (issue #139: a day/golden/blue/night base-map palette driven by sun altitude, tokens not hardcoded colours)", () => {
   afterEach(() => {
     // jsdom resolves inline custom properties without loading tokens.css
     // (vitest config sets `css: false`), so each test sets exactly the
@@ -330,12 +330,20 @@ describe("readMapPalette phase support (issue #139: a day/dusk/night base-map pa
     expect(palette.water).toBe("#141516");
   });
 
-  it("reads the dusk-phase background/water tokens when phase is 'dusk'", () => {
-    document.documentElement.style.setProperty("--map-bg-dusk", "#211213");
-    document.documentElement.style.setProperty("--map-water-dusk", "#241516");
-    const palette = readMapPalette(document.documentElement, "dusk");
+  it("reads the golden-hour-phase background/water tokens when phase is 'golden'", () => {
+    document.documentElement.style.setProperty("--map-bg-golden", "#211213");
+    document.documentElement.style.setProperty("--map-water-golden", "#241516");
+    const palette = readMapPalette(document.documentElement, "golden");
     expect(palette.background).toBe("#211213");
     expect(palette.water).toBe("#241516");
+  });
+
+  it("reads the blue-hour-phase background/water tokens when phase is 'blue'", () => {
+    document.documentElement.style.setProperty("--map-bg-blue", "#0e1030");
+    document.documentElement.style.setProperty("--map-water-blue", "#141850");
+    const palette = readMapPalette(document.documentElement, "blue");
+    expect(palette.background).toBe("#0e1030");
+    expect(palette.water).toBe("#141850");
   });
 
   it("leaves every non-background/water token identical across phases (only the sky/water tint changes)", () => {

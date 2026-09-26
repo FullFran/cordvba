@@ -37,6 +37,10 @@ export const en = {
     edgeIndicator: "{name}, {distance} km away",
     columnsLegend:
       "Each column is one station; height = ICA index; nothing is interpolated between stations.",
+    cameraPresetsLabel: "Camera view",
+    presetOverview: "Overview",
+    presetHistoric: "Historic centre",
+    legendSummary: "Legend",
   },
   wind: {
     toggle: "Illustrative wind",

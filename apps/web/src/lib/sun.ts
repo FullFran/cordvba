@@ -51,18 +51,36 @@ export function getSunTimes(date: Date, latDeg: number, lonDeg: number): SunTime
   };
 }
 
-export type SunPhase = "day" | "dusk" | "night";
+/**
+ * Four phases, not three (parent review: "the sun is barely noticeable
+ * ... noon vs dusk differ by a faint tint"). A flat day/dusk/night split
+ * treated a wide, visually distinct range of low-sun lighting as one
+ * "dusk" bucket; photographers already have names — and a strong colour
+ * language — for exactly this range: golden hour (warm amber, low but
+ * still well above the horizon) and blue hour (cool blue, straddling the
+ * horizon itself). Splitting them out gives the map's lighting two more
+ * genuinely different states to move through, not just a fixed endpoint
+ * pair.
+ */
+export type SunPhase = "day" | "golden" | "blue" | "night";
 
-/** Civil twilight (sun within 6° of the horizon) reads as "dusk"; the rest of the day/night cycle is a plain binary (issue #139: drives the map's day/dusk/night palette and light). */
-const CIVIL_TWILIGHT_DEG = 6;
+/** Below this altitude, daylight starts reading as low-angle golden-hour light. */
+const GOLDEN_HOUR_MAX_ALTITUDE_DEG = 20;
+/** Below this altitude (still comfortably above civil twilight), the light has crossed into the cooler blue-hour band. */
+const BLUE_HOUR_MAX_ALTITUDE_DEG = 2;
+/** Civil twilight's own bound: past this, the sun contributes negligible direct light — genuinely night. */
+const NIGHT_MAX_ALTITUDE_DEG = -6;
 
-/** Categorises an altitude into the three lighting phases this app's palette and building-shadow layer key off. */
+/** Categorises an altitude into the four lighting phases this app's palette, light and building-shadow layer key off. */
 export function sunPhase(altitudeDeg: number): SunPhase {
-  if (altitudeDeg > CIVIL_TWILIGHT_DEG) {
-    return "day";
+  if (altitudeDeg <= NIGHT_MAX_ALTITUDE_DEG) {
+    return "night";
   }
-  if (altitudeDeg > -CIVIL_TWILIGHT_DEG) {
-    return "dusk";
+  if (altitudeDeg <= BLUE_HOUR_MAX_ALTITUDE_DEG) {
+    return "blue";
   }
-  return "night";
+  if (altitudeDeg <= GOLDEN_HOUR_MAX_ALTITUDE_DEG) {
+    return "golden";
+  }
+  return "day";
 }

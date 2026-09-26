@@ -48,8 +48,8 @@ never this app's own design decisions).
 | `--color-aq-good` … `--color-aq-extremely-poor` | 6 hues | Air-quality category hint; never the only encoding (shape + text always carry it too) |
 | `--map-bg`, `--map-water`, `--map-building-low/-high`, `--map-label-halo` | dark navy/green/grey | The MapLibre style's curated overrides (`src/map/darkStyle.ts`); `--map-bg`/`--map-water` double as the **night** phase of the sun-driven palette below |
 | `--map-road-minor/-mid/-major`, `--map-road-label` | neutral slate (hue ~220) | Roads/bridges/tunnels/aeroways and their labels — deliberately *not* the basemap's original warm amber, which shared a hue family with the moderate/poor beacons (see Decision Log) |
-| `--map-bg-day/-dusk`, `--map-water-day/-dusk` | lighter cool slate / warm dark amber | The sun-driven day/dusk base-map tint (issue #139): `sunPhase(altitude)` selects which of these `readMapPalette` reads; still the Void Signal dark aesthetic at every phase, never a light theme |
-| `--map-light-day/-dusk/-night` | `#cfe0f5` / `#f2b783` / `#6b7ba8` | The extrusion light's colour per sun phase (`src/map/sunLight.ts`), read straight through with no literal in JS |
+| `--map-bg-day/-golden/-blue`, `--map-water-day/-golden/-blue` | cool slate / vivid warm amber-brown / deep indigo-blue | The sun-driven day/golden-hour/blue-hour base-map tint (issue #139, parent review: dramatic not faint): `sunPhase(altitude)` selects which of these `readMapPalette` reads; still the Void Signal dark aesthetic at every phase, never a light theme |
+| `--map-light-day/-golden/-blue/-night` | `#cfe0f5` / `#ffb066` / `#7b93e0` / `#2a3550` | The extrusion light's colour per sun phase (`src/map/sunLight.ts`), paired with that module's own per-phase intensity (0.85/0.55/0.28/0.06) — read straight through with no literal in JS |
 | `--map-shadow-fill` | `rgba(3, 6, 12, 0.4)` | The historic-centre building-shadow layer's translucent fill — a plain dark tint at every phase (a shadow is a shadow); not drawn once the sun is down (AC-3) |
 | `--font-sans` | `"IBM Plex Sans", -apple-system, …` | UI text |
 | `--font-mono` | `"IBM Plex Mono", ui-monospace, …` | Numeric readouts, the network-error reason |
@@ -77,8 +77,9 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   full-width bar along the bottom edge, source attribution bottom-left,
   and a collapsible "Scenario" drawer under the state dock (closed by
   default — keeps the HUD from clutter until asked for). `fitBounds`
-  padding (`MapView.tsx`'s `FIT_PADDING`) keeps the initial camera from
-  ever framing a station behind these panels.
+  padding (`MapView.tsx`'s `resolveFitPadding`, `DESKTOP_FIT_PADDING` at
+  this breakpoint) keeps the initial camera from ever framing a station
+  behind these panels.
 - **<48rem (mobile):** everything reverts to normal document flow:
   `.app__stage` is a static `60vh` block on top, `.app__panel`s stack
   below it in order (header, state, scrubber, footer), matching the
@@ -114,7 +115,10 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   saturated elements). Pitched 55°, bearing -17°, and — since real station
   coordinates can differ from the fixtures — the initial camera always
   `fitBounds`es the three city stations plus the historic centre, with
-  HUD-aware padding (`FIT_PADDING`), rather than a fixed center/zoom.
+  breakpoint-aware padding (`resolveFitPadding`: the HUD-shaped
+  `DESKTOP_FIT_PADDING` at >=768px, a small symmetric `MOBILE_FIT_PADDING`
+  below it — see Decision Log's "the left beacon is cut" entry), rather
+  than a fixed center/zoom.
   Beacons (`src/map/beacons.ts`) are pills, not fixed small circles (a
   category word like "extremely poor"/"desfavorable" never fit a ~44px
   circle): a glow + two pulsing rings (CSS, frozen under reduced motion),
@@ -125,23 +129,38 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   category-driven rate (`breathingDurationMs`: slower for good air, faster
   for poor) — a fourth, colour-independent severity channel alongside
   shape/text/height. Real 3D "columns of light" (issue #140,
-  `src/map/airQualityColumns.ts`) rise from each of the three city
-  stations as a small `fill-extrusion` disc, height literally encoding
-  the ICA index (`icaColumnHeightM`) and colour following the same
-  `--color-aq-*` tokens — one independent GeoJSON feature per station,
-  never a shared/merged surface (the columns' own legend line states this
-  explicitly). No interpolated air-quality surface, ever. When the
+  `src/map/airQualityColumns.ts`), hero-scaled (parent review): height
+  ~280m per ICA level (`icaColumnHeightM`, index 1-6 spans 280-1680m),
+  130m base radius, `fill-extrusion-vertical-gradient` and 0.9 opacity so
+  they are the frame's clear focal point, not a "tiny stub" — plus a
+  soft breathing `circle-blur` glow at each base, animated at the same
+  per-category rate as the beacon's own rings. One independent GeoJSON
+  feature per station, never a shared/merged surface (the columns' own
+  legend line states this explicitly; the three stations are hundreds of
+  metres apart, so the discs never touch). No interpolated air-quality
+  surface, ever. When the
   airport beacon's true position falls outside the viewport, a
   `clampToEdge`-positioned arrow + distance (`src/map/geo.ts`) replaces it
   instead of it silently vanishing. A caption states the two honesty notes
   verbatim ("Extrusion heights: OpenStreetMap, approximate…"; "Beacons
   show individual stations only — no interpolated surface") as a small
-  overlay chip, not layout-height text. Sun-driven (issue #139): a
+  overlay chip, not layout-height text. The legend's descriptive body is a
+  collapsible `<details>`/`<summary>` (parent review), open by default on
+  desktop and closed on mobile — see Decision Log. Two camera states
+  (parent review): the station-framed overview (`flyToOverview`, reusing
+  the exact `fitBounds` the initial mount computed) and "Casco histórico
+  / Historic centre" (`flyToHistoricCentre`, zoom 16.5, pitch 60° over
+  the Mezquita — where building shadows actually read), a segmented-
+  control toggle (`.map-camera-presets`) in the map legend, always
+  visible regardless of the disclosure's own open/closed state. Sun-driven
+  (issue #139): a
   `sun: SunPosition` prop (computed once in `App.tsx` from the timeline's
   selected time, `src/lib/sun.ts`'s `getSunPosition`) drives three effects
   — the extrusion light and background/water palette via
-  `map.setPaintProperty`/`setLight` (`sunPhase` picks day/dusk/night;
-  `src/map/sunLight.ts` computes the light spec), a translucent
+  `map.setPaintProperty`/`setLight` (`sunPhase` picks one of four dramatic
+  phases — day, golden hour, blue hour, night, each a clearly distinct
+  colour and intensity, parent review; `src/map/sunLight.ts` computes the
+  light spec), a translucent
   `building-shadows` GeoJSON layer recomputed from currently rendered
   `building-3d` footprints projected along the sun's shadow vector
   (`src/map/shadows.ts`'s `buildingShadow`, a convex-hull approximation —
@@ -163,7 +182,11 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   `<button>`s (keyboard-native, unlike a custom slider widget would need to
   be), each carrying its epistemic symbol (●/■/▲/◌/◇) and a texture class
   (`textureForLabel`: solid/outline/dotted/hatched) so the four kinds never
-  rely on colour alone.
+  rely on colour alone. Its primary label is always the clock time
+  (`pointLabel`); a forecast horizon (e.g. "+1h") is muted secondary text
+  (`pointHorizonLabel`, `.timeline__point-horizon`) — polish fix for a
+  "+1h before now" confusion caused by persistence horizons anchoring on a
+  1-2h-lagged last observation.
 - **StatePanel / ScenarioPanel / ValueTile** — every value routes through
   `formatValue`/`formatWindDirection`/`formatAirQualityCategory` (locale +
   unit aware) and `Label` (locale-aware epistemic word). `ValueTile`'s
@@ -186,7 +209,10 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   (`formatDegrees`, no space before `°`, matching `formatWindDirection`'s
   existing convention). Lives in the state dock, next to `StatePanel`; a
   polar day/night's missing sunrise/sunset renders as an em dash, never
-  "Invalid Date".
+  "Invalid Date". One flowing `flex-wrap` row of items (parent review),
+  not a fixed grid — see Decision Log for the honest limit of that
+  compaction at this dock's width, and the dock's own scroll as the
+  other half of the fix.
 
 ## 5. Motion System
 
@@ -538,18 +564,42 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   test times for Córdoba, comfortably inside AC-1's 1° budget
   (`sun.test.ts` bakes in the NOAA-side numbers as the reference).
 - **2026-09-26 — Sun-driven palette: two tokens change (background,
-  water), not the whole basemap (issue #139).** "A day/dusk/night palette
-  for the base map" could have meant recolouring roads/buildings/labels
-  too; scoped to just the sky/water tint (`--map-bg-*`/`--map-water-*`)
-  so the change stays legible as "the light changed," not "the whole city
-  changed colour," and so beacons/roads/labels keep their one already
-  carefully-tuned contrast ratio (§8, "Road network recoloured…")
-  regardless of time of day. `sunPhase` is a plain 3-way categorical read
-  (day / dusk within ±6° of the horizon / night) rather than continuously
-  interpolating a colour ramp from raw altitude — simpler, testable in
-  three fixed cases, and the extrusion *light* (continuous, via
-  `sunLight`'s `intensity`/`position`) already carries the smooth part of
-  "the sun is moving."
+  water), not the whole basemap (issue #139).** *(4-phase split and
+  dramatic intensity superseded below, parent review.)* "A day/dusk/night
+  palette for the base map" could have meant recolouring roads/buildings/
+  labels too; scoped to just the sky/water tint (`--map-bg-*`/
+  `--map-water-*`) so the change stays legible as "the light changed," not
+  "the whole city changed colour," and so beacons/roads/labels keep their
+  one already carefully-tuned contrast ratio (§8, "Road network
+  recoloured…") regardless of time of day.
+- **2026-09-26 — Four sun phases (day/golden/blue/night), not three
+  (parent review: "the sun is barely noticeable... noon vs dusk differ by
+  a faint tint. Make the lighting dramatic").** The original 3-way
+  day/dusk/night split (dusk = within ±6° of the horizon) folded two
+  visually distinct states — the warm, low-angle light before sunset/
+  after sunrise, and the cool light straddling the horizon itself — into
+  one blurred "dusk," and a flat intensity floor (0.15) that never dimmed
+  further meant "night" only ever read as a slightly darker "day."
+  `sunPhase` (`src/lib/sun.ts`) now names both halves of that range with
+  photography's own vocabulary: **golden hour** (2°–20° altitude, warm
+  amber) and **blue hour** (-6°–2°, cool blue) — genuinely different
+  tokens (`--map-bg-golden`/`--map-water-golden` vs `--map-bg-blue`/
+  `--map-water-blue`, both new) and genuinely different extrusion-light
+  colours (`--map-light-golden: #ffb066` vs `--map-light-blue: #7b93e0`).
+  `sunLight`'s intensity is now driven primarily by phase, not a smooth
+  `sin(altitude)` curve with a shared floor: day 0.85 (near MapLibre's
+  own maximum), golden 0.55, blue 0.28, night 0.06 (never exactly zero,
+  so extrusions never go fully flat) — four clearly ordered, clearly
+  different steps, each pinned by a test. Still a categorical read, not a
+  continuous interpolation (simpler, testable in four fixed cases): the
+  map style's own `transition` (800ms, zeroed under
+  `prefers-reduced-motion`) already eases every discrete jump, including
+  `setLight` calls, so scrubbing the timeline across a phase boundary
+  still reads as smooth motion, not a hard cut. Real building faces
+  (both the AQ columns and the city's own extruded roofs) visibly
+  re-shade with every phase change, since MapLibre's lighting model
+  shades every `fill-extrusion` layer from the same `light.color`/
+  `intensity`/`position` — no per-layer colour hack needed.
 - **2026-09-26 — Building shadows: convex hull of footprint ∪
   shadow-cast translation, not a full silhouette sweep (issue #139).**
   `shadows.ts`'s `buildingShadow` translates every footprint vertex by
@@ -577,6 +627,24 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   this scale (see the report's timing numbers) — real future work if the
   historic centre's building count grows enough to matter, not a
   currently-measured problem.
+- **2026-09-26 — "Casco histórico / Historic centre" camera preset
+  (parent review: "shadows are invisible at city zoom").** The station-
+  framed overview camera is deliberately wide — it has to fit three
+  spread-out stations plus the centre — so a building's shadow (tens to
+  low-hundreds of metres) reads as a sliver at that scale, however
+  correct the underlying geometry is. A second, explicit camera state
+  (`MapView.tsx`'s `flyToHistoricCentre`, zoom 16.5, pitch 60°, over
+  `CORDOBA_HISTORIC_CENTRE` — the Mezquita) gives shadows a frame where
+  they occupy a meaningful fraction of the screen, with a segmented-
+  control-style toggle (`.map-camera-presets`, same shape as the locale
+  switch) to jump back to the overview via `flyToOverview`, which reuses
+  the exact `LngLatBounds` the initial mount computed (`overviewBoundsRef`)
+  rather than recomputing it. `--map-shadow-fill`'s alpha raised 0.4→0.6
+  to match — legible without reading as solid black. Verified in a real
+  browser at both a high midday sun (short, near-building shadows) and
+  golden hour (long shadows stretching across open ground, the sun near
+  the horizon) — direction stayed consistent with `shadowBearing`
+  (opposite the sun's azimuth) in both.
 - **2026-09-26 — Air quality as columns of light: real 3D extrusion, not
   a taller pill (issue #140, maintainer: "a more artistic representation
   using the 3D city it sits in").** A `fill-extrusion` GeoJSON layer
@@ -591,10 +659,147 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   cost far more than it added; the column is additive value, not a
   redesign.
 - **2026-09-26 — Column footprint: a 16-gon disc via `destinationPoint`,
-  not a MapLibre `circle` layer (issue #140).** `circle` layers are
-  always 2D (screen-space radius, no `fill-extrusion-height`); a real
-  extruded "column" needs an actual small `Polygon` footprint in the
-  source data. `discPolygonCoordinates` reuses `geo.ts`'s
-  `destinationPoint` (the same geodesic-offset helper issue #139's
-  shadows already introduced) around each station at a fixed 14m radius,
-  16 vertices — plenty round at the zoom this app frames stations at.
+  not a MapLibre `circle` layer (issue #140).** *(Radius superseded
+  below, parent review.)* `circle` layers are always 2D (screen-space
+  radius, no `fill-extrusion-height`); a real extruded "column" needs an
+  actual small `Polygon` footprint in the source data. `discPolygonCoordinates`
+  reuses `geo.ts`'s `destinationPoint` (the same geodesic-offset helper
+  issue #139's shadows already introduced) around each station, 16
+  vertices — plenty round at the zoom this app frames stations at.
+- **2026-09-26 — Column hero scale: ~280m per ICA level, 130m radius, not
+  the original ~18-43m/14m "stub" scale (parent review: "tiny orange
+  stubs at the fitted zoom").** The original scale was calibrated against
+  nothing — it drew *a* column, but a real city block's buildings
+  (`--map-building-high`, tens of metres) already out-sized it, so at the
+  app's initial `fitBounds` camera (station-framed, zoom ~14) it read as
+  a barely-visible sliver rather than the "hero" element the issue asked
+  for. `icaColumnHeightM`'s `HEIGHT_PER_INDEX_M` is now 280 (within the
+  requested 250-300m band; index 1-6 spans 280-1680m) and
+  `AQ_COLUMN_RADIUS_M` is 130 (within the requested 100-150m band, still
+  far short of the ~300-600m gaps between real stations, so the three
+  discs never touch — DESIGN.md §7's standing "no interpolated surface"
+  rule is a geometric fact here, not just a stated intent). Both are
+  pinned by a test (`airQualityColumns.test.ts`) asserting the exact
+  requested range, so this cannot silently shrink back to invisible.
+  `fill-extrusion-vertical-gradient: true` and a raised
+  `fill-extrusion-opacity` (0.75 → 0.9) make the taller shape actually
+  read as a lit column (darker base, bright top) instead of a flat
+  coloured slab.
+- **2026-09-26 — Breathing glow: a `circle` layer with `circle-blur`,
+  animated by rewriting its own source data every frame, not a
+  zoom-expression trick (issue #140 AC, parent review).** MapLibre's
+  style expressions forbid using `["zoom"]` as a sub-expression of
+  arithmetic operators like `*`, which would otherwise be the natural way
+  to scale a data-driven radius by a per-frame "breathing" factor. Three
+  stations is cheap enough to just recompute `opacity`/`radiusScale` per
+  feature every `requestAnimationFrame` tick and call the glow source's
+  own `setData` — the same per-category rate as the DOM beacon's
+  `breathingDurationMs` (slower for good air, faster for poor), so both
+  readings of "how urgent is this" agree. Frozen to one calm, static
+  mid-opacity frame under `prefers-reduced-motion` (no rAF loop started
+  at all), matching every other JS-driven animation in this app.
+  Drawn *below* the extrusion layer (`map.addLayer(glow, beforeId:
+  columns)`) so it reads as a pool of light the column rises out of, not
+  a halo painted over its face.
+- **2026-09-26 — Column/pill alignment: verified by test, not "fixed" —
+  the original "stubs look offset from the pills" was the old scale
+  being too small to judge by eye, not a coordinate bug (parent review).**
+  `stationColumnFeature`/`stationGlowFeature`/the beacon `Marker` all read
+  the identical `station.lat`/`station.lon` — a new test
+  (`airQualityColumns.test.ts`) computes the disc's own vertex centroid
+  and asserts it lands exactly on the station coordinate. At hero scale
+  the column's base now visibly meets its beacon pill (see the PR/report
+  screenshots); the remaining, expected effect is ordinary 3D
+  perspective at a 58° pitch — a *very* tall column's lit top leans back
+  on screen relative to its ground-anchored base and label, the same way
+  any real extruded skyscraper would at this camera angle. This was not
+  "fixed" by moving the label to a computed top-of-column screen
+  position: that needs projecting a 3D point through MapLibre's camera
+  transform, which the public API does not expose, and an approximate
+  pixel-lift heuristic would drift out of sync the moment pitch, bearing
+  or zoom changes (e.g. the new historic-centre camera preset, #139/#140
+  follow-up). Documented as a known, camera-angle-dependent optical
+  effect rather than silently papered over.
+- **2026-09-26 — Timeline label: always the clock time, horizon secondary
+  (polish, maintainer report: "+1h shows before now/ahora").** Persistence
+  horizons anchor on the last ICA observation, published with a 1-2h lag,
+  so a "+1h" prediction's own `at` can still fall before `now` — landing
+  it in the timeline's *past* section while showing only "+1h", with no
+  clock time to make sense of it there. `pointLabel` now always returns
+  the clock time; the horizon moves to a new `pointHorizonLabel`, rendered
+  as muted secondary text (`.timeline__point-horizon`) alongside it. Fixes
+  the meaning regardless of which section a point lands in, without
+  touching `splitTimeline`'s past/future split itself — that split (at
+  <= now is past) was already correct; only the label was confusing.
+- **2026-09-26 — Mobile `fitBounds` padding: small and symmetric below
+  768px, not the desktop HUD padding (polish, maintainer report: "the left
+  beacon is cut at the screen edge").** The desktop padding's right: 340
+  accounts for the fixed-position state dock, which only exists at
+  >=48rem (DESIGN.md §3); below that the HUD reverts to normal document
+  flow above/below the map, so applying that same padding on a 390px-wide
+  viewport left `fitBounds` under 2px of horizontal room, which zoomed out
+  to fit the whole country instead of Córdoba — a beacon "cut at the
+  edge" was actually the mild end of a much larger framing bug.
+  `resolveFitPadding(viewportWidthPx)` (`MapView.tsx`) picks between
+  `DESKTOP_FIT_PADDING` (unchanged) and a new small `MOBILE_FIT_PADDING`
+  (40/40/24/24) at the same 768px breakpoint every other layout rule in
+  this app already uses.
+- **2026-09-26 — Map legend: a native `<details>`/`<summary>` disclosure,
+  open on desktop and closed on mobile by default (parent review: "the
+  bottom-left legend is clipped by the timeline bar").** The legend's
+  actual bug was a stacking-order collision, not a CSS overflow clip: at
+  >=48rem the scrubber (`.app__panel--scrubber`) is a fixed bar hovering
+  over the map's bottom edge, and `.map-legend`'s own `bottom: var(--
+  space-3)` put its lower portion in the exact same screen region, one
+  layer underneath — confirmed by measuring both elements'
+  `getBoundingClientRect()`s in a real browser before touching anything.
+  Fixed on two fronts: `.map-legend` is raised to `bottom: 6rem` at that
+  breakpoint (clear of the scrubber, verified by the same measurement
+  afterwards — no overlap left) with its own `max-height`/`overflow-y:
+  auto` as a second safety net; and the legend's descriptive body (wind
+  toggle, captions) now lives inside a `<details>` (`.map-legend__body`),
+  native HTML with no extra JS for keyboard/screen-reader support,
+  defaulting open on desktop and closed on mobile via the same
+  `MOBILE_BREAKPOINT_PX` (768px) the rest of this app's layout already
+  keys off. The camera-preset toggle sits *outside* the disclosure,
+  since it is a control, not legend text, and stays reachable either way.
+- **2026-09-26 — Sun widget: one flowing row, not a fixed 2x2 grid
+  (parent review: "the right dock clips the attribution... compact the
+  sun widget into one row").** `SunWidget.tsx` changed from four stacked
+  `<p>` lines in a rigid grid to four inline `.sun-widget__item`s in a
+  `flex-wrap` row — no fixed cell height or forced gap between rows, so
+  it only ever takes the vertical space its actual (locale-dependent)
+  text needs. Measured honestly: Spanish's longer words ("Mediodía
+  solar") still wrap the four items across two lines at the state dock's
+  fixed 19rem width, not one — genuinely fitting all four on a single
+  line at that width is not achievable without abbreviating the labels
+  (a separate, larger decision about this app's epistemic vocabulary, not
+  taken lightly or in passing here). The state dock's pre-existing
+  `overflow-y: auto` (`.app__panel--state`, already there before this
+  change) is the requirement's other named option and was verified
+  directly: scrolling the dock to its end brings the attribution fully
+  into view (`getBoundingClientRect()` inside the dock's bounds), so nothing
+  is permanently unreachable even where the compaction alone falls short.
+- **2026-09-26 — AQ glow throttled to ~12Hz, not the full animation-frame
+  rate (measured regression, parent review's own performance ask).**
+  Re-measuring frame rate after the hero-scale/dramatic-lighting/
+  historic-preset work (this same review round) showed a real drop from
+  the previous ~60fps baseline. A `GeoJSONSource.setData` call
+  re-tessellates its geometry — far costlier than a plain paint-property
+  update — and the breathing glow (issue #140) was calling it on every
+  single `requestAnimationFrame` tick. `GLOW_UPDATE_INTERVAL_MS` (80ms)
+  throttles the actual `setData` call while still checking every frame,
+  cutting the call rate roughly 5x; a slow, gentle breathing animation
+  (900-3600ms periods) reads identically smooth sampled at ~12Hz.
+  Honesty about what this did and did not fix: this session's Playwright
+  measurements run in this sandbox's headless Chromium, confirmed via
+  `WEBGL_debug_renderer_info` to be using **SwiftShader** (software, not
+  hardware-accelerated, WebGL) — frame rate here is not representative of
+  a real visitor's GPU-accelerated browser, and the historic-centre
+  preset's much higher visible building/geometry density (a genuinely
+  richer scene, the point of this review round) costs more to
+  software-rasterise regardless of this fix. The throttle is a real,
+  measured, unconditional improvement in how much work this app's own JS
+  does per frame; it is reported here as exactly that, not as a claim
+  that the sandbox's absolute fps number reflects real-world performance
+  (see the PR/report for the actual before/after numbers, both bands).
