@@ -1,55 +1,58 @@
 # Path-based auto-labeler for actions/labeler@v5.
 # Applied by .github/workflows/labeler.yml on every PR.
+#
+# Paths under apps/eye/ are eye-specific; .github/** is monorepo-wide
+# infrastructure and stays unprefixed.
 
 "area:domain":
   - changed-files:
-      - any-glob-to-any-file: "internal/*/domain/**"
+      - any-glob-to-any-file: "apps/eye/internal/*/domain/**"
 
 "area:application":
   - changed-files:
-      - any-glob-to-any-file: "internal/*/application/**"
+      - any-glob-to-any-file: "apps/eye/internal/*/application/**"
 
 "area:infrastructure":
   - changed-files:
-      - any-glob-to-any-file: "internal/*/infrastructure/**"
+      - any-glob-to-any-file: "apps/eye/internal/*/infrastructure/**"
 
 "area:providers":
   - changed-files:
-      - any-glob-to-any-file: "internal/provider/**"
+      - any-glob-to-any-file: "apps/eye/internal/provider/**"
 
 "area:events":
   - changed-files:
-      - any-glob-to-any-file: "internal/event/**"
+      - any-glob-to-any-file: "apps/eye/internal/event/**"
 
 "area:scheduler":
   - changed-files:
-      - any-glob-to-any-file: "internal/scheduler/**"
+      - any-glob-to-any-file: "apps/eye/internal/scheduler/**"
 
 "area:fusion":
   - changed-files:
-      - any-glob-to-any-file: "internal/fusion/**"
+      - any-glob-to-any-file: "apps/eye/internal/fusion/**"
 
 "area:cli":
   - changed-files:
       - any-glob-to-any-file:
-          - "internal/cli/**"
-          - "cmd/**"
+          - "apps/eye/internal/cli/**"
+          - "apps/eye/cmd/**"
 
 "area:sources":
   - changed-files:
-      - any-glob-to-any-file: "configs/sources.yaml"
+      - any-glob-to-any-file: "apps/eye/configs/sources.yaml"
 
 "area:docs":
   - changed-files:
       - any-glob-to-any-file:
-          - "docs/**"
-          - "README.md"
-          - "AGENTS.md"
-          - ".agents/**"
+          - "apps/eye/docs/**"
+          - "apps/eye/README.md"
+          - "apps/eye/AGENTS.md"
+          - "apps/eye/.agents/**"
 
 "area:infra":
   - changed-files:
       - any-glob-to-any-file:
           - ".github/**"
-          - "Makefile"
-          - ".golangci.yml"
+          - "apps/eye/Makefile"
+          - "apps/eye/.golangci.yml"

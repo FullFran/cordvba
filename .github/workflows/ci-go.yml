@@ -18,6 +18,9 @@ jobs:
   build-and-test:
     name: Build & Test
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/eye
 
     steps:
       - name: Checkout
@@ -26,8 +29,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version-file: apps/eye/go.mod
           cache: true
+          cache-dependency-path: apps/eye/go.sum
 
       - name: Download modules
         run: go mod download
@@ -49,17 +53,22 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version-file: apps/eye/go.mod
           cache: true
+          cache-dependency-path: apps/eye/go.sum
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
           version: latest
+          working-directory: apps/eye
 
   vuln:
     name: govulncheck
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/eye
 
     steps:
       - name: Checkout
@@ -68,8 +77,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version-file: apps/eye/go.mod
           cache: true
+          cache-dependency-path: apps/eye/go.sum
 
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@latest

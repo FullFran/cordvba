@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Before filling this in, read
-        [docs/legal/data-ethics.md](https://github.com/FullFran/eye/blob/main/docs/legal/data-ethics.md#adding-a-source-the-checklist).
+        [docs/legal/data-ethics.md](https://github.com/FullFran/cordvba/blob/main/apps/eye/docs/legal/data-ethics.md#adding-a-source-the-checklist).
 
         A source with an unresolved licence is still worth proposing — it will
         land as `automation: review_terms`. What is not acceptable is guessing.
