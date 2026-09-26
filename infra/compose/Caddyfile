@@ -1,0 +1,42 @@
+# infra/compose/Caddyfile — the mvp edge.
+#
+# A bare ":8080" address (no hostname) keeps Caddy on plain HTTP with no
+# automatic-HTTPS/ACME attempt: TLS for the public internet is Tailscale
+# Funnel's job, terminated outside this container — see
+# infra/deployment/README.md. This edge only needs to speak plain HTTP to
+# the loopback port Funnel forwards to.
+
+:8080 {
+	encode zstd gzip
+
+	# /api/* reaches api with the prefix stripped, so a request for
+	# /api/v1/environment arrives at api as /v1/environment.
+	handle_path /api/* {
+		reverse_proxy api:8000
+	}
+
+	# Everything else is the static web app (SPA fallback lives in
+	# apps/web/nginx.conf, not here).
+	handle {
+		reverse_proxy web:80
+	}
+
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# The server header is free information for anyone scanning.
+		-Server
+		# Report-only for now, until the page's real asset list is confirmed
+		# in production; tighten to an enforced policy once it is. Allows
+		# self, the OpenStreetMap tile hosts the map uses, data: images and
+		# inline styles (Leaflet draws its markers that way).
+		Content-Security-Policy-Report-Only "default-src 'self'; img-src 'self' data: https://tile.openstreetmap.org https://*.tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; connect-src 'self'"
+	}
+
+	# stdout, not a file: the container runs read-only, and the json-file
+	# logging driver in compose.yml already captures and rotates this.
+	log {
+		output stdout
+		format json
+	}
+}
