@@ -1,8 +1,8 @@
 # Makefile — cordvba monorepo root
 #
 # This orchestrates components without duplicating their build logic: every
-# target delegates to the component's own Makefile. Today the only component
-# is apps/eye; more will be wired in here the same way as they land.
+# target delegates to the component's own Makefile, or to `uv` for the
+# Python workspace (packages/eye-client, services/twin, apps/api).
 
 .DEFAULT_GOAL := help
 
@@ -18,10 +18,12 @@ eye: ## Build eye (apps/eye)
 .PHONY: test
 test: ## Run tests for every component
 	$(MAKE) -C apps/eye test
+	uv run --all-packages pytest
 
 .PHONY: lint
 lint: ## Lint every component
 	$(MAKE) -C apps/eye lint
+	uv run --all-packages ruff check .
 
 .PHONY: boundaries
 boundaries: ## Check that nothing outside apps/eye touches eye's store or internals
@@ -31,3 +33,5 @@ boundaries: ## Check that nothing outside apps/eye touches eye's store or intern
 .PHONY: ci
 ci: boundaries ## Run the full local CI pipeline for every component
 	$(MAKE) -C apps/eye ci-local
+	uv run --all-packages pytest
+	uv run --all-packages ruff check .

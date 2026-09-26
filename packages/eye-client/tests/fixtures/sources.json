@@ -1,0 +1,38 @@
+{
+  "sources": [
+    {
+      "id": "metar-cordoba",
+      "authority": "NOAA Aviation Weather Center",
+      "topic": "weather",
+      "format": "metar-json",
+      "license": "us-government-public-domain",
+      "access": "documented_api",
+      "automation": "enabled",
+      "pollable": true,
+      "redistributable": true,
+      "url": "https://aviationweather.gov/api/data/metar",
+      "notes": "Live surface weather for Córdoba, with no credential. LEBA is the ICAO identifier of Córdoba Airport. Verified 2026-09-03: 23 °C, dew point 12, wind 360° at 3 kt, QNH 1019, reported at 00:00Z and received at 00:05Z.\nTHIS IS THE SAME PHYSICAL STATION AEMET PUBLISHES AS 5402, reported through a different channel, and the differences matter more than the similarity:\n\n  · The publisher is NOAA, not AEMET. NOAA is not the competent\n    meteorological authority for Spain, so this is stored as\n    quality=preliminary and never as an official declaration. Every\n    record carries a payload note saying so.\n  · METAR is written for pilots. It reports temperature, dew point,\n    wind, visibility, cloud and pressure — not the fuller variable set\n    AEMET publishes.\n  · The cadence is the aerodrome's, roughly half-hourly.\n\nIt exists because until it did, eye knew nothing at all about the weather outside: `aemet-observation` has never once run, because it needs a key nobody had set. A reading from the right instrument under the wrong letterhead, clearly labelled, beats no reading.\nLicence: works of the US federal government are in the public domain. Attribution is courtesy rather than obligation, and eye records the publisher anyway.\nsampled_kinds: a surface reading is a sample of a moving signal, not a statement. Diffing two of them would report the weather back as news.",
+      "last_attempt": "2026-09-26T09:58:24Z",
+      "last_success": "2026-09-26T09:58:24Z",
+      "records": 1,
+      "consecutive_errors": 0
+    },
+    {
+      "id": "miteco-ica",
+      "authority": "MITECO",
+      "topic": "air_quality",
+      "format": "csv-dcat",
+      "license": "CC-BY-4.0",
+      "access": "documented_api",
+      "automation": "enabled",
+      "pollable": true,
+      "redistributable": true,
+      "url": "https://ica.miteco.es/datos/ica-ultima-hora.csv",
+      "notes": "The national air-quality index, hourly, per station. 624 rows nationally, narrowed here to Córdoba province by bounding box.\nTLS: THIS HOST SERVES AN INCOMPLETE CHAIN. The root CA (AC RAIZ FNMT-RCM) is publicly trusted and the intermediate (AC Componentes Informáticos) is simply absent from the handshake. Go does not chase AIA, so it cannot complete the chain by itself, and the poll fails with \"certificate signed by unknown authority\" against a certificate that is perfectly valid.\nTHE FIX, verified 2026-09-03 — 13 Córdoba stations returned:\n\n  curl -o /tmp/accomp.crt http://www.cert.fnmt.es/certs/ACCOMP.crt\n  openssl x509 -inform DER -in /tmp/accomp.crt \\\n    -out ~/.config/eye/fnmt-intermediate.pem\n  export EYE_EXTRA_CA_FILE=~/.config/eye/fnmt-intermediate.pem\n\nThat COMPLETES a chain. It is the opposite of disabling verification, which eye does not offer and will not grow: every certificate is still checked, against a pool the operator widened on purpose, one named file at a time.\nTWO CAVEATS THE PUBLISHER'S OWN DICTIONARY STATES, both preserved. An index computed from fewer pollutants than the full set is published as the same category multiplied by ten (10, 20 … 60) — same rank, but recorded as quality=preliminary rather than official. And 63 of the 624 rows carry a BLANK index, which the dictionary does not explain at all; those stations are kept with index_reported:false instead of being quietly dropped.",
+      "last_attempt": "2026-09-26T09:57:55Z",
+      "last_success": "2026-09-26T09:57:55Z",
+      "records": 13,
+      "consecutive_errors": 0
+    }
+  ]
+}

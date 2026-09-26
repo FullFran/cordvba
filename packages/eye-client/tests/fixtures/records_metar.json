@@ -1,0 +1,89 @@
+{
+  "count": 2,
+  "records": [
+    {
+      "id": "metar-cordoba:LEBA:2026-09-26T09:30:00Z",
+      "source": "metar-cordoba",
+      "kind": "weather_observation",
+      "topic": "weather",
+      "observed_at": "2026-09-26T09:30:00Z",
+      "fetched_at": "2026-09-26T09:58:25.039533Z",
+      "position": {
+        "lat": 37.842,
+        "lon": -4.849
+      },
+      "title": "Córdoba Arpt, AN, ES · 28 °C · 8 kt · CAVOK",
+      "description": "METAR LEBA 260930Z 08008KT CAVOK 28/08 Q1018",
+      "severity": 0,
+      "confidence": 1,
+      "quality": "preliminary",
+      "dedupe_key": "metar-cordoba:LEBA:2026-09-26T09:30:00Z",
+      "local_key": "LEBA",
+      "expires_at": "2026-10-26T09:30:00Z",
+      "payload": {
+        "altimeter_hpa": 1018,
+        "cloud_cover": "CAVOK",
+        "dewpoint_c": 8,
+        "icao": "LEBA",
+        "note": "aerodrome METAR relayed by the NOAA Aviation Weather Center; not a statement by the competent national meteorological authority",
+        "raw": "METAR LEBA 260930Z 08008KT CAVOK 28/08 Q1018",
+        "report_type": "METAR",
+        "station": "Córdoba Arpt, AN, ES",
+        "temperature_c": 28,
+        "visibility": "6+",
+        "wind_direction_deg": 80,
+        "wind_gust_kt": null,
+        "wind_speed_kt": 8
+      },
+      "provenance": {
+        "publisher": "NOAA Aviation Weather Center",
+        "source_url": "https://aviationweather.gov/api/data/metar?ids=LEBA&format=json",
+        "license": "us-government-public-domain",
+        "fetched_at": "2026-09-26T09:58:25.039533Z",
+        "raw_hash": "acb3f267e5d361d8e71838f4e5d0fed05a31a37ac9862a27c641238854c91f17"
+      }
+    },
+    {
+      "id": "metar-cordoba:LEBA:2026-09-26T09:00:00Z",
+      "source": "metar-cordoba",
+      "kind": "weather_observation",
+      "topic": "weather",
+      "observed_at": "2026-09-26T09:00:00Z",
+      "fetched_at": "2026-09-26T09:35:30.140078Z",
+      "position": {
+        "lat": 37.842,
+        "lon": -4.849
+      },
+      "title": "Córdoba Arpt, AN, ES · 26 °C · 8 kt · CAVOK",
+      "description": "METAR LEBA 260900Z 08008KT CAVOK 26/07 Q1018",
+      "severity": 0,
+      "confidence": 1,
+      "quality": "preliminary",
+      "dedupe_key": "metar-cordoba:LEBA:2026-09-26T09:00:00Z",
+      "local_key": "LEBA",
+      "expires_at": "2026-10-26T09:00:00Z",
+      "payload": {
+        "altimeter_hpa": 1018,
+        "cloud_cover": "CAVOK",
+        "dewpoint_c": 7,
+        "icao": "LEBA",
+        "note": "aerodrome METAR relayed by the NOAA Aviation Weather Center; not a statement by the competent national meteorological authority",
+        "raw": "METAR LEBA 260900Z 08008KT CAVOK 26/07 Q1018",
+        "report_type": "METAR",
+        "station": "Córdoba Arpt, AN, ES",
+        "temperature_c": 26,
+        "visibility": "6+",
+        "wind_direction_deg": 80,
+        "wind_gust_kt": null,
+        "wind_speed_kt": 8
+      },
+      "provenance": {
+        "publisher": "NOAA Aviation Weather Center",
+        "source_url": "https://aviationweather.gov/api/data/metar?ids=LEBA&format=json",
+        "license": "us-government-public-domain",
+        "fetched_at": "2026-09-26T09:35:30.140078Z",
+        "raw_hash": "80dd109e261c38be0f1dfdbb717e518c0cbd8e090ccf8bcd15c9984a907c99d0"
+      }
+    }
+  ]
+}

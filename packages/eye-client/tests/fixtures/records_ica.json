@@ -1,0 +1,473 @@
+{
+  "count": 13,
+  "records": [
+    {
+      "id": "miteco-ica:13071014:2026-09-26T08:00:00Z",
+      "source": "miteco-ica",
+      "kind": "air_quality_index",
+      "topic": "air_quality",
+      "observed_at": "2026-09-26T08:00:00Z",
+      "fetched_at": "2026-09-26T09:35:30.114829Z",
+      "position": {
+        "lat": 38.6893,
+        "lon": -4.1115
+      },
+      "title": "CALLE ANCHA: sin datos",
+      "severity": 0,
+      "confidence": 1,
+      "quality": "preliminary",
+      "dedupe_key": "miteco-ica:13071014:2026-09-26T08:00:00Z",
+      "local_key": "13071014",
+      "expires_at": "2026-10-26T08:00:00Z",
+      "payload": {
+        "active": false,
+        "category": "",
+        "due_to": "",
+        "index": 0,
+        "index_reported": false,
+        "partial": false,
+        "station": "13071014",
+        "station_type": "INDUSTRIAL"
+      },
+      "provenance": {
+        "publisher": "MITECO",
+        "source_url": "https://ica.miteco.es/datos/ica-ultima-hora.csv",
+        "license": "CC-BY-4.0",
+        "fetched_at": "2026-09-26T09:35:30.114829Z",
+        "raw_hash": "aefca408009e84be8009388090155e9d8910897ce66e60ca2f9a44bf16dd4dca"
+      }
+    },
+    {
+      "id": "miteco-ica:13071015:2026-09-26T08:00:00Z",
+      "source": "miteco-ica",
+      "kind": "air_quality_index",
+      "topic": "air_quality",
+      "observed_at": "2026-09-26T08:00:00Z",
+      "fetched_at": "2026-09-26T09:35:30.114829Z",
+      "position": {
+        "lat": 38.682,
+        "lon": -4.0886
+      },
+      "title": "CAMPO DE FÚTBOL: calidad del aire razonablemente buena",
+      "severity": 1,
+      "confidence": 1,
+      "quality": "official",
+      "dedupe_key": "miteco-ica:13071015:2026-09-26T08:00:00Z",
+      "local_key": "13071015",
+      "expires_at": "2026-10-26T08:00:00Z",
+      "payload": {
+        "active": true,
+        "category": "razonablemente buena",
+        "due_to": "PM10",
+        "index": 2,
+        "index_reported": true,
+        "partial": false,
+        "station": "13071015",
+        "station_type": "INDUSTRIAL"
+      },
+      "provenance": {
+        "publisher": "MITECO",
+        "source_url": "https://ica.miteco.es/datos/ica-ultima-hora.csv",
+        "license": "CC-BY-4.0",
+        "fetched_at": "2026-09-26T09:35:30.114829Z",
+        "raw_hash": "aefca408009e84be8009388090155e9d8910897ce66e60ca2f9a44bf16dd4dca"
+      }
+    },
+    {
+      "id": "miteco-ica:13071016:2026-09-26T08:00:00Z",
+      "source": "miteco-ica",
+      "kind": "air_quality_index",
+      "topic": "air_quality",
+      "observed_at": "2026-09-26T08:00:00Z",
+      "fetched_at": "2026-09-26T09:35:30.114829Z",
+      "position": {
+        "lat": 38.6807,
+        "lon": -4.1083
+      },
+      "title": "INSTITUTO Nº 3: sin datos",
+      "severity": 0,
+      "confidence": 1,
+      "quality": "preliminary",
+      "dedupe_key": "miteco-ica:13071016:2026-09-26T08:00:00Z",
+      "local_key": "13071016",
+      "expires_at": "2026-10-26T08:00:00Z",
+      "payload": {
+        "active": false,
+        "category": "",
+        "due_to": "",
+        "index": 0,
+        "index_reported": false,
+        "partial": false,
+        "station": "13071016",
+        "station_type": "INDUSTRIAL"
+      },
+      "provenance": {
+        "publisher": "MITECO",
+        "source_url": "https://ica.miteco.es/datos/ica-ultima-hora.csv",
+        "license": "CC-BY-4.0",
+        "fetched_at": "2026-09-26T09:35:30.114829Z",
+        "raw_hash": "aefca408009e84be8009388090155e9d8910897ce66e60ca2f9a44bf16dd4dca"
+      }
+    },
+    {
+      "id": "miteco-ica:13071017:2026-09-26T08:00:00Z",
+      "source": "miteco-ica",
+      "kind": "air_quality_index",
+      "topic": "air_quality",
+      "observed_at": "2026-09-26T08:00:00Z",
+      "fetched_at": "2026-09-26T09:35:30.114829Z",
+      "position": {
+        "lat": 38.7027,
+        "lon": -4.112
+      },
+      "title": "BARRIO 630: calidad del aire razonablemente buena",
+      "severity": 1,
+      "confidence": 1,
+      "quality": "official",
+      "dedupe_key": "miteco-ica:13071017:2026-09-26T08:00:00Z",
+      "local_key": "13071017",
+      "expires_at": "2026-10-26T08:00:00Z",
+      "payload": {
+        "active": true,
+        "category": "razonablemente buena",
+        "due_to": "PM10",
+        "index": 2,
+        "index_reported": true,
+        "partial": false,
+        "station": "13071017",
+        "station_type": "INDUSTRIAL"
+      },
+      "provenance": {
+        "publisher": "MITECO",
+        "source_url": "https://ica.miteco.es/datos/ica-ultima-hora.csv",
+        "license": "CC-BY-4.0",
+        "fetched_at": "2026-09-26T09:35:30.114829Z",
+        "raw_hash": "aefca408009e84be8009388090155e9d8910897ce66e60ca2f9a44bf16dd4dca"
+      }
+    },
+    {
+      "id": "miteco-ica:13071018:2026-09-26T08:00:00Z",
+      "source": "miteco-ica",
+      "kind": "air_quality_index",
+      "topic": "air_quality",
+      "observed_at": "2026-09-26T08:00:00Z",
+      "fetched_at": "2026-09-26T09:35:30.114829Z",
+      "position": {
+        "lat": 38.69,
+        "lon": -4.1134
+      },
+      "title": "RAMPAS MECÁNICAS: calidad del aire razonablemente buena",
+      "severity": 1,
+      "confidence": 1,
+      "quality": "official",
+      "dedupe_key": "miteco-ica:13071018:2026-09-26T08:00:00Z",
+      "local_key": "13071018",
+      "expires_at": "2026-10-26T08:00:00Z",
+      "payload": {
+        "active": true,
+        "category": "razonablemente buena",
+        "due_to": "NO2",
+        "index": 2,
+        "index_reported": true,
+        "partial": false,
+        "station": "13071018",
+        "station_type": "TRAFICO"
+      },
+      "provenance": {
+        "publisher": "MITECO",
+        "source_url": "https://ica.miteco.es/datos/ica-ultima-hora.csv",
+        "license": "CC-BY-4.0",
+        "fetched_at": "2026-09-26T09:35:30.114829Z",
+        "raw_hash": "aefca408009e84be8009388090155e9d8910897ce66e60ca2f9a44bf16dd4dca"
+      }
+    },
+    {
+      "id": "miteco-ica:13071019:2026-09-26T08:00:00Z",
+      "source": "miteco-ica",
+      "kind": "air_quality_index",
+      "topic": "air_quality",
+      "observed_at": "2026-09-26T08:00:00Z",
+      "fetched_at": "2026-09-26T09:35:30.114829Z",
+      "position": {
+        "lat": 38.6791,
+        "lon": -4.1078
+      },
+      "title": "ALMACÉN MUNICIPAL: calidad del aire buena",
+      "severity": 1,
+      "confidence": 1,
+      "quality": "official",
+      "dedupe_key": "miteco-ica:13071019:2026-09-26T08:00:00Z",
+      "local_key": "13071019",
+      "expires_at": "2026-10-26T08:00:00Z",
+      "payload": {
+        "active": true,
+        "category": "buena",
+        "due_to": "O3",
+        "index": 1,
+        "index_reported": true,
+        "partial": false,
+        "station": "13071019",
+        "station_type": "INDUSTRIAL"
+      },
+      "provenance": {
+        "publisher": "MITECO",
+        "source_url": "https://ica.miteco.es/datos/ica-ultima-hora.csv",
+        "license": "CC-BY-4.0",
+        "fetched_at": "2026-09-26T09:35:30.114829Z",
+        "raw_hash": "aefca408009e84be8009388090155e9d8910897ce66e60ca2f9a44bf16dd4dca"
+      }
+    },
+    {
+      "id": "miteco-ica:14021006:2026-09-26T08:00:00Z",
+      "source": "miteco-ica",
+      "kind": "air_quality_index",
+      "topic": "air_quality",
+      "observed_at": "2026-09-26T08:00:00Z",
+      "fetched_at": "2026-09-26T09:35:30.114829Z",
+      "position": {
+        "lat": 37.90274,
+        "lon": -4.77958
+      },
+      "title": "ASOMADILLA: calidad del aire regular",
+      "severity": 2,
+      "confidence": 1,
+      "quality": "preliminary",
+      "dedupe_key": "miteco-ica:14021006:2026-09-26T08:00:00Z",
+      "local_key": "14021006",
+      "expires_at": "2026-10-26T08:00:00Z",
+      "payload": {
+        "active": true,
+        "category": "regular",
+        "due_to": "PM10",
+        "index": 30,
+        "index_reported": true,
+        "partial": true,
+        "station": "14021006",
+        "station_type": "FONDO"
+      },
+      "provenance": {
+        "publisher": "MITECO",
+        "source_url": "https://ica.miteco.es/datos/ica-ultima-hora.csv",
+        "license": "CC-BY-4.0",
+        "fetched_at": "2026-09-26T09:35:30.114829Z",
+        "raw_hash": "aefca408009e84be8009388090155e9d8910897ce66e60ca2f9a44bf16dd4dca"
+      }
+    },
+    {
+      "id": "miteco-ica:14021007:2026-09-26T08:00:00Z",
+      "source": "miteco-ica",
+      "kind": "air_quality_index",
+      "topic": "air_quality",
+      "observed_at": "2026-09-26T08:00:00Z",
+      "fetched_at": "2026-09-26T09:35:30.114829Z",
+      "position": {
+        "lat": 37.89261,
+        "lon": -4.76234
+      },
+      "title": "LEPANTO: calidad del aire regular",
+      "severity": 2,
+      "confidence": 1,
+      "quality": "official",
+      "dedupe_key": "miteco-ica:14021007:2026-09-26T08:00:00Z",
+      "local_key": "14021007",
+      "expires_at": "2026-10-26T08:00:00Z",
+      "payload": {
+        "active": true,
+        "category": "regular",
+        "due_to": "PM10",
+        "index": 3,
+        "index_reported": true,
+        "partial": false,
+        "station": "14021007",
+        "station_type": "FONDO"
+      },
+      "provenance": {
+        "publisher": "MITECO",
+        "source_url": "https://ica.miteco.es/datos/ica-ultima-hora.csv",
+        "license": "CC-BY-4.0",
+        "fetched_at": "2026-09-26T09:35:30.114829Z",
+        "raw_hash": "aefca408009e84be8009388090155e9d8910897ce66e60ca2f9a44bf16dd4dca"
+      }
+    },
+    {
+      "id": "miteco-ica:14021009:2026-09-26T08:00:00Z",
+      "source": "miteco-ica",
+      "kind": "air_quality_index",
+      "topic": "air_quality",
+      "observed_at": "2026-09-26T08:00:00Z",
+      "fetched_at": "2026-09-26T09:35:30.114829Z",
+      "position": {
+        "lat": 37.8926,
+        "lon": -4.7801
+      },
+      "title": "AVDA. AL-NASIR: calidad del aire desfavorable",
+      "severity": 3,
+      "confidence": 1,
+      "quality": "official",
+      "dedupe_key": "miteco-ica:14021009:2026-09-26T08:00:00Z",
+      "local_key": "14021009",
+      "expires_at": "2026-10-26T08:00:00Z",
+      "payload": {
+        "active": true,
+        "category": "desfavorable",
+        "due_to": "PM10",
+        "index": 4,
+        "index_reported": true,
+        "partial": false,
+        "station": "14021009",
+        "station_type": "TRAFICO"
+      },
+      "provenance": {
+        "publisher": "MITECO",
+        "source_url": "https://ica.miteco.es/datos/ica-ultima-hora.csv",
+        "license": "CC-BY-4.0",
+        "fetched_at": "2026-09-26T09:35:30.114829Z",
+        "raw_hash": "aefca408009e84be8009388090155e9d8910897ce66e60ca2f9a44bf16dd4dca"
+      }
+    },
+    {
+      "id": "miteco-ica:14026002:2026-09-26T08:00:00Z",
+      "source": "miteco-ica",
+      "kind": "air_quality_index",
+      "topic": "air_quality",
+      "observed_at": "2026-09-26T08:00:00Z",
+      "fetched_at": "2026-09-26T09:35:30.114829Z",
+      "position": {
+        "lat": 38.10814,
+        "lon": -4.9268
+      },
+      "title": "POBLADO: sin datos",
+      "severity": 0,
+      "confidence": 1,
+      "quality": "preliminary",
+      "dedupe_key": "miteco-ica:14026002:2026-09-26T08:00:00Z",
+      "local_key": "14026002",
+      "expires_at": "2026-10-26T08:00:00Z",
+      "payload": {
+        "active": false,
+        "category": "",
+        "due_to": "",
+        "index": 0,
+        "index_reported": false,
+        "partial": false,
+        "station": "14026002",
+        "station_type": "INDUSTRIAL"
+      },
+      "provenance": {
+        "publisher": "MITECO",
+        "source_url": "https://ica.miteco.es/datos/ica-ultima-hora.csv",
+        "license": "CC-BY-4.0",
+        "fetched_at": "2026-09-26T09:35:30.114829Z",
+        "raw_hash": "aefca408009e84be8009388090155e9d8910897ce66e60ca2f9a44bf16dd4dca"
+      }
+    },
+    {
+      "id": "miteco-ica:14047001:2026-09-26T08:00:00Z",
+      "source": "miteco-ica",
+      "kind": "air_quality_index",
+      "topic": "air_quality",
+      "observed_at": "2026-09-26T08:00:00Z",
+      "fetched_at": "2026-09-26T09:35:30.114829Z",
+      "position": {
+        "lat": 38.1325,
+        "lon": -4.8017
+      },
+      "title": "OBEJO: sin datos",
+      "severity": 0,
+      "confidence": 1,
+      "quality": "preliminary",
+      "dedupe_key": "miteco-ica:14047001:2026-09-26T08:00:00Z",
+      "local_key": "14047001",
+      "expires_at": "2026-10-26T08:00:00Z",
+      "payload": {
+        "active": false,
+        "category": "",
+        "due_to": "",
+        "index": 0,
+        "index_reported": false,
+        "partial": false,
+        "station": "14047001",
+        "station_type": "INDUSTRIAL"
+      },
+      "provenance": {
+        "publisher": "MITECO",
+        "source_url": "https://ica.miteco.es/datos/ica-ultima-hora.csv",
+        "license": "CC-BY-4.0",
+        "fetched_at": "2026-09-26T09:35:30.114829Z",
+        "raw_hash": "aefca408009e84be8009388090155e9d8910897ce66e60ca2f9a44bf16dd4dca"
+      }
+    },
+    {
+      "id": "miteco-ica:14068001:2026-09-26T08:00:00Z",
+      "source": "miteco-ica",
+      "kind": "air_quality_index",
+      "topic": "air_quality",
+      "observed_at": "2026-09-26T08:00:00Z",
+      "fetched_at": "2026-09-26T09:35:30.114829Z",
+      "position": {
+        "lat": 38.13793,
+        "lon": -4.90397
+      },
+      "title": "VILLAHARTA: sin datos",
+      "severity": 0,
+      "confidence": 1,
+      "quality": "preliminary",
+      "dedupe_key": "miteco-ica:14068001:2026-09-26T08:00:00Z",
+      "local_key": "14068001",
+      "expires_at": "2026-10-26T08:00:00Z",
+      "payload": {
+        "active": false,
+        "category": "",
+        "due_to": "",
+        "index": 0,
+        "index_reported": false,
+        "partial": false,
+        "station": "14068001",
+        "station_type": "INDUSTRIAL"
+      },
+      "provenance": {
+        "publisher": "MITECO",
+        "source_url": "https://ica.miteco.es/datos/ica-ultima-hora.csv",
+        "license": "CC-BY-4.0",
+        "fetched_at": "2026-09-26T09:35:30.114829Z",
+        "raw_hash": "aefca408009e84be8009388090155e9d8910897ce66e60ca2f9a44bf16dd4dca"
+      }
+    },
+    {
+      "id": "miteco-ica:41088001:2026-09-26T08:00:00Z",
+      "source": "miteco-ica",
+      "kind": "air_quality_index",
+      "topic": "air_quality",
+      "observed_at": "2026-09-26T08:00:00Z",
+      "fetched_at": "2026-09-26T09:35:30.114829Z",
+      "position": {
+        "lat": 37.99435,
+        "lon": -5.66687
+      },
+      "title": "SIERRA NORTE: calidad del aire razonablemente buena",
+      "severity": 1,
+      "confidence": 1,
+      "quality": "preliminary",
+      "dedupe_key": "miteco-ica:41088001:2026-09-26T08:00:00Z",
+      "local_key": "41088001",
+      "expires_at": "2026-10-26T08:00:00Z",
+      "payload": {
+        "active": true,
+        "category": "razonablemente buena",
+        "due_to": "PM2.5",
+        "index": 20,
+        "index_reported": true,
+        "partial": true,
+        "station": "41088001",
+        "station_type": "FONDO"
+      },
+      "provenance": {
+        "publisher": "MITECO",
+        "source_url": "https://ica.miteco.es/datos/ica-ultima-hora.csv",
+        "license": "CC-BY-4.0",
+        "fetched_at": "2026-09-26T09:35:30.114829Z",
+        "raw_hash": "aefca408009e84be8009388090155e9d8910897ce66e60ca2f9a44bf16dd4dca"
+      }
+    }
+  ]
+}
