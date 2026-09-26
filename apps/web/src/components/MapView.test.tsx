@@ -371,6 +371,42 @@ describe("MapView: air quality as columns of light (issue #140)", () => {
     expect(lastCall![0].features).toHaveLength(environment.air_quality.stations.length);
   });
 
+  it("renders the column hero-scale: vertical gradient, high opacity (parent review)", async () => {
+    render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: 40 }} />);
+    await waitFor(() => expect(mapInstances).toHaveLength(1));
+    const instance = mapInstances[0] as unknown as { addLayer: ReturnType<typeof vi.fn> };
+
+    const columnsCall = instance.addLayer.mock.calls.find((call) => call[0]?.id === "air-quality-columns-layer");
+    expect(columnsCall).toBeDefined();
+    const paint = columnsCall![0].paint;
+    expect(paint["fill-extrusion-vertical-gradient"]).toBe(true);
+    expect(paint["fill-extrusion-opacity"]).toBeGreaterThanOrEqual(0.85);
+  });
+
+  it("adds a breathing glow circle layer, blurred, at the same source points as the columns (parent review)", async () => {
+    render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: 40 }} />);
+    await waitFor(() => expect(mapInstances).toHaveLength(1));
+    const instance = mapInstances[0] as unknown as {
+      addLayer: ReturnType<typeof vi.fn>;
+      addSource: ReturnType<typeof vi.fn>;
+      getSource: ReturnType<typeof vi.fn>;
+    };
+
+    expect(instance.addSource).toHaveBeenCalledWith("air-quality-glow", expect.objectContaining({ type: "geojson" }));
+    const glowCall = instance.addLayer.mock.calls.find((call) => call[0]?.id === "air-quality-glow-layer");
+    expect(glowCall).toBeDefined();
+    expect(glowCall![0].type).toBe("circle");
+    expect(glowCall![0].paint["circle-blur"]).toBeGreaterThan(0);
+
+    const source = instance.getSource("air-quality-glow") as { setData: ReturnType<typeof vi.fn> };
+    await waitFor(() => expect(source.setData).toHaveBeenCalled());
+    const lastCall = source.setData.mock.calls[source.setData.mock.calls.length - 1];
+    const [feature] = lastCall![0].features;
+    expect(feature.geometry.type).toBe("Point");
+    expect(typeof feature.properties.opacity).toBe("number");
+    expect(typeof feature.properties.radiusScale).toBe("number");
+  });
+
   it("shows the columns-are-not-interpolated legend line, always (not conditional on the sun)", () => {
     render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: -5 }} />);
     expect(screen.getByText(/nothing is interpolated between stations/i)).toBeInTheDocument();

@@ -6,8 +6,8 @@ import { useLocale } from "../i18n/LocaleContext";
 import { prefersReducedMotion } from "../lib/motion";
 import { formatAirQualityCategory } from "../lib/format";
 import { sunPhase, type SunPosition } from "../lib/sun";
-import { stationColumnFeature } from "../map/airQualityColumns";
-import { createBeaconElement, createEdgeIndicatorElement, windArrowRotation } from "../map/beacons";
+import { stationColumnFeature, stationGlowFeature } from "../map/airQualityColumns";
+import { breathingDurationMs, createBeaconElement, createEdgeIndicatorElement, windArrowRotation } from "../map/beacons";
 import { loadDarkStyle, readMapPalette } from "../map/darkStyle";
 import { clampToEdge, haversineDistanceKm } from "../map/geo";
 import { buildingShadow, footprintFromGeometry, shadowToGeoJSONCoordinates } from "../map/shadows";
@@ -51,7 +51,44 @@ const SHADOW_SOURCE_ID = "building-shadows";
 const SHADOW_LAYER_ID = "building-shadows-layer";
 const AQ_COLUMNS_SOURCE_ID = "air-quality-columns";
 const AQ_COLUMNS_LAYER_ID = "air-quality-columns-layer";
+const AQ_GLOW_SOURCE_ID = "air-quality-glow";
+const AQ_GLOW_LAYER_ID = "air-quality-glow-layer";
+/** Flat pixel radius (parent review: "a soft glow at the base"); `circle-radius` is screen pixels, not metres, so this does not scale with the column's real-world 130m footprint. */
+const AQ_GLOW_BASE_RADIUS_PX = 34;
+const AQ_GLOW_MIN_OPACITY = 0.18;
+const AQ_GLOW_MAX_OPACITY = 0.5;
+const AQ_GLOW_MID_OPACITY = (AQ_GLOW_MIN_OPACITY + AQ_GLOW_MAX_OPACITY) / 2;
 const EMPTY_FEATURE_COLLECTION: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
+
+/**
+ * The ICA category → token-colour `match` expression shared by the
+ * air-quality columns and their glow (parent review: same category,
+ * same colour, in both layers). Reads `--color-aq-*` at call time, never
+ * a literal in this module — see `readMapPalette`'s own convention.
+ */
+function aqCategoryColorMatch(): maplibregl.ExpressionSpecification {
+  const style = getComputedStyle(document.documentElement);
+  const read = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback;
+  // ds-allow-hardcode:start (runtime CSS-variable fallback, same convention as darkStyle.ts's readMapPalette)
+  return [
+    "match",
+    ["get", "category"],
+    "good",
+    read("--color-aq-good", "#34d399"),
+    "fair",
+    read("--color-aq-fair", "#a3e635"),
+    "moderate",
+    read("--color-aq-moderate", "#facc15"),
+    "poor",
+    read("--color-aq-poor", "#fb923c"),
+    "very_poor",
+    read("--color-aq-very-poor", "#f87171"),
+    "extremely_poor",
+    read("--color-aq-extremely-poor", "#e879f9"),
+    read("--color-aq-moderate", "#facc15"),
+  ];
+  // ds-allow-hardcode:end
+}
 /** Reads the tokens.css light-tint variable for a given sun phase (issue #139); falls back to a sane default so a missing token never breaks `map.setLight`. */
 // ds-allow-hardcode:start (runtime CSS-variable fallback, same convention as darkStyle.ts's readMapPalette)
 const LIGHT_TOKEN_FALLBACK: Record<ReturnType<typeof sunPhase>, string> = {
@@ -199,27 +236,7 @@ export function MapView({ environment, highlightStationId, sun }: MapViewProps) 
         map.addSource(AQ_COLUMNS_SOURCE_ID, { type: "geojson", data: EMPTY_FEATURE_COLLECTION });
       }
       if (!map.getLayer(AQ_COLUMNS_LAYER_ID)) {
-        const style = getComputedStyle(document.documentElement);
-        const read = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback;
-        // ds-allow-hardcode:start (runtime CSS-variable fallback, same convention as darkStyle.ts's readMapPalette)
-        const colorMatch: maplibregl.ExpressionSpecification = [
-          "match",
-          ["get", "category"],
-          "good",
-          read("--color-aq-good", "#34d399"),
-          "fair",
-          read("--color-aq-fair", "#a3e635"),
-          "moderate",
-          read("--color-aq-moderate", "#facc15"),
-          "poor",
-          read("--color-aq-poor", "#fb923c"),
-          "very_poor",
-          read("--color-aq-very-poor", "#f87171"),
-          "extremely_poor",
-          read("--color-aq-extremely-poor", "#e879f9"),
-          read("--color-aq-moderate", "#facc15"),
-        ];
-        // ds-allow-hardcode:end
+        const colorMatch = aqCategoryColorMatch();
         map.addLayer({
           id: AQ_COLUMNS_LAYER_ID,
           type: "fill-extrusion",
@@ -228,9 +245,38 @@ export function MapView({ environment, highlightStationId, sun }: MapViewProps) 
             "fill-extrusion-color": colorMatch,
             "fill-extrusion-height": ["get", "height"],
             "fill-extrusion-base": 0,
-            "fill-extrusion-opacity": 0.75,
+            // Hero scale (parent review): opaque enough that the column
+            // reads as the frame's focal point, not a translucent haze;
+            // the vertical gradient (darker base, lit top) is what makes
+            // a flat-shaded extrusion actually read as a "column of
+            // light" rather than a plain coloured block.
+            "fill-extrusion-opacity": 0.9,
+            "fill-extrusion-vertical-gradient": true,
           },
         });
+      }
+      if (!map.getSource(AQ_GLOW_SOURCE_ID)) {
+        map.addSource(AQ_GLOW_SOURCE_ID, { type: "geojson", data: EMPTY_FEATURE_COLLECTION });
+      }
+      if (!map.getLayer(AQ_GLOW_LAYER_ID)) {
+        const colorMatch = aqCategoryColorMatch();
+        map.addLayer(
+          {
+            id: AQ_GLOW_LAYER_ID,
+            type: "circle",
+            source: AQ_GLOW_SOURCE_ID,
+            paint: {
+              "circle-color": colorMatch,
+              "circle-radius": ["*", AQ_GLOW_BASE_RADIUS_PX, ["get", "radiusScale"]],
+              "circle-opacity": ["get", "opacity"],
+              "circle-blur": 1,
+            },
+          },
+          // Drawn below the extrusion layer, so the glow reads as a soft
+          // pool of light the column rises out of, not a halo painted
+          // over its face.
+          AQ_COLUMNS_LAYER_ID,
+        );
       }
     }
 
@@ -249,15 +295,62 @@ export function MapView({ environment, highlightStationId, sun }: MapViewProps) 
       source.setData({ type: "FeatureCollection", features });
     }
 
-    if (map.isStyleLoaded()) {
+    // The breathing glow (issue #140 AC, parent review: "a soft glow ...
+    // that breathes"): slower for good air, faster for poor — the exact
+    // same per-category rate as the DOM beacon's own breathing rings
+    // (`breathingDurationMs`), so the two readings of "how urgent is
+    // this" agree. Animated by rewriting the glow source's own feature
+    // properties every frame (three tiny point features — cheap), not by
+    // an unsupported zoom-expression trick; frozen to one calm static
+    // frame under `prefers-reduced-motion`.
+    function glowFeaturesAt(nowMs: number): GeoJSON.FeatureCollection {
+      const features = environment.air_quality.stations.map((station) => {
+        const category = station.index.category;
+        let opacity = AQ_GLOW_MID_OPACITY;
+        let radiusScale = 1;
+        if (!prefersReducedMotion()) {
+          const durationMs = breathingDurationMs(category);
+          const phase = (nowMs % durationMs) / durationMs;
+          const wave = (Math.sin(phase * 2 * Math.PI) + 1) / 2; // 0..1
+          opacity = AQ_GLOW_MIN_OPACITY + wave * (AQ_GLOW_MAX_OPACITY - AQ_GLOW_MIN_OPACITY);
+          radiusScale = 1 + wave * 0.25;
+        }
+        return stationGlowFeature(
+          { lat: station.lat, lon: station.lon, category, index: station.index.value },
+          opacity,
+          radiusScale,
+        );
+      });
+      return { type: "FeatureCollection", features };
+    }
+
+    let glowFrameHandle = 0;
+    function stepGlow(nowMs: number) {
+      if (!map) return;
+      const source = map.getSource(AQ_GLOW_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+      if (source) {
+        source.setData(glowFeaturesAt(nowMs));
+      }
+      if (!prefersReducedMotion()) {
+        glowFrameHandle = requestAnimationFrame(stepGlow);
+      }
+    }
+
+    function setUpAndStart() {
       ensureColumnsLayer();
       updateColumns();
-    } else {
-      map.once("load", () => {
-        ensureColumnsLayer();
-        updateColumns();
-      });
+      stepGlow(performance.now());
     }
+
+    if (map.isStyleLoaded()) {
+      setUpAndStart();
+    } else {
+      map.once("load", setUpAndStart);
+    }
+
+    return () => {
+      cancelAnimationFrame(glowFrameHandle);
+    };
   }, [map, environment.air_quality.stations]);
 
   // The airport weather beacon, always at its true position; a manually

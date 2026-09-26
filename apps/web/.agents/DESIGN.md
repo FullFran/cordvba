@@ -129,12 +129,16 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   category-driven rate (`breathingDurationMs`: slower for good air, faster
   for poor) — a fourth, colour-independent severity channel alongside
   shape/text/height. Real 3D "columns of light" (issue #140,
-  `src/map/airQualityColumns.ts`) rise from each of the three city
-  stations as a small `fill-extrusion` disc, height literally encoding
-  the ICA index (`icaColumnHeightM`) and colour following the same
-  `--color-aq-*` tokens — one independent GeoJSON feature per station,
-  never a shared/merged surface (the columns' own legend line states this
-  explicitly). No interpolated air-quality surface, ever. When the
+  `src/map/airQualityColumns.ts`), hero-scaled (parent review): height
+  ~280m per ICA level (`icaColumnHeightM`, index 1-6 spans 280-1680m),
+  130m base radius, `fill-extrusion-vertical-gradient` and 0.9 opacity so
+  they are the frame's clear focal point, not a "tiny stub" — plus a
+  soft breathing `circle-blur` glow at each base, animated at the same
+  per-category rate as the beacon's own rings. One independent GeoJSON
+  feature per station, never a shared/merged surface (the columns' own
+  legend line states this explicitly; the three stations are hundreds of
+  metres apart, so the discs never touch). No interpolated air-quality
+  surface, ever. When the
   airport beacon's true position falls outside the viewport, a
   `clampToEdge`-positioned arrow + distance (`src/map/geo.ts`) replaces it
   instead of it silently vanishing. A caption states the two honesty notes
@@ -599,13 +603,67 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   cost far more than it added; the column is additive value, not a
   redesign.
 - **2026-09-26 — Column footprint: a 16-gon disc via `destinationPoint`,
-  not a MapLibre `circle` layer (issue #140).** `circle` layers are
-  always 2D (screen-space radius, no `fill-extrusion-height`); a real
-  extruded "column" needs an actual small `Polygon` footprint in the
-  source data. `discPolygonCoordinates` reuses `geo.ts`'s
-  `destinationPoint` (the same geodesic-offset helper issue #139's
-  shadows already introduced) around each station at a fixed 14m radius,
-  16 vertices — plenty round at the zoom this app frames stations at.
+  not a MapLibre `circle` layer (issue #140).** *(Radius superseded
+  below, parent review.)* `circle` layers are always 2D (screen-space
+  radius, no `fill-extrusion-height`); a real extruded "column" needs an
+  actual small `Polygon` footprint in the source data. `discPolygonCoordinates`
+  reuses `geo.ts`'s `destinationPoint` (the same geodesic-offset helper
+  issue #139's shadows already introduced) around each station, 16
+  vertices — plenty round at the zoom this app frames stations at.
+- **2026-09-26 — Column hero scale: ~280m per ICA level, 130m radius, not
+  the original ~18-43m/14m "stub" scale (parent review: "tiny orange
+  stubs at the fitted zoom").** The original scale was calibrated against
+  nothing — it drew *a* column, but a real city block's buildings
+  (`--map-building-high`, tens of metres) already out-sized it, so at the
+  app's initial `fitBounds` camera (station-framed, zoom ~14) it read as
+  a barely-visible sliver rather than the "hero" element the issue asked
+  for. `icaColumnHeightM`'s `HEIGHT_PER_INDEX_M` is now 280 (within the
+  requested 250-300m band; index 1-6 spans 280-1680m) and
+  `AQ_COLUMN_RADIUS_M` is 130 (within the requested 100-150m band, still
+  far short of the ~300-600m gaps between real stations, so the three
+  discs never touch — DESIGN.md §7's standing "no interpolated surface"
+  rule is a geometric fact here, not just a stated intent). Both are
+  pinned by a test (`airQualityColumns.test.ts`) asserting the exact
+  requested range, so this cannot silently shrink back to invisible.
+  `fill-extrusion-vertical-gradient: true` and a raised
+  `fill-extrusion-opacity` (0.75 → 0.9) make the taller shape actually
+  read as a lit column (darker base, bright top) instead of a flat
+  coloured slab.
+- **2026-09-26 — Breathing glow: a `circle` layer with `circle-blur`,
+  animated by rewriting its own source data every frame, not a
+  zoom-expression trick (issue #140 AC, parent review).** MapLibre's
+  style expressions forbid using `["zoom"]` as a sub-expression of
+  arithmetic operators like `*`, which would otherwise be the natural way
+  to scale a data-driven radius by a per-frame "breathing" factor. Three
+  stations is cheap enough to just recompute `opacity`/`radiusScale` per
+  feature every `requestAnimationFrame` tick and call the glow source's
+  own `setData` — the same per-category rate as the DOM beacon's
+  `breathingDurationMs` (slower for good air, faster for poor), so both
+  readings of "how urgent is this" agree. Frozen to one calm, static
+  mid-opacity frame under `prefers-reduced-motion` (no rAF loop started
+  at all), matching every other JS-driven animation in this app.
+  Drawn *below* the extrusion layer (`map.addLayer(glow, beforeId:
+  columns)`) so it reads as a pool of light the column rises out of, not
+  a halo painted over its face.
+- **2026-09-26 — Column/pill alignment: verified by test, not "fixed" —
+  the original "stubs look offset from the pills" was the old scale
+  being too small to judge by eye, not a coordinate bug (parent review).**
+  `stationColumnFeature`/`stationGlowFeature`/the beacon `Marker` all read
+  the identical `station.lat`/`station.lon` — a new test
+  (`airQualityColumns.test.ts`) computes the disc's own vertex centroid
+  and asserts it lands exactly on the station coordinate. At hero scale
+  the column's base now visibly meets its beacon pill (see the PR/report
+  screenshots); the remaining, expected effect is ordinary 3D
+  perspective at a 58° pitch — a *very* tall column's lit top leans back
+  on screen relative to its ground-anchored base and label, the same way
+  any real extruded skyscraper would at this camera angle. This was not
+  "fixed" by moving the label to a computed top-of-column screen
+  position: that needs projecting a 3D point through MapLibre's camera
+  transform, which the public API does not expose, and an approximate
+  pixel-lift heuristic would drift out of sync the moment pitch, bearing
+  or zoom changes (e.g. the new historic-centre camera preset, #139/#140
+  follow-up). Documented as a known, camera-angle-dependent optical
+  effect rather than silently papered over.
 - **2026-09-26 — Timeline label: always the clock time, horizon secondary
   (polish, maintainer report: "+1h shows before now/ahora").** Persistence
   horizons anchor on the last ICA observation, published with a 1-2h lag,
