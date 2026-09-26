@@ -230,13 +230,13 @@ export const OPENFREEMAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liber
  * MapLibre style — which needs literal colour values, not CSS custom
  * properties — still has exactly one source of truth for its palette.
  *
- * `phase` (issue #139: sun-driven day/dusk/night lighting) selects which
- * background/water tokens to read — `--map-bg`/`--map-water` for `night`
- * (the app's original, unchanged default), `--map-bg-day`/`--map-water-day`
- * and `--map-bg-dusk`/`--map-water-dusk` for the other two phases. Every
- * other token (buildings, roads, label halo) stays the same regardless of
- * phase: only the sky/water tint changes with the sun, not the whole
- * basemap.
+ * `phase` (issue #139: sun-driven day/golden/blue/night lighting) selects
+ * which background/water tokens to read — `--map-bg`/`--map-water` for
+ * `night` (the app's original, unchanged default), and
+ * `--map-bg-{day,golden,blue}`/`--map-water-{day,golden,blue}` for the
+ * other three phases. Every other token (buildings, roads, label halo)
+ * stays the same regardless of phase: only the sky/water tint changes
+ * with the sun, not the whole basemap.
  */
 export function readMapPalette(
   root: HTMLElement = document.documentElement,
@@ -269,8 +269,8 @@ export function readMapPalette(
 /**
  * Fetches OpenFreeMap's style and returns it recoloured dark, ready to
  * hand to `new maplibregl.Map({ style })`. `phase` (issue #139) seeds the
- * *initial* background/water palette with the correct day/dusk/night
- * tint from the very first frame, instead of always starting at "night"
+ * *initial* background/water palette with the correct day/golden/blue/
+ * night tint from the very first frame, instead of always starting at "night"
  * and waiting for the first `setPaintProperty` call to correct it; every
  * later phase change is applied live by that same runtime call, not by
  * recreating the style.

@@ -93,8 +93,9 @@ function aqCategoryColorMatch(): maplibregl.ExpressionSpecification {
 // ds-allow-hardcode:start (runtime CSS-variable fallback, same convention as darkStyle.ts's readMapPalette)
 const LIGHT_TOKEN_FALLBACK: Record<ReturnType<typeof sunPhase>, string> = {
   day: "#cfe0f5",
-  dusk: "#f2b783",
-  night: "#6b7ba8",
+  golden: "#ffb066",
+  blue: "#7b93e0",
+  night: "#2a3550",
 };
 // ds-allow-hardcode:end
 
@@ -464,7 +465,7 @@ export function MapView({ environment, highlightStationId, sun }: MapViewProps) 
       const style = getComputedStyle(document.documentElement);
       const lightColor =
         style.getPropertyValue(`--map-light-${phase}`).trim() || LIGHT_TOKEN_FALLBACK[phase];
-      map.setLight(sunLight(sun, lightColor));
+      map.setLight(sunLight(sun, phase, lightColor));
     }
 
     if (map.isStyleLoaded()) {

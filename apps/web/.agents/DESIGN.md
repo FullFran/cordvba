@@ -48,8 +48,8 @@ never this app's own design decisions).
 | `--color-aq-good` … `--color-aq-extremely-poor` | 6 hues | Air-quality category hint; never the only encoding (shape + text always carry it too) |
 | `--map-bg`, `--map-water`, `--map-building-low/-high`, `--map-label-halo` | dark navy/green/grey | The MapLibre style's curated overrides (`src/map/darkStyle.ts`); `--map-bg`/`--map-water` double as the **night** phase of the sun-driven palette below |
 | `--map-road-minor/-mid/-major`, `--map-road-label` | neutral slate (hue ~220) | Roads/bridges/tunnels/aeroways and their labels — deliberately *not* the basemap's original warm amber, which shared a hue family with the moderate/poor beacons (see Decision Log) |
-| `--map-bg-day/-dusk`, `--map-water-day/-dusk` | lighter cool slate / warm dark amber | The sun-driven day/dusk base-map tint (issue #139): `sunPhase(altitude)` selects which of these `readMapPalette` reads; still the Void Signal dark aesthetic at every phase, never a light theme |
-| `--map-light-day/-dusk/-night` | `#cfe0f5` / `#f2b783` / `#6b7ba8` | The extrusion light's colour per sun phase (`src/map/sunLight.ts`), read straight through with no literal in JS |
+| `--map-bg-day/-golden/-blue`, `--map-water-day/-golden/-blue` | cool slate / vivid warm amber-brown / deep indigo-blue | The sun-driven day/golden-hour/blue-hour base-map tint (issue #139, parent review: dramatic not faint): `sunPhase(altitude)` selects which of these `readMapPalette` reads; still the Void Signal dark aesthetic at every phase, never a light theme |
+| `--map-light-day/-golden/-blue/-night` | `#cfe0f5` / `#ffb066` / `#7b93e0` / `#2a3550` | The extrusion light's colour per sun phase (`src/map/sunLight.ts`), paired with that module's own per-phase intensity (0.85/0.55/0.28/0.06) — read straight through with no literal in JS |
 | `--map-shadow-fill` | `rgba(3, 6, 12, 0.4)` | The historic-centre building-shadow layer's translucent fill — a plain dark tint at every phase (a shadow is a shadow); not drawn once the sun is down (AC-3) |
 | `--font-sans` | `"IBM Plex Sans", -apple-system, …` | UI text |
 | `--font-mono` | `"IBM Plex Mono", ui-monospace, …` | Numeric readouts, the network-error reason |
@@ -148,8 +148,10 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   `sun: SunPosition` prop (computed once in `App.tsx` from the timeline's
   selected time, `src/lib/sun.ts`'s `getSunPosition`) drives three effects
   — the extrusion light and background/water palette via
-  `map.setPaintProperty`/`setLight` (`sunPhase` picks day/dusk/night;
-  `src/map/sunLight.ts` computes the light spec), a translucent
+  `map.setPaintProperty`/`setLight` (`sunPhase` picks one of four dramatic
+  phases — day, golden hour, blue hour, night, each a clearly distinct
+  colour and intensity, parent review; `src/map/sunLight.ts` computes the
+  light spec), a translucent
   `building-shadows` GeoJSON layer recomputed from currently rendered
   `building-3d` footprints projected along the sun's shadow vector
   (`src/map/shadows.ts`'s `buildingShadow`, a convex-hull approximation —
@@ -550,18 +552,42 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   test times for Córdoba, comfortably inside AC-1's 1° budget
   (`sun.test.ts` bakes in the NOAA-side numbers as the reference).
 - **2026-09-26 — Sun-driven palette: two tokens change (background,
-  water), not the whole basemap (issue #139).** "A day/dusk/night palette
-  for the base map" could have meant recolouring roads/buildings/labels
-  too; scoped to just the sky/water tint (`--map-bg-*`/`--map-water-*`)
-  so the change stays legible as "the light changed," not "the whole city
-  changed colour," and so beacons/roads/labels keep their one already
-  carefully-tuned contrast ratio (§8, "Road network recoloured…")
-  regardless of time of day. `sunPhase` is a plain 3-way categorical read
-  (day / dusk within ±6° of the horizon / night) rather than continuously
-  interpolating a colour ramp from raw altitude — simpler, testable in
-  three fixed cases, and the extrusion *light* (continuous, via
-  `sunLight`'s `intensity`/`position`) already carries the smooth part of
-  "the sun is moving."
+  water), not the whole basemap (issue #139).** *(4-phase split and
+  dramatic intensity superseded below, parent review.)* "A day/dusk/night
+  palette for the base map" could have meant recolouring roads/buildings/
+  labels too; scoped to just the sky/water tint (`--map-bg-*`/
+  `--map-water-*`) so the change stays legible as "the light changed," not
+  "the whole city changed colour," and so beacons/roads/labels keep their
+  one already carefully-tuned contrast ratio (§8, "Road network
+  recoloured…") regardless of time of day.
+- **2026-09-26 — Four sun phases (day/golden/blue/night), not three
+  (parent review: "the sun is barely noticeable... noon vs dusk differ by
+  a faint tint. Make the lighting dramatic").** The original 3-way
+  day/dusk/night split (dusk = within ±6° of the horizon) folded two
+  visually distinct states — the warm, low-angle light before sunset/
+  after sunrise, and the cool light straddling the horizon itself — into
+  one blurred "dusk," and a flat intensity floor (0.15) that never dimmed
+  further meant "night" only ever read as a slightly darker "day."
+  `sunPhase` (`src/lib/sun.ts`) now names both halves of that range with
+  photography's own vocabulary: **golden hour** (2°–20° altitude, warm
+  amber) and **blue hour** (-6°–2°, cool blue) — genuinely different
+  tokens (`--map-bg-golden`/`--map-water-golden` vs `--map-bg-blue`/
+  `--map-water-blue`, both new) and genuinely different extrusion-light
+  colours (`--map-light-golden: #ffb066` vs `--map-light-blue: #7b93e0`).
+  `sunLight`'s intensity is now driven primarily by phase, not a smooth
+  `sin(altitude)` curve with a shared floor: day 0.85 (near MapLibre's
+  own maximum), golden 0.55, blue 0.28, night 0.06 (never exactly zero,
+  so extrusions never go fully flat) — four clearly ordered, clearly
+  different steps, each pinned by a test. Still a categorical read, not a
+  continuous interpolation (simpler, testable in four fixed cases): the
+  map style's own `transition` (800ms, zeroed under
+  `prefers-reduced-motion`) already eases every discrete jump, including
+  `setLight` calls, so scrubbing the timeline across a phase boundary
+  still reads as smooth motion, not a hard cut. Real building faces
+  (both the AQ columns and the city's own extruded roofs) visibly
+  re-shade with every phase change, since MapLibre's lighting model
+  shades every `fill-extrusion` layer from the same `light.color`/
+  `intensity`/`position` — no per-layer colour hack needed.
 - **2026-09-26 — Building shadows: convex hull of footprint ∪
   shadow-cast translation, not a full silhouette sweep (issue #139).**
   `shadows.ts`'s `buildingShadow` translates every footprint vertex by

@@ -52,17 +52,32 @@ describe("getSunTimes (issue #139: sunrise/solar noon/sunset for the sun widget)
   });
 });
 
-describe("sunPhase (issue #139: drives the day/dusk/night map palette)", () => {
-  it("is 'day' well above the horizon", () => {
+describe("sunPhase (parent review: 'the sun is barely noticeable' — four dramatic phases, not three subtle ones)", () => {
+  it("is 'day' well above golden hour", () => {
     expect(sunPhase(50)).toBe("day");
+    expect(sunPhase(21)).toBe("day");
   });
 
-  it("is 'dusk' near the horizon, in the civil-twilight band", () => {
-    expect(sunPhase(0)).toBe("dusk");
-    expect(sunPhase(-4)).toBe("dusk");
+  it("is 'golden' in the golden-hour band (low but still comfortably above the horizon) — warm amber light", () => {
+    expect(sunPhase(20)).toBe("golden");
+    expect(sunPhase(10)).toBe("golden");
+    expect(sunPhase(3)).toBe("golden");
   });
 
-  it("is 'night' once well past civil twilight", () => {
+  it("is 'blue' straddling the horizon (blue hour: civil twilight both sides of sunrise/sunset) — cool bluish light", () => {
+    expect(sunPhase(2)).toBe("blue");
+    expect(sunPhase(0)).toBe("blue");
+    expect(sunPhase(-4)).toBe("blue");
+  });
+
+  it("is 'night' once well past civil twilight — genuinely dark", () => {
+    expect(sunPhase(-6)).toBe("night");
     expect(sunPhase(-20)).toBe("night");
+  });
+
+  it("covers the full altitude range with no gap or overlap at the band edges", () => {
+    for (let altitude = -90; altitude <= 90; altitude += 0.5) {
+      expect(["day", "golden", "blue", "night"]).toContain(sunPhase(altitude));
+    }
   });
 });
