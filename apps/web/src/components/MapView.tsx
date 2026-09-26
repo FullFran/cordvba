@@ -70,6 +70,8 @@ const AQ_GLOW_BASE_RADIUS_PX = 34;
 const AQ_GLOW_MIN_OPACITY = 0.18;
 const AQ_GLOW_MAX_OPACITY = 0.5;
 const AQ_GLOW_MID_OPACITY = (AQ_GLOW_MIN_OPACITY + AQ_GLOW_MAX_OPACITY) / 2;
+/** ~12Hz (measured regression, parent review): plenty smooth for a slow breathing animation, far cheaper than re-tessellating the glow source's GeoJSON on every animation frame. */
+const GLOW_UPDATE_INTERVAL_MS = 80;
 const EMPTY_FEATURE_COLLECTION: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
 
 /**
@@ -352,11 +354,23 @@ export function MapView({ environment, highlightStationId, sun }: MapViewProps) 
     }
 
     let glowFrameHandle = 0;
+    let lastGlowUpdateMs = -Infinity;
     function stepGlow(nowMs: number) {
       if (!map) return;
-      const source = map.getSource(AQ_GLOW_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
-      if (source) {
-        source.setData(glowFeaturesAt(nowMs));
+      // Throttled (measured regression, parent review's own performance
+      // ask): a GeoJSON source's `setData` re-tessellates on every call,
+      // which is far costlier than a plain paint-property update — doing
+      // it 60 times a second dropped this page from 60fps to single
+      // digits at the historic-centre preset. A slow, gentle "breathing"
+      // animation (900-3600ms periods) reads exactly as smooth sampled at
+      // ~12Hz as it did at 60Hz; only the update *rate* changes here, not
+      // the animation's own math.
+      if (nowMs - lastGlowUpdateMs >= GLOW_UPDATE_INTERVAL_MS) {
+        lastGlowUpdateMs = nowMs;
+        const source = map.getSource(AQ_GLOW_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+        if (source) {
+          source.setData(glowFeaturesAt(nowMs));
+        }
       }
       if (!prefersReducedMotion()) {
         glowFrameHandle = requestAnimationFrame(stepGlow);

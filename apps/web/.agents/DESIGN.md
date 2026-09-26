@@ -780,3 +780,26 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   directly: scrolling the dock to its end brings the attribution fully
   into view (`getBoundingClientRect()` inside the dock's bounds), so nothing
   is permanently unreachable even where the compaction alone falls short.
+- **2026-09-26 — AQ glow throttled to ~12Hz, not the full animation-frame
+  rate (measured regression, parent review's own performance ask).**
+  Re-measuring frame rate after the hero-scale/dramatic-lighting/
+  historic-preset work (this same review round) showed a real drop from
+  the previous ~60fps baseline. A `GeoJSONSource.setData` call
+  re-tessellates its geometry — far costlier than a plain paint-property
+  update — and the breathing glow (issue #140) was calling it on every
+  single `requestAnimationFrame` tick. `GLOW_UPDATE_INTERVAL_MS` (80ms)
+  throttles the actual `setData` call while still checking every frame,
+  cutting the call rate roughly 5x; a slow, gentle breathing animation
+  (900-3600ms periods) reads identically smooth sampled at ~12Hz.
+  Honesty about what this did and did not fix: this session's Playwright
+  measurements run in this sandbox's headless Chromium, confirmed via
+  `WEBGL_debug_renderer_info` to be using **SwiftShader** (software, not
+  hardware-accelerated, WebGL) — frame rate here is not representative of
+  a real visitor's GPU-accelerated browser, and the historic-centre
+  preset's much higher visible building/geometry density (a genuinely
+  richer scene, the point of this review round) costs more to
+  software-rasterise regardless of this fix. The throttle is a real,
+  measured, unconditional improvement in how much work this app's own JS
+  does per frame; it is reported here as exactly that, not as a claim
+  that the sandbox's absolute fps number reflects real-world performance
+  (see the PR/report for the actual before/after numbers, both bands).
