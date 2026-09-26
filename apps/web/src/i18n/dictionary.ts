@@ -42,6 +42,15 @@ export interface Dictionary {
     toggle: string;
     label: string;
   };
+  /** The sun widget (issue #139): sunrise/solar-noon/sunset + current altitude, and the building-shadow layer's honesty legend line. */
+  sun: {
+    ariaLabel: string;
+    sunrise: string;
+    solarNoon: string;
+    sunset: string;
+    altitude: string;
+    shadowLegend: string;
+  };
   timeline: {
     ariaLabel: string;
     now: string;

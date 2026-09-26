@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { postSimulate } from "./api/client";
 import { Footer } from "./components/Footer";
@@ -9,9 +9,11 @@ import { ProvenancePanel } from "./components/ProvenancePanel";
 import { ScenarioPanel } from "./components/ScenarioPanel";
 import { LoadingStatus, Skeleton } from "./components/Skeleton";
 import { StatePanel } from "./components/StatePanel";
+import { SunWidget } from "./components/SunWidget";
 import { TimelineView } from "./components/TimelineView";
 import { useEnvironmentTwin } from "./hooks/useEnvironmentTwin";
 import { useLocale } from "./i18n/LocaleContext";
+import { getSunPosition, getSunTimes } from "./lib/sun";
 import type { Value } from "./types/environment";
 
 /**
@@ -28,6 +30,21 @@ export function App() {
   const [selectedValue, setSelectedValue] = useState<Value | null>(null);
   const [highlightStationId, setHighlightStationId] = useState<string | undefined>(undefined);
   const [scenarioOpen, setScenarioOpen] = useState(false);
+  /**
+   * The timeline's selected time (issue #139 — "Córdoba bajo el sol"):
+   * drives the sun widget, the map's sun-driven lighting/palette and its
+   * building-shadow layer. Defaults to the environment payload's own
+   * `generated_at` (the data's clock, so a fixture-mode demo and its
+   * screenshots stay reproducible) rather than the visitor's wall clock,
+   * until a timeline point is explicitly selected below.
+   */
+  const [selectedTime, setSelectedTime] = useState<Date>(() => new Date());
+  useEffect(() => {
+    if (environment.status === "success") {
+      setSelectedTime(new Date(environment.data.generated_at));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only the loading->success transition should reset this; a value re-render must not fight the visitor's own timeline selection.
+  }, [environment.status]);
 
   const allLoading =
     environment.status === "loading" && timeline.status === "loading" && sources.status === "loading";
@@ -43,7 +60,11 @@ export function App() {
         {allLoading ? (
           <Skeleton />
         ) : environment.status === "success" ? (
-          <MapView environment={environment.data} highlightStationId={highlightStationId} />
+          <MapView
+            environment={environment.data}
+            highlightStationId={highlightStationId}
+            sun={getSunPosition(selectedTime, environment.data.place.lat, environment.data.place.lon)}
+          />
         ) : environment.status === "error" ? (
           <NetworkErrorPanel reason={environment.message} onRetry={retry} />
         ) : (
@@ -61,7 +82,15 @@ export function App() {
         {!allLoading ? (
           <div className="app__panel app__panel--state">
             {environment.status === "success" ? (
-              <StatePanel environment={environment.data} onSelect={setSelectedValue} />
+              <>
+                <StatePanel environment={environment.data} onSelect={setSelectedValue} />
+                <SunWidget
+                  {...getSunTimes(selectedTime, environment.data.place.lat, environment.data.place.lon)}
+                  altitudeDeg={
+                    getSunPosition(selectedTime, environment.data.place.lat, environment.data.place.lon).altitudeDeg
+                  }
+                />
+              </>
             ) : null}
 
             <button
@@ -99,6 +128,7 @@ export function App() {
               onSelectPoint={(point) => {
                 setSelectedValue(point);
                 setHighlightStationId(airQualitySeries.entity.id);
+                setSelectedTime(new Date(point.at));
               }}
             />
           ) : timeline.status === "error" ? (

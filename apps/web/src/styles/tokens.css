@@ -75,6 +75,27 @@
      ~0.33) — verified in DESIGN.md §8. */
   --map-bg: #060a12;
   --map-water: #0c1c33;
+  /* --- Sun-driven day/dusk/night base-map palette (issue #139) ---------
+     Only the sky/water tint shifts with the sun's altitude
+     (`src/lib/sun.ts`'s `sunPhase`); buildings/roads/labels stay the same
+     token regardless of phase — "night" above (unsuffixed) is this app's
+     original, unchanged default. Still the Void Signal dark aesthetic at
+     every phase (never a light theme): "day" only lightens/cools the
+     void, "dusk" only warms it. */
+  --map-bg-day: #141b2e;
+  --map-water-day: #1c3a5e;
+  --map-bg-dusk: #1a1210;
+  --map-water-dusk: #241a12;
+  /* Extrusion-light colour per phase (`src/map/sunLight.ts`), read
+     straight through with no literal in JS. */
+  --map-light-day: #cfe0f5;
+  --map-light-dusk: #f2b783;
+  --map-light-night: #6b7ba8;
+  /* The historic-centre building-shadow layer (issue #139): always a
+     plain dark translucent tint, regardless of phase — a shadow is a
+     shadow at any time of day; it simply is not drawn once the sun is
+     down (see `shadowLengthM`/AC-3). */
+  --map-shadow-fill: rgba(3, 6, 12, 0.4);
   --map-park: #0f2418;
   --map-building-low: #171d2b;
   --map-building-high: #3a4a63;

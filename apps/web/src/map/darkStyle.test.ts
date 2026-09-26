@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-import { buildDarkStyle, type MapPalette, type MapStyle } from "./darkStyle";
+import { buildDarkStyle, readMapPalette, type MapPalette, type MapStyle } from "./darkStyle";
 
 // A minimal slice of OpenFreeMap's real "liberty" style (fetched and
 // inspected while building this module): enough layers to exercise the
@@ -302,6 +302,47 @@ describe("buildDarkStyle: road network muted to neutral slate (issue 119, mainta
     const minorLum = relLuminance(palette.roadMinor);
     const majorLum = relLuminance(palette.roadMajor);
     expect(majorLum / minorLum).toBeLessThan(3);
+  });
+});
+
+describe("readMapPalette phase support (issue #139: a day/dusk/night base-map palette driven by sun altitude, tokens not hardcoded colours)", () => {
+  afterEach(() => {
+    // jsdom resolves inline custom properties without loading tokens.css
+    // (vitest config sets `css: false`), so each test sets exactly the
+    // properties it needs and this clears them again afterwards.
+    document.documentElement.removeAttribute("style");
+  });
+
+  it("reads the night (default) background/water tokens when no phase is given, unchanged from before this feature", () => {
+    document.documentElement.style.setProperty("--map-bg", "#010203");
+    document.documentElement.style.setProperty("--map-water", "#040506");
+    const palette = readMapPalette(document.documentElement);
+    expect(palette.background).toBe("#010203");
+    expect(palette.water).toBe("#040506");
+  });
+
+  it("reads the day-phase background/water tokens when phase is 'day'", () => {
+    document.documentElement.style.setProperty("--map-bg-day", "#111213");
+    document.documentElement.style.setProperty("--map-water-day", "#141516");
+    const palette = readMapPalette(document.documentElement, "day");
+    expect(palette.background).toBe("#111213");
+    expect(palette.water).toBe("#141516");
+  });
+
+  it("reads the dusk-phase background/water tokens when phase is 'dusk'", () => {
+    document.documentElement.style.setProperty("--map-bg-dusk", "#211213");
+    document.documentElement.style.setProperty("--map-water-dusk", "#241516");
+    const palette = readMapPalette(document.documentElement, "dusk");
+    expect(palette.background).toBe("#211213");
+    expect(palette.water).toBe("#241516");
+  });
+
+  it("leaves every non-background/water token identical across phases (only the sky/water tint changes)", () => {
+    document.documentElement.style.setProperty("--map-building-low", "#171d2b");
+    const night = readMapPalette(document.documentElement, "night");
+    const day = readMapPalette(document.documentElement, "day");
+    expect(day.buildingLow).toBe(night.buildingLow);
+    expect(day.roadMinor).toBe(night.roadMinor);
   });
 });
 
