@@ -1,5 +1,9 @@
-# Go binary and build artifacts
-/bin/
+# Go binary and build artifacts.
+#
+# Unanchored on purpose: each component keeps its own bin/ (apps/eye/bin/,
+# and more to come), and a leading slash would only ignore one at the
+# repository root.
+bin/
 *.out
 *.test
 coverage.out

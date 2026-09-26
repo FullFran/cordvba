@@ -15,8 +15,8 @@ binary and one SQLite file.
 ## Build and run
 
 ```bash
-git clone https://github.com/FullFran/eye.git
-cd eye
+git clone https://github.com/FullFran/cordvba.git
+cd cordvba/apps/eye
 
 make build          # → bin/eye
 ./bin/eye status    # polls every live source and reports the city

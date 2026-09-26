@@ -1,6 +1,12 @@
 # eye — a static, CGO-free binary in a distroless image.
 #
-# Build from the repository root:
+# The build context is apps/eye (this component's own root), not the
+# monorepo root — the COPY instructions below are relative to it.
+#
+# From the repository root:
+#   docker build -f apps/eye/deploy/Dockerfile -t eye:latest apps/eye
+#
+# Or, from apps/eye itself:
 #   docker build -f deploy/Dockerfile -t eye:latest .
 #
 # Nothing secret is baked in. The token, the API keys and the data directory

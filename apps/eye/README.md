@@ -122,8 +122,8 @@ services. The source registry is compiled into the binary, so it works the
 moment it finishes building.
 
 ```bash
-git clone https://github.com/FullFran/eye.git
-cd eye && make build
+git clone https://github.com/FullFran/cordvba.git
+cd cordvba/apps/eye && make build
 
 ./bin/eye status
 ```

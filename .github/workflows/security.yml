@@ -25,6 +25,9 @@ jobs:
   gosec:
     name: gosec (SAST)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/eye
 
     steps:
       - name: Checkout
@@ -33,8 +36,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version-file: apps/eye/go.mod
           cache: true
+          cache-dependency-path: apps/eye/go.sum
 
       - name: Install gosec
         run: go install github.com/securego/gosec/v2/cmd/gosec@latest
@@ -69,7 +73,7 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: "fs"
-          scan-ref: "."
+          scan-ref: "apps/eye"
           format: "table"
           exit-code: "1"
           ignore-unfixed: true
