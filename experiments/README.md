@@ -16,7 +16,7 @@ component — model exploration, data exploration, one-off analysis.
 
 Anything, read-only, for exploration purposes; nothing depends on it back.
 See
-[`docs/architecture/system-overview.md`](../../docs/architecture/system-overview.md).
+[`docs/architecture/system-overview.md`](../docs/architecture/system-overview.md).
 
 ## Data
 
