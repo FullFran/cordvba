@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 
+import { useLocale } from "../i18n/LocaleContext";
 import { ValueTile } from "./ValueTile";
 import { SCENARIO_BOUNDS, buildSimulateRequest, type ScenarioSliders } from "../lib/scenario";
 import type { SimulateRequest, SimulateResponse, Value } from "../types/environment";
@@ -22,6 +23,7 @@ const DEFAULT_SLIDERS: ScenarioSliders = {
  * simulated ones always labelled SIMULATED.
  */
 export function ScenarioPanel({ onSimulate, now, onSelectValue }: ScenarioPanelProps) {
+  const { t } = useLocale();
   const [sliders, setSliders] = useState<ScenarioSliders>(DEFAULT_SLIDERS);
   const [result, setResult] = useState<SimulateResponse | null>(null);
   const [pending, setPending] = useState(false);
@@ -42,9 +44,9 @@ export function ScenarioPanel({ onSimulate, now, onSelectValue }: ScenarioPanelP
   }
 
   return (
-    <section className="scenario-panel" aria-label="Scenario">
+    <section className="scenario-panel" aria-label={t.scenario.ariaLabel}>
       <div className="scenario-panel__sliders">
-        <label htmlFor={temperatureId}>Temperature (+°C)</label>
+        <label htmlFor={temperatureId}>{t.scenario.temperatureLabel}</label>
         <input
           id={temperatureId}
           type="range"
@@ -57,7 +59,7 @@ export function ScenarioPanel({ onSimulate, now, onSelectValue }: ScenarioPanelP
           }
         />
 
-        <label htmlFor={humidityId}>Humidity (points)</label>
+        <label htmlFor={humidityId}>{t.scenario.humidityLabel}</label>
         <input
           id={humidityId}
           type="range"
@@ -70,7 +72,7 @@ export function ScenarioPanel({ onSimulate, now, onSelectValue }: ScenarioPanelP
           }
         />
 
-        <label htmlFor={windId}>Wind (%)</label>
+        <label htmlFor={windId}>{t.scenario.windLabel}</label>
         <input
           id={windId}
           type="range"
@@ -85,60 +87,60 @@ export function ScenarioPanel({ onSimulate, now, onSelectValue }: ScenarioPanelP
       </div>
 
       <button type="button" onClick={runScenario} disabled={pending}>
-        {pending ? "Running scenario…" : "Run scenario"}
+        {pending ? t.scenario.running : t.scenario.run}
       </button>
 
       {result ? (
         <div className="scenario-panel__result">
           <div className="scenario-panel__observed">
-            <h3>Observed</h3>
+            <h3>{t.scenario.observedHeading}</h3>
             <ValueTile
-              name="Temperature"
+              name={t.state.temperature}
               value={result.observed.air_temperature}
               now={now}
               onSelect={onSelectValue}
             />
             <ValueTile
-              name="Humidity"
+              name={t.state.humidity}
               value={result.observed.relative_humidity}
               now={now}
               onSelect={onSelectValue}
             />
             <ValueTile
-              name="Wind speed"
+              name={t.state.windSpeed}
               value={result.observed.wind_speed}
               now={now}
               onSelect={onSelectValue}
             />
             <ValueTile
-              name="Apparent temperature"
+              name={t.state.apparentTemperature}
               value={result.observed.apparent_temperature}
               now={now}
               onSelect={onSelectValue}
             />
           </div>
           <div className="scenario-panel__simulated">
-            <h3>Simulated</h3>
+            <h3>{t.scenario.simulatedHeading}</h3>
             <ValueTile
-              name="Temperature"
+              name={t.state.temperature}
               value={result.simulated.air_temperature}
               now={now}
               onSelect={onSelectValue}
             />
             <ValueTile
-              name="Humidity"
+              name={t.state.humidity}
               value={result.simulated.relative_humidity}
               now={now}
               onSelect={onSelectValue}
             />
             <ValueTile
-              name="Wind speed"
+              name={t.state.windSpeed}
               value={result.simulated.wind_speed}
               now={now}
               onSelect={onSelectValue}
             />
             <ValueTile
-              name="Apparent temperature"
+              name={t.state.apparentTemperature}
               value={result.simulated.apparent_temperature}
               now={now}
               onSelect={onSelectValue}

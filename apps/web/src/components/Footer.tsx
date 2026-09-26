@@ -1,3 +1,4 @@
+import { useLocale } from "../i18n/LocaleContext";
 import { formatAge } from "../lib/age";
 import type { Source } from "../types/environment";
 
@@ -8,18 +9,24 @@ export interface FooterProps {
 
 /**
  * Attribution for every data source and the map tiles, plus freshness per
- * source from GET /v1/sources (issue #102, AC-4).
+ * source from GET /v1/sources (issue #102, AC-4). The map moved from
+ * Leaflet/OSM raster tiles to MapLibre/OpenFreeMap vector tiles (issue
+ * #119), so the required attribution changed with it: "OpenFreeMap ©
+ * OpenMapTiles Data from OpenStreetMap" replaces the old bare "Map data ©
+ * OpenStreetMap contributors" line.
  */
 export function Footer({ sources, now }: FooterProps) {
+  const { locale, t } = useLocale();
+
   return (
     <footer className="page-footer">
       <ul>
         {sources.map((source) => (
           <li key={source.id}>
-            {source.attribution} — updated {formatAge(source.last_ok, now)}
+            {source.attribution} — {t.footer.updatedPrefix} {formatAge(source.last_ok, now, locale)}
           </li>
         ))}
-        <li>Map data © OpenStreetMap contributors</li>
+        <li>{t.footer.tileAttribution}</li>
       </ul>
     </footer>
   );

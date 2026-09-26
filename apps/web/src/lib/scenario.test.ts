@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { SCENARIO_BOUNDS, buildSimulateRequest } from "./scenario";
 
 describe("SCENARIO_BOUNDS", () => {
-  it("keeps the UI slider ranges from issue #102 within the API's accepted bounds (packages/contracts/environment/v1/README.md)", () => {
+  it("keeps the UI slider ranges from issue 102 within the API's accepted bounds (packages/contracts/environment/v1/README.md)", () => {
     // API: temperature_delta_c in [-10, 10], humidity_delta_pct in [-50, 50], wind_factor in [0, 2]
       expect(SCENARIO_BOUNDS.temperatureDeltaC.min).toBeGreaterThanOrEqual(-10);
       expect(SCENARIO_BOUNDS.temperatureDeltaC.max).toBeLessThanOrEqual(10);
