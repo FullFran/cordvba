@@ -330,6 +330,77 @@ func TestSQLitePruneRemovesExpiredRecords(t *testing.T) {
 
 // RawHashInUse is the keep() lookup #74 wires into RawCache.Prune: a payload
 // is kept as long as any surviving record OR entity still points at its hash.
+// #132: retention.historical was, until now, enforced only on the collector
+// path — records already stored through the daemon's own path still carry
+// the expiry their adapter computed. This is the store-side half of the fix:
+// a start-up reconciliation clears it, never sets one, and touches only the
+// sources it is told to.
+func TestSQLiteClearExpiryForSourcesOnlyClearsNamedSources(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	s := openStore(t)
+	now := time.Now().UTC().Truncate(time.Microsecond)
+
+	staleExpiry := now.Add(30 * 24 * time.Hour)
+	historical := fullRecord("historical-1", now)
+	historical.Source = "metar-cordoba"
+	historical.ExpiresAt = &staleExpiry
+
+	otherExpiry := now.Add(24 * time.Hour)
+	untouched := fullRecord("untouched-1", now)
+	untouched.Source = "adsb-lol"
+	untouched.ExpiresAt = &otherExpiry
+
+	alreadyNil := fullRecord("already-nil", now)
+	alreadyNil.Source = "metar-cordoba"
+	alreadyNil.ExpiresAt = nil
+
+	if _, err := s.Append(ctx, []domain.Record{historical, untouched, alreadyNil}); err != nil {
+		t.Fatalf("Append() = %v", err)
+	}
+
+	n, err := s.ClearExpiryForSources(ctx, []string{"metar-cordoba"})
+	if err != nil {
+		t.Fatalf("ClearExpiryForSources() = %v", err)
+	}
+	// Only historical-1 had a non-nil expiry to clear; already-nil has
+	// nothing to touch, so it must not be counted.
+	if n != 1 {
+		t.Errorf("cleared = %d, want 1", n)
+	}
+
+	got, err := s.Query(ctx, domain.Filter{})
+	if err != nil {
+		t.Fatalf("Query() = %v", err)
+	}
+	for _, r := range got {
+		switch r.ID {
+		case "historical-1":
+			if r.ExpiresAt != nil {
+				t.Errorf("historical-1 still carries an expiry: %v", r.ExpiresAt)
+			}
+		case "untouched-1":
+			if r.ExpiresAt == nil || !r.ExpiresAt.Equal(otherExpiry) {
+				t.Errorf("untouched-1's expiry changed: got %v, want %v", r.ExpiresAt, otherExpiry)
+			}
+		}
+	}
+}
+
+func TestSQLiteClearExpiryForSourcesEmptyListIsANoOp(t *testing.T) {
+	t.Parallel()
+
+	s := openStore(t)
+	n, err := s.ClearExpiryForSources(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("ClearExpiryForSources() = %v", err)
+	}
+	if n != 0 {
+		t.Errorf("cleared = %d, want 0", n)
+	}
+}
+
 func TestSQLiteRawHashInUse(t *testing.T) {
 	t.Parallel()
 

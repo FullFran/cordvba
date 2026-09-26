@@ -104,7 +104,7 @@ func (c *Collector) collectOne(ctx context.Context, p provider.Provider) Result 
 		return res
 	}
 
-	applyRetention(info, records)
+	ApplyRetention(info, records)
 
 	if stored, err := c.records.Append(ctx, records); err == nil {
 		res.Records = stored
@@ -129,23 +129,27 @@ func (c *Collector) collectOne(ctx context.Context, p provider.Provider) Result 
 	return res
 }
 
-// applyRetention overrides ExpiresAt for a historical source's freshly polled
+// ApplyRetention overrides ExpiresAt for a historical source's freshly polled
 // records, in place.
 //
 // Every adapter still computes its own ExpiresAt from its own TTL — that code
 // is unchanged, on purpose: rewriting three adapters to each ask the registry
 // "am I historical?" would mean the same policy re-implemented three times,
-// with a fourth mistake waiting the next time a source is added. The
-// collector is instead the single seam every source's Poll() result passes
-// through before it reaches the store, regardless of adapter, so the
-// registry's retention decision is enforced exactly once, here, for every
-// source there is or ever will be.
+// with a fourth mistake waiting the next time a source is added. This
+// function is instead meant to be the single seam every source's Poll()
+// result passes through before it reaches the store, regardless of adapter OR
+// of which caller stores the result — see #132: the collector's own
+// collectOne is one such caller, and cli.daemonSink.Store, the daemon's other
+// persistence path, is the other. Exporting this function, rather than
+// leaving it private to the collector, is what makes that shared call
+// possible instead of a second, easily-forgotten reimplementation that #132
+// found had already happened once.
 //
-// Change records never reach this function: they are produced by
-// detectChanges below, through a separate Append call, and keep their own
-// fixed 30-day TTL untouched — that belongs to the change-feed ADR, not to a
-// source's retention policy.
-func applyRetention(info source.Source, records []domain.Record) {
+// Change records never reach this function: in the collector they are
+// produced by detectChanges below, through a separate Append call, and keep
+// their own fixed 30-day TTL untouched — that belongs to the change-feed ADR,
+// not to a source's retention policy.
+func ApplyRetention(info source.Source, records []domain.Record) {
 	if !info.Historical() {
 		return
 	}

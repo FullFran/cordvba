@@ -4,11 +4,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/FullFran/cordvba/apps/eye/internal/cli"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	store "github.com/FullFran/cordvba/apps/eye/internal/observation/infrastructure"
 )
 
 // The daemon must poll everything shortly after startup and shut down cleanly
@@ -108,6 +112,74 @@ func TestDaemonLogsAreStructuredJSON(t *testing.T) {
 		}
 		if _, ok := entry["msg"]; !ok {
 			t.Errorf("log entry has no msg: %v", entry)
+		}
+	}
+}
+
+// #132: a record already in the store, stored before its source became
+// historical (the registry always said so, but the daemon's own persistence
+// path skipped retention entirely until this fix), must have its stale
+// expiry cleared at start-up. This is reconciliation, not re-computation: it
+// only ever clears an expiry, it never sets one.
+func TestDaemonReconcilesExpiryForHistoricalSourcesAtStartup(t *testing.T) {
+	t.Parallel()
+
+	portal := fakePortal(t)
+	registry := writeRegistryBody(t, fmt.Sprintf(`
+sources:
+  - id: test-press
+    authority: Diario de Prueba
+    topic: press
+    url: %s/press.rss
+    format: rss
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 30m
+    retention: historical
+`, portal.URL))
+	dataDir := t.TempDir()
+
+	// Seed a record as if it had been stored before this fix: a stale
+	// expiry, computed by whatever TTL the adapter used at the time.
+	db, err := store.OpenSQLite(filepath.Join(dataDir, "eye.db"))
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	staleExpiry := time.Now().UTC().Add(30 * 24 * time.Hour)
+	preExisting := observation.Record{
+		ID: "pre-existing", Source: "test-press", Kind: "news_item", Topic: "press",
+		ObservedAt: time.Now().UTC(), FetchedAt: time.Now().UTC(), ExpiresAt: &staleExpiry,
+		Title: "seeded before the fix", Quality: observation.QualityOfficial, Confidence: 1,
+		Provenance: observation.Provenance{
+			Publisher: "Diario de Prueba", SourceURL: "https://example.org/1",
+			License: "unspecified", FetchedAt: time.Now().UTC(),
+		},
+	}
+	if _, err := db.Append(context.Background(), []observation.Record{preExisting}); err != nil {
+		t.Fatalf("seed pre-existing record: %v", err)
+	}
+	_ = db.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	var stdout, stderr bytes.Buffer
+	cli.New().Run(ctx, []string{"daemon", "--registry", registry, "--data-dir", dataDir, "--once"}, &stdout, &stderr)
+
+	db, err = store.OpenSQLite(filepath.Join(dataDir, "eye.db"))
+	if err != nil {
+		t.Fatalf("reopen store: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	got, err := db.Query(context.Background(), observation.Filter{})
+	if err != nil {
+		t.Fatalf("Query() = %v", err)
+	}
+	for _, r := range got {
+		if r.ID == "pre-existing" && r.ExpiresAt != nil {
+			t.Errorf("pre-existing's expiry was not reconciled: %v", r.ExpiresAt)
 		}
 	}
 }

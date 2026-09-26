@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/FullFran/cordvba/apps/eye/internal/logging"
+	application "github.com/FullFran/cordvba/apps/eye/internal/observation/application"
 	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 	store "github.com/FullFran/cordvba/apps/eye/internal/observation/infrastructure"
 	provider "github.com/FullFran/cordvba/apps/eye/internal/provider/domain"
@@ -55,6 +56,7 @@ func daemonCommand() Command {
 				"store", rt.store.Path(),
 				"raw_cache", rt.cache.Root(),
 				"registry", rt.registryPath)
+			reconcileHistoricalRetention(ctx, rt, log)
 
 			if *once {
 				return runOnce(ctx, rt, ps, stdout)
@@ -107,6 +109,35 @@ func daemonCommand() Command {
 			return nil
 		},
 	}
+}
+
+// reconcileHistoricalRetention clears ExpiresAt on already-stored records of
+// every source whose retention is historical.
+//
+// #132: a record can predate that policy applying to its source, because the
+// daemon's own persistence path (daemonSink.Store) never composed retention
+// before this fix while Collector.collectOne already did. Such a record
+// still carries the expiry an earlier poll (or adapter) computed for it.
+// This is reconciliation, not re-derivation: it only ever clears an expiry,
+// and only for the ids given; it never sets one, so it can never turn a live
+// record into an expired one.
+func reconcileHistoricalRetention(ctx context.Context, rt *runtime, log *loggerAlias) {
+	var historical []string
+	for _, s := range rt.sources {
+		if s.Historical() {
+			historical = append(historical, s.ID)
+		}
+	}
+	if len(historical) == 0 {
+		return
+	}
+
+	cleared, err := rt.store.ClearExpiryForSources(ctx, historical)
+	if err != nil {
+		log.Warn("retention reconciliation failed", "error", err, "sources", historical)
+		return
+	}
+	log.Info("retention reconciliation", "cleared_expiry", cleared, "sources", historical)
 }
 
 // runOnce polls every source a single time. It is what a systemd timer or a
@@ -209,7 +240,16 @@ func newDaemonSink(rt *runtime, log *loggerAlias) *daemonSink {
 }
 
 // Store persists records, and the inventory when the provider publishes one.
+//
+// #132: this is the daemon's OWN persistence path, separate from
+// Collector.collectOne, and it used to skip retention entirely — a registry
+// entry marked retention: historical still expired after whatever TTL its
+// adapter computed, because nothing here ever applied that decision.
+// ApplyRetention is the single function both paths now call, so there is
+// exactly one place left to get this right.
 func (s *daemonSink) Store(ctx context.Context, p provider.Provider, records []observation.Record) (int, error) {
+	application.ApplyRetention(p.Info(), records)
+
 	stored, err := s.rt.store.Append(ctx, records)
 	if err != nil {
 		return 0, err
