@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/FullFran/cordvba/apps/eye/internal/config"
 )
@@ -159,5 +160,48 @@ func TestLoadLeavesTheExtraCAFileEmptyByDefault(t *testing.T) {
 	}
 	if cfg.ExtraCAFile != "" {
 		t.Errorf("ExtraCAFile = %q, want empty", cfg.ExtraCAFile)
+	}
+}
+
+// The grace period defaults to 24h, long enough that a payload fetched but
+// not yet normalized into a record is never removed by an ordinary prune
+// cycle.
+func TestLoadRawCacheGraceDefaultsTo24h(t *testing.T) {
+	t.Setenv("EYE_RAW_CACHE_GRACE", "")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load() = %v", err)
+	}
+	if cfg.RawCacheGrace != 24*time.Hour {
+		t.Errorf("RawCacheGrace = %v, want 24h", cfg.RawCacheGrace)
+	}
+}
+
+func TestLoadRawCacheGraceIsConfigurable(t *testing.T) {
+	t.Setenv("EYE_RAW_CACHE_GRACE", "6h")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load() = %v", err)
+	}
+	if cfg.RawCacheGrace != 6*time.Hour {
+		t.Errorf("RawCacheGrace = %v, want 6h", cfg.RawCacheGrace)
+	}
+}
+
+func TestLoadRejectsAnUnparsableRawCacheGrace(t *testing.T) {
+	t.Setenv("EYE_RAW_CACHE_GRACE", "soon")
+
+	if _, err := config.Load(); !errors.Is(err, config.ErrInvalidConfig) {
+		t.Fatalf("Load() = %v, want ErrInvalidConfig", err)
+	}
+}
+
+func TestLoadRejectsANonPositiveRawCacheGrace(t *testing.T) {
+	t.Setenv("EYE_RAW_CACHE_GRACE", "0h")
+
+	if _, err := config.Load(); !errors.Is(err, config.ErrInvalidConfig) {
+		t.Fatalf("Load() = %v, want ErrInvalidConfig", err)
 	}
 }

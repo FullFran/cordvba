@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -324,6 +325,90 @@ func TestSQLitePruneRemovesExpiredRecords(t *testing.T) {
 		if r.ID == "expired" {
 			t.Error("an expired record survived the prune")
 		}
+	}
+}
+
+// RawHashInUse is the keep() lookup #74 wires into RawCache.Prune: a payload
+// is kept as long as any surviving record OR entity still points at its hash.
+func TestSQLiteRawHashInUse(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	s := openStore(t)
+	now := time.Now().UTC()
+
+	recordOnly := fullRecord("record-only", now)
+	recordOnly.Provenance.RawHash = "hash-record-only"
+	unreferenced := fullRecord("unreferenced", now)
+	unreferenced.Provenance.RawHash = "hash-nobody-points-at"
+
+	if _, err := s.Append(ctx, []domain.Record{recordOnly, unreferenced}); err != nil {
+		t.Fatalf("Append() = %v", err)
+	}
+
+	entityOnly := domain.Entity{
+		ID: "cam-1", Source: "test", Kind: "camera", Topic: "transport",
+		Title: "Puente", FirstSeen: now, LastSeen: now,
+		Provenance: domain.Provenance{
+			Publisher: "P", SourceURL: "https://example.org", License: "unspecified",
+			FetchedAt: now, RawHash: "hash-entity-only",
+		},
+	}
+	if _, err := s.Upsert(ctx, []domain.Entity{entityOnly}); err != nil {
+		t.Fatalf("Upsert() = %v", err)
+	}
+
+	cases := []struct {
+		name string
+		hash string
+		want bool
+	}{
+		{name: "referenced by a record", hash: "hash-record-only", want: true},
+		{name: "referenced by an entity", hash: "hash-entity-only", want: true},
+		{name: "referenced by nothing", hash: "hash-nobody-points-at-x", want: false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := s.RawHashInUse(ctx, tc.hash)
+			if err != nil {
+				t.Fatalf("RawHashInUse(%q) = %v", tc.hash, err)
+			}
+			if got != tc.want {
+				t.Errorf("RawHashInUse(%q) = %v, want %v", tc.hash, got, tc.want)
+			}
+		})
+	}
+}
+
+// The keep() lookup runs once per cached payload, every prune cycle — on the
+// operator's own store, 1296 files in one afternoon. A per-hash SCAN of the
+// whole records (or entities) table for each one would make the prune loop's
+// cost grow with the product of both table sizes. This test is the executable
+// record of that decision: it pins the query plan to an index SEARCH, so a
+// future change that drops the index fails loudly here instead of quietly
+// reintroducing the O(payloads × rows) scan.
+func TestSQLiteRawHashLookupUsesAnIndexNotATableScan(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	s := openStore(t)
+
+	plan, err := s.ExplainRawHashLookup(ctx, "any-hash")
+	if err != nil {
+		t.Fatalf("ExplainRawHashLookup() = %v", err)
+	}
+	for _, table := range []string{"records", "entities"} {
+		if strings.Contains(plan, "SCAN "+table) {
+			t.Errorf("plan scans %s instead of searching an index:\n%s", table, plan)
+		}
+	}
+	if !strings.Contains(plan, "records_raw_hash") {
+		t.Errorf("plan does not use the records_raw_hash index:\n%s", plan)
+	}
+	if !strings.Contains(plan, "entities_raw_hash") {
+		t.Errorf("plan does not use the entities_raw_hash index:\n%s", plan)
 	}
 }
 

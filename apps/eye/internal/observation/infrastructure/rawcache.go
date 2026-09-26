@@ -126,12 +126,11 @@ func (c *RawCache) Has(hash string) bool {
 }
 
 // Prune deletes payloads not modified since the cutoff, and reports how many
-// went. Evidence for anything still in the record store should outlive it, so
-// callers pass a cutoff derived from their longest retention window.
-func (c *RawCache) Prune(before time.Time, keep func(hash string) bool) (int, error) {
-	var removed int
-
-	err := filepath.WalkDir(c.root, func(path string, d os.DirEntry, err error) error {
+// went and how many bytes they occupied on disk. Evidence for anything still
+// in the record store should outlive it, so callers pass a cutoff derived
+// from their longest retention window.
+func (c *RawCache) Prune(before time.Time, keep func(hash string) bool) (removed int, freedBytes int64, err error) {
+	walkErr := filepath.WalkDir(c.root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			if os.IsNotExist(err) {
 				return nil // Nothing cached yet.
@@ -160,13 +159,41 @@ func (c *RawCache) Prune(before time.Time, keep func(hash string) bool) (int, er
 		}
 		if err := os.Remove(path); err == nil { // #nosec G122 -- name validated as a hex hash above
 			removed++
+			freedBytes += info.Size()
 		}
 		return nil
 	})
-	if err != nil {
-		return removed, fmt.Errorf("%w: prune: %w", ErrRawCache, err)
+	if walkErr != nil {
+		return removed, freedBytes, fmt.Errorf("%w: prune: %w", ErrRawCache, walkErr)
 	}
-	return removed, nil
+	return removed, freedBytes, nil
+}
+
+// Size reports how many payloads the cache holds and their total size on
+// disk, for an operator watching what a prune cycle left behind.
+func (c *RawCache) Size() (files int, bytes int64, err error) {
+	walkErr := filepath.WalkDir(c.root, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil // Nothing cached yet.
+			}
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		info, err := d.Info()
+		if err != nil {
+			return nil //nolint:nilerr // an unreadable entry is skipped, not fatal
+		}
+		files++
+		bytes += info.Size()
+		return nil
+	})
+	if walkErr != nil {
+		return files, bytes, fmt.Errorf("%w: size: %w", ErrRawCache, walkErr)
+	}
+	return files, bytes, nil
 }
 
 // isHashName reports whether a filename is a full hex SHA-256, which is the

@@ -534,7 +534,7 @@ func TestDaemonOnceReportsWhatItStored(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit = %d", code)
 	}
-	for _, want := range []string{"polled", "new", "store holds"} {
+	for _, want := range []string{"polled", "new", "store holds", "raw payload", "raw cache holds"} {
 		if !strings.Contains(stdout, want) {
 			t.Errorf("output is missing %q:\n%s", want, stdout)
 		}
