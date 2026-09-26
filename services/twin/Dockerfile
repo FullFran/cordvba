@@ -14,6 +14,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 COPY packages/eye-client/pyproject.toml packages/eye-client/pyproject.toml
 COPY services/twin/pyproject.toml services/twin/pyproject.toml
+COPY apps/api/pyproject.toml apps/api/pyproject.toml
 
 RUN uv sync --locked --no-dev --package twin --no-install-workspace
 
