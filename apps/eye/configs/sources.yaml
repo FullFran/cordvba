@@ -974,10 +974,18 @@ sources:
     published_every: 1h
     options:
       distribution: https://ica.miteco.es/datos/ica-ultima-hora.csv
-      bbox: "-5.8,37.2,-4.0,38.8"
+      province: "14"
     notes: >-
       The national air-quality index, hourly, per station. 624 rows nationally,
-      narrowed here to Córdoba province by bounding box.
+      narrowed here to Córdoba province (INE code 14) by station code, not by
+      bounding box: a bounding box tight enough to hold Córdoba city also holds
+      Puertollano (Ciudad Real) and the Sierra Norte of Sevilla, which a box
+      cannot tell apart from a real province boundary.
+
+      6 Córdoba-province stations are returned: 14021006 ASOMADILLA, 14021007
+      LEPANTO and 14021009 AVDA. AL-NASIR in the city, plus 14026002 POBLADO,
+      14047001 OBEJO and 14068001 VILLAHARTA. The bbox this replaced also
+      picked up 6 Puertollano stations and 1 Sevilla station — see issue #98.
 
       TLS: THIS HOST SERVES AN INCOMPLETE CHAIN. The root CA (AC RAIZ FNMT-RCM)
       is publicly trusted and the intermediate (AC Componentes Informáticos) is
@@ -985,7 +993,7 @@ sources:
       complete the chain by itself, and the poll fails with "certificate signed
       by unknown authority" against a certificate that is perfectly valid.
 
-      THE FIX, verified 2026-09-03 — 13 Córdoba stations returned:
+      THE FIX, verified 2026-09-03:
 
         curl -o /tmp/accomp.crt http://www.cert.fnmt.es/certs/ACCOMP.crt
         openssl x509 -inform DER -in /tmp/accomp.crt \
