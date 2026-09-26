@@ -252,6 +252,148 @@ func TestBoundingBoxFilter(t *testing.T) {
 	}
 }
 
+// A registry entry may narrow the national table to a single INE province
+// instead of a bounding box, which cannot avoid a neighbouring province's
+// stations that happen to fall inside the same rectangle.
+func TestProvinceFilter(t *testing.T) {
+	t.Parallel()
+
+	srv := serve(t, http.StatusOK, fixture(t, "ica-ultima-hora.csv"))
+	p := dcat.NewAirQuality(src(srv.URL, map[string]string{"province": "14"}), httpx.New())
+
+	records, err := p.Poll(context.Background())
+	if err != nil {
+		t.Fatalf("Poll() = %v", err)
+	}
+
+	want := map[string]bool{
+		"14021006": true, "14021007": true, "14021009": true,
+		"14026002": true, "14047001": true, "14068001": true,
+	}
+	if len(records) != len(want) {
+		t.Fatalf("Poll() = %d records, want %d", len(records), len(want))
+	}
+	for _, r := range records {
+		if !want[r.LocalKey] {
+			t.Errorf("station %s is outside province 14", r.LocalKey)
+		}
+	}
+}
+
+// A municipality option narrows further, to one city inside the province.
+func TestMunicipalityFilter(t *testing.T) {
+	t.Parallel()
+
+	srv := serve(t, http.StatusOK, fixture(t, "ica-ultima-hora.csv"))
+	p := dcat.NewAirQuality(src(srv.URL, map[string]string{"municipality": "14021"}), httpx.New())
+
+	records, err := p.Poll(context.Background())
+	if err != nil {
+		t.Fatalf("Poll() = %v", err)
+	}
+
+	want := map[string]bool{"14021006": true, "14021007": true, "14021009": true}
+	if len(records) != len(want) {
+		t.Fatalf("Poll() = %d records, want %d", len(records), len(want))
+	}
+	for _, r := range records {
+		if !want[r.LocalKey] {
+			t.Errorf("station %s is outside municipality 14021", r.LocalKey)
+		}
+	}
+}
+
+// cod_estacion is the 5-digit INE municipality code plus a 3-digit station
+// number, written without the leading zero. A 7-digit code must be left-padded
+// to 8 before its province is read, or a station in province 01 would compare
+// as if it were in province 10.
+func TestSevenDigitCodeIsPaddedBeforeProvinceMatch(t *testing.T) {
+	t.Parallel()
+
+	body := []byte(icaHeader +
+		"1022001,EL CIEGO,TRAFICO,42.51833,-2.61944,true,2026-09-02T21:00:00,3,O3\n")
+
+	cases := []struct {
+		name     string
+		province string
+		want     int
+	}{
+		{name: "matches province 01 once left-padded", province: "01", want: 1},
+		{name: "does not match a different province", province: "02", want: 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			srv := serve(t, http.StatusOK, body)
+			p := dcat.NewAirQuality(src(srv.URL, map[string]string{"province": tc.province}), httpx.New())
+
+			records, err := p.Poll(context.Background())
+			if err != nil {
+				t.Fatalf("Poll() = %v", err)
+			}
+			if len(records) != tc.want {
+				t.Fatalf("Poll() = %d records, want %d", len(records), tc.want)
+			}
+		})
+	}
+}
+
+// A bbox left configured alongside province/municipality still applies: the
+// two filters narrow the table together, not one replacing the other.
+func TestProvinceFilterAppliesInAdditionToBoundingBox(t *testing.T) {
+	t.Parallel()
+
+	srv := serve(t, http.StatusOK, fixture(t, "ica-ultima-hora.csv"))
+	p := dcat.NewAirQuality(src(srv.URL, map[string]string{
+		// This bbox alone keeps 13 stations across three provinces (see the
+		// bbox test above); the province option must narrow it to 6.
+		"bbox":     "-5.8,37.2,-4.0,38.8",
+		"province": "14",
+	}), httpx.New())
+
+	records, err := p.Poll(context.Background())
+	if err != nil {
+		t.Fatalf("Poll() = %v", err)
+	}
+	if len(records) != 6 {
+		t.Fatalf("Poll() = %d records, want 6", len(records))
+	}
+}
+
+// A malformed province or municipality option is a configuration mistake, not
+// a filter that quietly matches nothing eye can silently under-report.
+func TestMalformedProvinceOrMunicipalityOptionFailsLoudly(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		opts map[string]string
+	}{
+		{name: "province too short", opts: map[string]string{"province": "1"}},
+		{name: "province too long", opts: map[string]string{"province": "140"}},
+		{name: "province not numeric", opts: map[string]string{"province": "AB"}},
+		{name: "municipality too short", opts: map[string]string{"municipality": "1402"}},
+		{name: "municipality too long", opts: map[string]string{"municipality": "140210"}},
+		{name: "municipality not numeric", opts: map[string]string{"municipality": "1402A"}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			srv := serve(t, http.StatusOK, fixture(t, "ica-ultima-hora.csv"))
+			_, err := dcat.NewAirQuality(src(srv.URL, tc.opts), httpx.New()).Poll(context.Background())
+			if err == nil {
+				t.Fatal("a malformed option was accepted silently")
+			}
+			if !errors.Is(err, dcat.ErrDCAT) {
+				t.Errorf("error = %v, want it wrapped in ErrDCAT", err)
+			}
+		})
+	}
+}
+
 // The stations are an inventory in their own right, published with every poll.
 func TestEntities(t *testing.T) {
 	t.Parallel()

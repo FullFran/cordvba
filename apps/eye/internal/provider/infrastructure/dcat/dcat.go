@@ -201,6 +201,11 @@ func (p *AirQualityProvider) Entities(ctx context.Context) ([]observation.Entity
 
 // read fetches the distribution and parses the rows eye can place.
 func (p *AirQualityProvider) read(ctx context.Context) ([]station, *httpx.Response, error) {
+	filters, err := p.stationFilters()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	resp, err := p.client.Get(ctx, p.distribution(), httpx.Validators{})
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w: %s: %w", ErrDCAT, p.src.ID, err)
@@ -211,20 +216,67 @@ func (p *AirQualityProvider) read(ctx context.Context) ([]station, *httpx.Respon
 		return nil, nil, fmt.Errorf("poll %s: %w", p.src.ID, err)
 	}
 
-	west, south, east, north, filtering := p.viewport()
 	kept := make([]station, 0, len(rows))
 	for _, row := range rows {
 		s, ok := toStation(row)
-		if !ok {
-			continue
-		}
-		if filtering && (s.Position.Lon < west || s.Position.Lon > east ||
-			s.Position.Lat < south || s.Position.Lat > north) {
+		if !ok || !filters.matches(s) {
 			continue
 		}
 		kept = append(kept, s)
 	}
 	return kept, resp, nil
+}
+
+// stationFilters is every narrowing the registry configured for this source.
+// Each one is independent and, when configured, must all match.
+type stationFilters struct {
+	west, south, east, north float64
+	byBBox                   bool
+	province                 string
+	byProvince               bool
+	municipality             string
+	byMunicipality           bool
+}
+
+// matches reports whether a station survives every configured filter.
+func (f stationFilters) matches(s station) bool {
+	if f.byBBox && (s.Position.Lon < f.west || s.Position.Lon > f.east ||
+		s.Position.Lat < f.south || s.Position.Lat > f.north) {
+		return false
+	}
+	if !f.byProvince && !f.byMunicipality {
+		return true
+	}
+	padded := padStationCode(s.Code)
+	if f.byProvince && !strings.HasPrefix(padded, f.province) {
+		return false
+	}
+	if f.byMunicipality && !strings.HasPrefix(padded, f.municipality) {
+		return false
+	}
+	return true
+}
+
+// stationFilters reads the registry options that narrow the national table:
+// the legacy "bbox" viewport plus the "province" and "municipality" station-code
+// prefixes, which apply in addition to it rather than replacing it.
+func (p *AirQualityProvider) stationFilters() (stationFilters, error) {
+	var f stationFilters
+	f.west, f.south, f.east, f.north, f.byBBox = p.viewport()
+
+	province, byProvince, err := p.codePrefixFilter("province", 2)
+	if err != nil {
+		return stationFilters{}, err
+	}
+	f.province, f.byProvince = province, byProvince
+
+	municipality, byMunicipality, err := p.codePrefixFilter("municipality", 5)
+	if err != nil {
+		return stationFilters{}, err
+	}
+	f.municipality, f.byMunicipality = municipality, byMunicipality
+
+	return f, nil
 }
 
 // distribution is the table to read. The registry may point at the catalogue,
@@ -258,6 +310,48 @@ func (p *AirQualityProvider) viewport() (west, south, east, north float64, ok bo
 		values = append(values, v)
 	}
 	return values[0], values[1], values[2], values[3], true
+}
+
+// codePrefixFilter reads an optional numeric registry option meant to be
+// compared against the left-padded station code's prefix — "province" (2
+// digits) or "municipality" (5 digits). A value present but the wrong shape
+// is a configuration mistake, not a filter that quietly matches nothing: it
+// is rejected here rather than left to silently drop every station.
+func (p *AirQualityProvider) codePrefixFilter(option string, width int) (prefix string, ok bool, err error) {
+	raw := strings.TrimSpace(p.src.Option(option, ""))
+	if raw == "" {
+		return "", false, nil
+	}
+	if len(raw) != width || !isDigits(raw) {
+		return "", false, fmt.Errorf("%w: source %s needs a %d-digit numeric %q option, got %q",
+			ErrDCAT, p.src.ID, width, option, raw)
+	}
+	return raw, true, nil
+}
+
+// padStationCode left-pads cod_estacion to the 8 digits its own dictionary
+// implies: a 5-digit INE municipality code followed by a 3-digit station
+// number, published without the leading zero. Without the padding, a code in
+// province 01 (e.g. "1022001") would compare as if it started with "10".
+func padStationCode(code string) string {
+	if len(code) >= 8 {
+		return code
+	}
+	return strings.Repeat("0", 8-len(code)) + code
+}
+
+// isDigits reports whether every rune is a decimal digit. An empty string is
+// not a valid option value.
+func isDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // parseTable reads the distribution by column name.
