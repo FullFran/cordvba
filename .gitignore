@@ -10,6 +10,12 @@ coverage.out
 
 # Environment secrets
 .env
+.env.local
+
+# Node/TypeScript build artifacts (apps/web and more to come).
+node_modules/
+dist/
+*.tsbuildinfo
 
 # Editor/OS noise
 .DS_Store
