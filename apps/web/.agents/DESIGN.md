@@ -144,7 +144,12 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   instead of it silently vanishing. A caption states the two honesty notes
   verbatim ("Extrusion heights: OpenStreetMap, approximate…"; "Beacons
   show individual stations only — no interpolated surface") as a small
-  overlay chip, not layout-height text. Sun-driven (issue #139): a
+  overlay chip, not layout-height text. Two camera states (parent review):
+  the station-framed overview (`flyToOverview`, reusing the exact
+  `fitBounds` the initial mount computed) and "Casco histórico / Historic
+  centre" (`flyToHistoricCentre`, zoom 16.5, pitch 60° over the Mezquita
+  — where building shadows actually read), a segmented-control toggle
+  (`.map-camera-presets`) in the map legend. Sun-driven (issue #139): a
   `sun: SunPosition` prop (computed once in `App.tsx` from the timeline's
   selected time, `src/lib/sun.ts`'s `getSunPosition`) drives three effects
   — the extrusion light and background/water palette via
@@ -615,6 +620,24 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   this scale (see the report's timing numbers) — real future work if the
   historic centre's building count grows enough to matter, not a
   currently-measured problem.
+- **2026-09-26 — "Casco histórico / Historic centre" camera preset
+  (parent review: "shadows are invisible at city zoom").** The station-
+  framed overview camera is deliberately wide — it has to fit three
+  spread-out stations plus the centre — so a building's shadow (tens to
+  low-hundreds of metres) reads as a sliver at that scale, however
+  correct the underlying geometry is. A second, explicit camera state
+  (`MapView.tsx`'s `flyToHistoricCentre`, zoom 16.5, pitch 60°, over
+  `CORDOBA_HISTORIC_CENTRE` — the Mezquita) gives shadows a frame where
+  they occupy a meaningful fraction of the screen, with a segmented-
+  control-style toggle (`.map-camera-presets`, same shape as the locale
+  switch) to jump back to the overview via `flyToOverview`, which reuses
+  the exact `LngLatBounds` the initial mount computed (`overviewBoundsRef`)
+  rather than recomputing it. `--map-shadow-fill`'s alpha raised 0.4→0.6
+  to match — legible without reading as solid black. Verified in a real
+  browser at both a high midday sun (short, near-building shadows) and
+  golden hour (long shadows stretching across open ground, the sun near
+  the horizon) — direction stayed consistent with `shadowBearing`
+  (opposite the sun's azimuth) in both.
 - **2026-09-26 — Air quality as columns of light: real 3D extrusion, not
   a taller pill (issue #140, maintainer: "a more artistic representation
   using the 3D city it sits in").** A `fill-extrusion` GeoJSON layer

@@ -24,6 +24,18 @@ const CORDOBA_HISTORIC_CENTRE: [number, number] = [-4.7794, 37.8789];
  */
 const INITIAL_PITCH = 58;
 const INITIAL_BEARING = -35;
+/**
+ * The "Casco histórico / Historic centre" camera preset (parent review:
+ * "shadows are invisible at city zoom"). The station-framed overview
+ * camera is deliberately wide (it has to fit three spread-out stations
+ * plus the centre); building shadows a few tens of metres long simply
+ * do not read at that scale. This preset flies close over the Mezquita
+ * — `CORDOBA_HISTORIC_CENTRE` — steeply pitched, where a shadow spans a
+ * meaningful fraction of the frame.
+ */
+const HISTORIC_PRESET_ZOOM = 16.5;
+const HISTORIC_PRESET_PITCH = 60;
+type CameraPreset = "overview" | "historic";
 /** Generous, HUD-aware padding (issue #119, maintainer review): the state dock (right), scrubber (bottom) and header overlay (top) must never cover a station. Only applies at/above the `MOBILE_BREAKPOINT_PX` — see `resolveFitPadding`. */
 const DESKTOP_FIT_PADDING = { top: 180, bottom: 150, left: 48, right: 340 };
 /**
@@ -130,6 +142,8 @@ export function MapView({ environment, highlightStationId, sun }: MapViewProps) 
   const [windEnabled, setWindEnabled] = useState(true);
   const windToggleId = useId();
   const initialSunRef = useRef(sun);
+  const overviewBoundsRef = useRef<maplibregl.LngLatBounds | null>(null);
+  const [cameraPreset, setCameraPreset] = useState<CameraPreset>("overview");
 
   useEffect(() => {
     const container = containerRef.current;
@@ -143,6 +157,7 @@ export function MapView({ environment, highlightStationId, sun }: MapViewProps) 
       (b, s) => b.extend([s.lon, s.lat]),
       new maplibregl.LngLatBounds(CORDOBA_HISTORIC_CENTRE, CORDOBA_HISTORIC_CENTRE),
     );
+    overviewBoundsRef.current = bounds;
 
     loadDarkStyle(undefined, sunPhase(initialSunRef.current.altitudeDeg))
       .then((style) => {
@@ -500,7 +515,7 @@ export function MapView({ environment, highlightStationId, sun }: MapViewProps) 
       if (!map.getLayer(SHADOW_LAYER_ID)) {
         const shadowFill =
           getComputedStyle(document.documentElement).getPropertyValue("--map-shadow-fill").trim() ||
-          "rgba(3, 6, 12, 0.4)"; // ds-allow-hardcode (runtime CSS-variable fallback, same convention as darkStyle.ts's readMapPalette)
+          "rgba(3, 6, 12, 0.6)"; // ds-allow-hardcode (runtime CSS-variable fallback, same convention as darkStyle.ts's readMapPalette)
         map.addLayer({
           id: SHADOW_LAYER_ID,
           type: "fill",
@@ -571,6 +586,33 @@ export function MapView({ environment, highlightStationId, sun }: MapViewProps) 
       ? environment.weather.wind_direction.value
       : null;
 
+  // Camera presets (parent review): "Casco histórico / Historic centre"
+  // flies close over the Mezquita where building shadows actually read;
+  // "Vista general / Overview" returns to the original station-fitted
+  // framing via the exact same `fitBounds` call the initial mount used.
+  function flyToOverview() {
+    if (!map || !overviewBoundsRef.current) return;
+    map.fitBounds(overviewBoundsRef.current, {
+      padding: resolveFitPadding(map.getContainer().clientWidth),
+      pitch: INITIAL_PITCH,
+      bearing: INITIAL_BEARING,
+      duration: prefersReducedMotion() ? 0 : 1500,
+    });
+    setCameraPreset("overview");
+  }
+
+  function flyToHistoricCentre() {
+    if (!map) return;
+    map.flyTo({
+      center: CORDOBA_HISTORIC_CENTRE,
+      zoom: HISTORIC_PRESET_ZOOM,
+      pitch: HISTORIC_PRESET_PITCH,
+      bearing: INITIAL_BEARING,
+      duration: prefersReducedMotion() ? 0 : 1500,
+    });
+    setCameraPreset("historic");
+  }
+
   return (
     <div className="map-view">
       <div className="map-view__stage" role="region" aria-label={t.map.ariaLabel} ref={stageRef}>
@@ -591,6 +633,27 @@ export function MapView({ environment, highlightStationId, sun }: MapViewProps) 
             rendered, not gated on `map`, so it is visible on every
             breakpoint regardless of load state. */}
         <div className="map-legend">
+          {/* Camera presets (parent review: "shadows are invisible at city
+              zoom"): the station-framed overview has to stay wide enough to
+              fit three spread-out stations, so a close, legible view of the
+              historic centre's building shadows needs its own camera jump,
+              with a way back. */}
+          <div className="map-camera-presets" role="group" aria-label={t.map.cameraPresetsLabel}>
+            <button
+              type="button"
+              aria-pressed={cameraPreset === "overview"}
+              onClick={flyToOverview}
+            >
+              {t.map.presetOverview}
+            </button>
+            <button
+              type="button"
+              aria-pressed={cameraPreset === "historic"}
+              onClick={flyToHistoricCentre}
+            >
+              {t.map.presetHistoric}
+            </button>
+          </div>
           <label htmlFor={windToggleId} className="map-legend__toggle">
             <input
               id={windToggleId}

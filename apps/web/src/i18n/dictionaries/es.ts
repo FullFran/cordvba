@@ -37,6 +37,9 @@ export const es = {
     edgeIndicator: "{name}, a {distance} km",
     columnsLegend:
       "Cada columna es una estación; altura = índice ICA; no se interpola entre estaciones.",
+    cameraPresetsLabel: "Vista de cámara",
+    presetOverview: "Vista general",
+    presetHistoric: "Casco histórico",
   },
   wind: {
     toggle: "Viento ilustrativo",

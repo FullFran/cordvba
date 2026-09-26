@@ -43,6 +43,7 @@ vi.mock("maplibre-gl", () => {
     on = vi.fn();
     off = vi.fn();
     fitBounds = vi.fn();
+    flyTo = vi.fn();
     project = vi.fn().mockReturnValue({ x: 400, y: 200 });
     // Matches the page's own initial bearing (issue #138's `INITIAL_BEARING`).
     getBearing = vi.fn(() => -35);
@@ -448,5 +449,56 @@ describe("resolveFitPadding (polish: the mobile beacon-clipping bug)", () => {
   it("leaves enough room on a 390px-wide viewport for an actual map area to fit bounds into", () => {
     const padding = resolveFitPadding(390);
     expect(padding.left + padding.right).toBeLessThan(390 * 0.5);
+  });
+});
+
+describe("MapView: historic-centre camera preset (parent review: 'shadows are invisible at city zoom')", () => {
+  afterEach(() => {
+    mapInstances.length = 0;
+    markerInstances.length = 0;
+  });
+
+  it("flies to the historic centre at a close, steeply pitched zoom when the preset is chosen", async () => {
+    render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: 40 }} />);
+    await waitFor(() => expect(mapInstances).toHaveLength(1));
+    const instance = mapInstances[0] as unknown as { flyTo: ReturnType<typeof vi.fn> };
+
+    await userEvent.click(screen.getByRole("button", { name: /historic/i }));
+
+    expect(instance.flyTo).toHaveBeenCalledTimes(1);
+    const [options] = instance.flyTo.mock.calls[0]!;
+    expect(options.zoom).toBeGreaterThanOrEqual(16);
+    expect(options.pitch).toBeGreaterThanOrEqual(55);
+    expect(options.center).toEqual([-4.7794, 37.8789]); // the Mezquita / historic-centre point
+  });
+
+  it("flies back to the station overview via fitBounds when 'overview' is chosen again", async () => {
+    render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: 40 }} />);
+    await waitFor(() => expect(mapInstances).toHaveLength(1));
+    const instance = mapInstances[0] as unknown as {
+      fitBounds: ReturnType<typeof vi.fn>;
+      flyTo: ReturnType<typeof vi.fn>;
+    };
+    instance.fitBounds.mockClear(); // clear the initial-mount call
+
+    await userEvent.click(screen.getByRole("button", { name: /historic/i }));
+    await userEvent.click(screen.getByRole("button", { name: /overview|general/i }));
+
+    expect(instance.fitBounds).toHaveBeenCalledTimes(1);
+  });
+
+  it("marks the active preset with aria-pressed, toggle-group style", async () => {
+    render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: 40 }} />);
+    await waitFor(() => expect(mapInstances).toHaveLength(1));
+
+    const overviewButton = screen.getByRole("button", { name: /overview|general/i });
+    const historicButton = screen.getByRole("button", { name: /historic/i });
+    expect(overviewButton).toHaveAttribute("aria-pressed", "true");
+    expect(historicButton).toHaveAttribute("aria-pressed", "false");
+
+    await userEvent.click(historicButton);
+
+    expect(overviewButton).toHaveAttribute("aria-pressed", "false");
+    expect(historicButton).toHaveAttribute("aria-pressed", "true");
   });
 });

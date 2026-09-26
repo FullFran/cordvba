@@ -366,6 +366,33 @@ a {
   pointer-events: auto;
 }
 
+/* The camera-preset toggle group (parent review: "Casco histórico /
+   Historic centre"), the same segmented-control shape as the locale
+   switch (`.locale-switch`) so the two read as the same kind of control. */
+.map-camera-presets {
+  display: flex;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: var(--space-2);
+  width: fit-content;
+}
+
+.map-camera-presets button {
+  background: transparent;
+  color: var(--color-text-muted);
+  border: none;
+  padding: var(--space-1) var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.map-camera-presets button[aria-pressed="true"] {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+}
+
 .map-legend__toggle {
   display: flex;
   align-items: center;

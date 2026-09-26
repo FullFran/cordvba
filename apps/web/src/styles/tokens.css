@@ -104,8 +104,10 @@
   /* The historic-centre building-shadow layer (issue #139): always a
      plain dark translucent tint, regardless of phase — a shadow is a
      shadow at any time of day; it simply is not drawn once the sun is
-     down (see `shadowLengthM`/AC-3). */
-  --map-shadow-fill: rgba(3, 6, 12, 0.4);
+     down (see `shadowLengthM`/AC-3). Raised from 0.4 to 0.6 (parent
+     review: "shadows are invisible at city zoom") — legible at the new
+     historic-centre camera preset without reading as solid black. */
+  --map-shadow-fill: rgba(3, 6, 12, 0.6);
   --map-park: #0f2418;
   --map-building-low: #171d2b;
   --map-building-high: #3a4a63;

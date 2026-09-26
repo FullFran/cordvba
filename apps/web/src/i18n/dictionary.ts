@@ -41,6 +41,10 @@ export interface Dictionary {
     edgeIndicator: string;
     /** The air-quality columns layer's honesty line (issue #140): one column per station, height = index, no interpolation. */
     columnsLegend: string;
+    /** The camera-preset toggle group's accessible group label (parent review). */
+    cameraPresetsLabel: string;
+    presetOverview: string;
+    presetHistoric: string;
   };
   wind: {
     toggle: string;
