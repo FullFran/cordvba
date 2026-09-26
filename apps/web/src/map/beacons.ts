@@ -26,6 +26,27 @@ export function categoryShape(category: string): BeaconShape {
 }
 
 /**
+ * The air-quality beacon's breathing-ring animation duration, in
+ * milliseconds (issue #140): slower for good air, faster for poor —
+ * "the air is calm" vs. "the air is agitated," a second, colour-independent
+ * severity channel alongside `categoryShape` and the category/index text.
+ * An unrecognised category falls back to the "moderate" rate rather than
+ * throwing or breathing at 0ms.
+ */
+const BREATHING_DURATION_MS: Record<string, number> = {
+  good: 3600,
+  fair: 2800,
+  moderate: 2200,
+  poor: 1700,
+  very_poor: 1300,
+  extremely_poor: 900,
+};
+
+export function breathingDurationMs(category: string): number {
+  return BREATHING_DURATION_MS[category] ?? BREATHING_DURATION_MS["moderate"]!;
+}
+
+/**
  * The wind arrow's on-screen rotation, in degrees (issue #138 — supersedes
  * issue #102's original "rotate straight to the reported degree" decision,
  * see DESIGN.md's decision log): it must point where the wind blows TO,
@@ -49,6 +70,8 @@ export interface AirQualityBeaconSpec {
   category: string;
   index: number | string | null;
   highlighted: boolean;
+  /** The pollutant responsible for the current index (issue #140), e.g. "O3", "NO2" — the contract's `due_to`. Shown as text, not just implied by colour/category. */
+  pollutant?: string;
 }
 
 export interface WindBeaconSpec {
@@ -83,8 +106,10 @@ function el(tag: string, className: string, text?: string): HTMLElement {
 export function createBeaconElement(spec: BeaconSpec, locale: Locale = "en"): HTMLElement {
   const t = DICTIONARIES[locale];
   const root = el("div", "beacon");
-  root.appendChild(el("span", "beacon__ring"));
-  root.appendChild(el("span", "beacon__ring beacon__ring--outer"));
+  const innerRing = el("span", "beacon__ring");
+  const outerRing = el("span", "beacon__ring beacon__ring--outer");
+  root.appendChild(innerRing);
+  root.appendChild(outerRing);
 
   if (spec.kind === "air-quality") {
     const shape = categoryShape(spec.category);
@@ -96,20 +121,38 @@ export function createBeaconElement(spec: BeaconSpec, locale: Locale = "en"): HT
     if (spec.highlighted) {
       root.classList.add("beacon--highlighted");
     }
+    // The breathing ring (issue #140): slower for good air, faster for
+    // poor — a third, colour-independent severity channel. Set here as an
+    // inline longhand rather than the `.beacon__ring` stylesheet rule's
+    // `animation` shorthand, so `prefers-reduced-motion`'s `animation: none`
+    // override (same stylesheet, a higher-specificity media query) still
+    // wins outright — this only ever overrides the *duration*, never
+    // whether it animates at all.
+    const durationMs = `${breathingDurationMs(spec.category)}ms`;
+    innerRing.style.animationDuration = durationMs;
+    outerRing.style.animationDuration = durationMs;
+
     const categoryWord = formatAirQualityCategory(spec.category, locale);
+    const indexText = spec.index === null ? t.map.unknownIndex : String(spec.index);
     root.setAttribute(
       "aria-label",
-      formatTemplate(t.map.beaconAirQuality, {
-        name: spec.name,
-        category: categoryWord,
-        index: spec.index === null ? t.map.unknownIndex : String(spec.index),
-      }),
+      spec.pollutant
+        ? formatTemplate(t.map.beaconAirQualityWithPollutant, {
+            name: spec.name,
+            category: categoryWord,
+            index: indexText,
+            pollutant: spec.pollutant,
+          })
+        : formatTemplate(t.map.beaconAirQuality, { name: spec.name, category: categoryWord, index: indexText }),
     );
 
     root.appendChild(el("span", `beacon__shape beacon__shape--${shape}`));
     const core = el("span", "beacon__core");
     core.appendChild(el("span", "beacon__index", spec.index === null ? "—" : String(spec.index)));
     core.appendChild(el("span", "beacon__category", categoryWord));
+    if (spec.pollutant) {
+      core.appendChild(el("span", "beacon__pollutant", spec.pollutant));
+    }
     root.appendChild(core);
     return root;
   }

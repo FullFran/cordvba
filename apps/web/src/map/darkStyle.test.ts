@@ -305,6 +305,7 @@ describe("buildDarkStyle: road network muted to neutral slate (issue 119, mainta
   });
 });
 
+// ds-allow-hardcode:start (test fixture: arbitrary literal colours, distinct per phase, exercising readMapPalette's own token-reading logic — not this app's own design decisions)
 describe("readMapPalette phase support (issue #139: a day/dusk/night base-map palette driven by sun altitude, tokens not hardcoded colours)", () => {
   afterEach(() => {
     // jsdom resolves inline custom properties without loading tokens.css
@@ -345,6 +346,7 @@ describe("readMapPalette phase support (issue #139: a day/dusk/night base-map pa
     expect(day.roadMinor).toBe(night.roadMinor);
   });
 });
+// ds-allow-hardcode:end
 
 describe("buildDarkStyle: extrusion visibility (issue 119, maintainer review: '3D barely perceptible')", () => {
   it("lowers building-3d's minzoom so extrusions render at a wider fitBounds camera", () => {

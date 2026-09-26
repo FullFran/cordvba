@@ -34,9 +34,13 @@ export interface Dictionary {
     ariaLabel: string;
     caption: string;
     beaconAirQuality: string;
+    /** Same as `beaconAirQuality`, plus the pollutant responsible (issue #140), e.g. "due to O3". */
+    beaconAirQualityWithPollutant: string;
     beaconWind: string;
     unknownIndex: string;
     edgeIndicator: string;
+    /** The air-quality columns layer's honesty line (issue #140): one column per station, height = index, no interpolation. */
+    columnsLegend: string;
   };
   wind: {
     toggle: string;

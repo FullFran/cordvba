@@ -6,6 +6,7 @@ import { useLocale } from "../i18n/LocaleContext";
 import { prefersReducedMotion } from "../lib/motion";
 import { formatAirQualityCategory } from "../lib/format";
 import { sunPhase, type SunPosition } from "../lib/sun";
+import { stationColumnFeature } from "../map/airQualityColumns";
 import { createBeaconElement, createEdgeIndicatorElement, windArrowRotation } from "../map/beacons";
 import { loadDarkStyle, readMapPalette } from "../map/darkStyle";
 import { clampToEdge, haversineDistanceKm } from "../map/geo";
@@ -29,13 +30,17 @@ const EDGE_MARGIN = 40;
 
 const SHADOW_SOURCE_ID = "building-shadows";
 const SHADOW_LAYER_ID = "building-shadows-layer";
+const AQ_COLUMNS_SOURCE_ID = "air-quality-columns";
+const AQ_COLUMNS_LAYER_ID = "air-quality-columns-layer";
 const EMPTY_FEATURE_COLLECTION: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
 /** Reads the tokens.css light-tint variable for a given sun phase (issue #139); falls back to a sane default so a missing token never breaks `map.setLight`. */
+// ds-allow-hardcode:start (runtime CSS-variable fallback, same convention as darkStyle.ts's readMapPalette)
 const LIGHT_TOKEN_FALLBACK: Record<ReturnType<typeof sunPhase>, string> = {
   day: "#cfe0f5",
   dusk: "#f2b783",
   night: "#6b7ba8",
 };
+// ds-allow-hardcode:end
 
 export interface MapViewProps {
   environment: EnvironmentResponse;
@@ -145,6 +150,7 @@ export function MapView({ environment, highlightStationId, sun }: MapViewProps) 
           category: station.index.category,
           index: station.index.value,
           highlighted: station.id === highlightStationId,
+          pollutant: station.index.due_to,
         },
         locale,
       );
@@ -155,6 +161,85 @@ export function MapView({ environment, highlightStationId, sun }: MapViewProps) 
       markers.forEach((marker) => marker.remove());
     };
   }, [map, environment.air_quality.stations, highlightStationId, locale]);
+
+  // Air quality as columns of light (issue #140): one small extruded disc
+  // per city station, its height encoding the ICA index and its colour
+  // following the category tokens — never an interpolated surface between
+  // the three stations (DESIGN.md §7's standing rule; see the legend line
+  // below). Static per-station data (unlike the sun layers above, this
+  // does not depend on `atTime`), so it is only rebuilt when the stations
+  // themselves change.
+  useEffect(() => {
+    if (!map) {
+      return undefined;
+    }
+
+    function ensureColumnsLayer() {
+      if (!map) return;
+      if (!map.getSource(AQ_COLUMNS_SOURCE_ID)) {
+        map.addSource(AQ_COLUMNS_SOURCE_ID, { type: "geojson", data: EMPTY_FEATURE_COLLECTION });
+      }
+      if (!map.getLayer(AQ_COLUMNS_LAYER_ID)) {
+        const style = getComputedStyle(document.documentElement);
+        const read = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback;
+        // ds-allow-hardcode:start (runtime CSS-variable fallback, same convention as darkStyle.ts's readMapPalette)
+        const colorMatch: maplibregl.ExpressionSpecification = [
+          "match",
+          ["get", "category"],
+          "good",
+          read("--color-aq-good", "#34d399"),
+          "fair",
+          read("--color-aq-fair", "#a3e635"),
+          "moderate",
+          read("--color-aq-moderate", "#facc15"),
+          "poor",
+          read("--color-aq-poor", "#fb923c"),
+          "very_poor",
+          read("--color-aq-very-poor", "#f87171"),
+          "extremely_poor",
+          read("--color-aq-extremely-poor", "#e879f9"),
+          read("--color-aq-moderate", "#facc15"),
+        ];
+        // ds-allow-hardcode:end
+        map.addLayer({
+          id: AQ_COLUMNS_LAYER_ID,
+          type: "fill-extrusion",
+          source: AQ_COLUMNS_SOURCE_ID,
+          paint: {
+            "fill-extrusion-color": colorMatch,
+            "fill-extrusion-height": ["get", "height"],
+            "fill-extrusion-base": 0,
+            "fill-extrusion-opacity": 0.75,
+          },
+        });
+      }
+    }
+
+    function updateColumns() {
+      if (!map) return;
+      const source = map.getSource(AQ_COLUMNS_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+      if (!source) return;
+      const features = environment.air_quality.stations.map((station) =>
+        stationColumnFeature({
+          lat: station.lat,
+          lon: station.lon,
+          category: station.index.category,
+          index: station.index.value,
+        }),
+      );
+      source.setData({ type: "FeatureCollection", features });
+    }
+
+    if (map.isStyleLoaded()) {
+      ensureColumnsLayer();
+      updateColumns();
+    } else {
+      map.once("load", () => {
+        ensureColumnsLayer();
+        updateColumns();
+      });
+    }
+  }, [map, environment.air_quality.stations]);
 
   // The airport weather beacon, always at its true position; a manually
   // positioned edge indicator (not a MapLibre Marker, which cannot be
@@ -404,6 +489,7 @@ export function MapView({ environment, highlightStationId, sun }: MapViewProps) 
           </label>
           {windEnabled ? <p className="map-legend__line">{t.wind.label}</p> : null}
           <p className="map-legend__line map-legend__line--muted">{t.map.caption}</p>
+          <p className="map-legend__line map-legend__line--muted">{t.map.columnsLegend}</p>
           {sun.altitudeDeg > 0 ? (
             <p className="map-legend__line map-legend__line--muted">{t.sun.shadowLegend}</p>
           ) : null}

@@ -120,7 +120,17 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   circle): a glow + two pulsing rings (CSS, frozen under reduced motion),
   a small `.beacon__shape` severity icon (circle→star, softest→sharpest)
   separate from the text, and the index/category as literal text — never
-  colour alone (AC-2). No interpolated air-quality surface, ever. When the
+  colour alone (AC-2). Each air-quality pill also names the pollutant
+  responsible (issue #140, e.g. "O3"), and its two rings breathe at a
+  category-driven rate (`breathingDurationMs`: slower for good air, faster
+  for poor) — a fourth, colour-independent severity channel alongside
+  shape/text/height. Real 3D "columns of light" (issue #140,
+  `src/map/airQualityColumns.ts`) rise from each of the three city
+  stations as a small `fill-extrusion` disc, height literally encoding
+  the ICA index (`icaColumnHeightM`) and colour following the same
+  `--color-aq-*` tokens — one independent GeoJSON feature per station,
+  never a shared/merged surface (the columns' own legend line states this
+  explicitly). No interpolated air-quality surface, ever. When the
   airport beacon's true position falls outside the viewport, a
   `clampToEdge`-positioned arrow + distance (`src/map/geo.ts`) replaces it
   instead of it silently vanishing. A caption states the two honesty notes
@@ -567,3 +577,24 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   this scale (see the report's timing numbers) — real future work if the
   historic centre's building count grows enough to matter, not a
   currently-measured problem.
+- **2026-09-26 — Air quality as columns of light: real 3D extrusion, not
+  a taller pill (issue #140, maintainer: "a more artistic representation
+  using the 3D city it sits in").** A `fill-extrusion` GeoJSON layer
+  (`src/map/airQualityColumns.ts`) sits alongside the existing DOM-marker
+  beacon (kept, not replaced): the beacon still carries the accessible
+  text/aria-label and now also the pollutant and a category-rate breathing
+  ring, while the column is the genuinely new, literally-3D "height =
+  index" encoding the issue asked for. Rejected: replacing the beacon
+  outright — the existing pill is exactly the kind of "glow + rings +
+  shape + text" treatment this file already documents at length (§4,
+  Decision Log), and duplicating that work under a new name would have
+  cost far more than it added; the column is additive value, not a
+  redesign.
+- **2026-09-26 — Column footprint: a 16-gon disc via `destinationPoint`,
+  not a MapLibre `circle` layer (issue #140).** `circle` layers are
+  always 2D (screen-space radius, no `fill-extrusion-height`); a real
+  extruded "column" needs an actual small `Polygon` footprint in the
+  source data. `discPolygonCoordinates` reuses `geo.ts`'s
+  `destinationPoint` (the same geodesic-offset helper issue #139's
+  shadows already introduced) around each station at a fixed 14m radius,
+  16 vertices — plenty round at the zoom this app frames stations at.
