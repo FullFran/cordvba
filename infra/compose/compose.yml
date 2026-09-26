@@ -33,7 +33,7 @@ services:
       - default
       - eye
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request as u; u.urlopen('http://localhost:8100/health', timeout=3)"]
+      test: ["CMD", "python3", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8100/health', timeout=3)"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -68,7 +68,7 @@ services:
       twin:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/health', timeout=3)"]
+      test: ["CMD", "python3", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -94,7 +94,7 @@ services:
     networks:
       - default
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:80/"]
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:80/"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -140,7 +140,7 @@ services:
       api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:8080/"]
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:8080/"]
       interval: 30s
       timeout: 5s
       retries: 3
