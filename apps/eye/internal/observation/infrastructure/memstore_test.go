@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	domain "github.com/FullFran/eye/internal/observation/domain"
-	store "github.com/FullFran/eye/internal/observation/infrastructure"
+	domain "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	store "github.com/FullFran/cordvba/apps/eye/internal/observation/infrastructure"
 )
 
 // record builds a valid record with the given id and time.

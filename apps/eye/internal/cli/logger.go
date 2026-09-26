@@ -3,7 +3,7 @@ package cli
 import (
 	"log/slog"
 
-	application "github.com/FullFran/eye/internal/observation/application"
+	application "github.com/FullFran/cordvba/apps/eye/internal/observation/application"
 )
 
 // loggerAlias names the logger type these commands pass around. It exists only

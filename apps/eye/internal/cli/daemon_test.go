@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FullFran/eye/internal/cli"
+	"github.com/FullFran/cordvba/apps/eye/internal/cli"
 )
 
 // The daemon must poll everything shortly after startup and shut down cleanly

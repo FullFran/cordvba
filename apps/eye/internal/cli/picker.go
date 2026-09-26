@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 )
 
 // pickerPageSize is how many options are shown at once. More than this and the

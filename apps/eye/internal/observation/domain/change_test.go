@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 )
 
 var now = time.Date(2026, 8, 28, 12, 0, 0, 0, time.UTC)

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 )
 
 // observationEntityWithID builds a bare entity for naming tests.

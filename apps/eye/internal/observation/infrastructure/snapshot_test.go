@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	domain "github.com/FullFran/eye/internal/observation/domain"
-	store "github.com/FullFran/eye/internal/observation/infrastructure"
+	domain "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	store "github.com/FullFran/cordvba/apps/eye/internal/observation/infrastructure"
 )
 
 var snapshotTime = time.Date(2026, 8, 28, 12, 0, 0, 0, time.UTC)

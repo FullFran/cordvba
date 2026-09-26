@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/FullFran/eye/internal/httpx"
+	"github.com/FullFran/cordvba/apps/eye/internal/httpx"
 )
 
 // Stop is one bus stop as the operator's own directory names it.

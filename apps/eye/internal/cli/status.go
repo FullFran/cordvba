@@ -8,10 +8,10 @@ import (
 	"sort"
 	"time"
 
-	application "github.com/FullFran/eye/internal/observation/application"
-	observation "github.com/FullFran/eye/internal/observation/domain"
-	"github.com/FullFran/eye/internal/render"
-	source "github.com/FullFran/eye/internal/source/domain"
+	application "github.com/FullFran/cordvba/apps/eye/internal/observation/application"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/render"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 )
 
 // statusCommand polls every live source and reports the state of the city and

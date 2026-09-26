@@ -25,10 +25,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/FullFran/eye/internal/httpx"
-	observation "github.com/FullFran/eye/internal/observation/domain"
-	provider "github.com/FullFran/eye/internal/provider/domain"
-	source "github.com/FullFran/eye/internal/source/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/httpx"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	provider "github.com/FullFran/cordvba/apps/eye/internal/provider/domain"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 )
 
 // ErrMETAR wraps every failure this adapter reports.

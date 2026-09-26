@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	application "github.com/FullFran/eye/internal/observation/application"
-	observation "github.com/FullFran/eye/internal/observation/domain"
+	application "github.com/FullFran/cordvba/apps/eye/internal/observation/application"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 )
 
 // changesCommand reports what moved since eye last looked.

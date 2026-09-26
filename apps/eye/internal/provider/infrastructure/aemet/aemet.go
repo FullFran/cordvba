@@ -23,8 +23,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/FullFran/eye/internal/httpx"
-	source "github.com/FullFran/eye/internal/source/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/httpx"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 )
 
 // Errors returned by the AEMET adapters.

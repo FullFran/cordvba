@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FullFran/eye/internal/httpx"
-	"github.com/FullFran/eye/internal/provider/infrastructure/datex"
-	source "github.com/FullFran/eye/internal/source/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/httpx"
+	"github.com/FullFran/cordvba/apps/eye/internal/provider/infrastructure/datex"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 )
 
 // serveFixture returns the recorded DevicePublication.

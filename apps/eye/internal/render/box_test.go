@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/FullFran/eye/internal/render"
+	"github.com/FullFran/cordvba/apps/eye/internal/render"
 )
 
 // Escape sequences are bytes the terminal never shows, so anything that lays

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 )
 
 // changeRecord builds a stored change of the given kind.

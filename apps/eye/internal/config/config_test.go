@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/FullFran/eye/internal/config"
+	"github.com/FullFran/cordvba/apps/eye/internal/config"
 )
 
 func TestLoadDefaults(t *testing.T) {

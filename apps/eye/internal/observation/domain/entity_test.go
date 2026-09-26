@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	domain "github.com/FullFran/eye/internal/observation/domain"
+	domain "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 )
 
 // validEntity returns an entity that passes Validate, for tests to mutate.

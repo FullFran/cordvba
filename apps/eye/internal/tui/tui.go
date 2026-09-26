@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/FullFran/eye/internal/render"
+	"github.com/FullFran/cordvba/apps/eye/internal/render"
 )
 
 // ViewID names one of the cockpit's screens.

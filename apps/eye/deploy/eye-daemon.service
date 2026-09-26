@@ -10,7 +10,7 @@
 
 [Unit]
 Description=eye source collector
-Documentation=https://github.com/FullFran/eye
+Documentation=https://github.com/FullFran/cordvba/apps/eye
 After=network-online.target
 Wants=network-online.target
 

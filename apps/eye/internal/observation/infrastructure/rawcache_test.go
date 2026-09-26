@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	store "github.com/FullFran/eye/internal/observation/infrastructure"
+	store "github.com/FullFran/cordvba/apps/eye/internal/observation/infrastructure"
 )
 
 func TestRawCacheRoundTrip(t *testing.T) {

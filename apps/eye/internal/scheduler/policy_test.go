@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FullFran/eye/internal/scheduler"
+	"github.com/FullFran/cordvba/apps/eye/internal/scheduler"
 )
 
 func TestBackoffNext(t *testing.T) {

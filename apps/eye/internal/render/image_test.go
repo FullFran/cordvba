@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/FullFran/eye/internal/render"
+	"github.com/FullFran/cordvba/apps/eye/internal/render"
 )
 
 // testImage builds a solid-colour image of the given size.

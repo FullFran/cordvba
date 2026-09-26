@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	application "github.com/FullFran/eye/internal/observation/application"
-	domain "github.com/FullFran/eye/internal/observation/domain"
-	store "github.com/FullFran/eye/internal/observation/infrastructure"
-	provider "github.com/FullFran/eye/internal/provider/domain"
-	source "github.com/FullFran/eye/internal/source/domain"
+	application "github.com/FullFran/cordvba/apps/eye/internal/observation/application"
+	domain "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	store "github.com/FullFran/cordvba/apps/eye/internal/observation/infrastructure"
+	provider "github.com/FullFran/cordvba/apps/eye/internal/provider/domain"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 )
 
 var tick = time.Date(2026, 8, 28, 12, 0, 0, 0, time.UTC)

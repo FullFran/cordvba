@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 )
 
 // Data is one read of everything the cockpit shows.

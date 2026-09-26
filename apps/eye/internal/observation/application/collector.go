@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	domain "github.com/FullFran/eye/internal/observation/domain"
-	provider "github.com/FullFran/eye/internal/provider/domain"
-	source "github.com/FullFran/eye/internal/source/domain"
+	domain "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	provider "github.com/FullFran/cordvba/apps/eye/internal/provider/domain"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 )
 
 // DefaultConcurrency bounds how many sources are polled at once. Public

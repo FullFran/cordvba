@@ -19,9 +19,9 @@ import (
 	"strings"
 	"time"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
-	source "github.com/FullFran/eye/internal/source/domain"
-	"github.com/FullFran/eye/internal/version"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/version"
 )
 
 // maxLimit caps how many records one request may take. A gateway that will

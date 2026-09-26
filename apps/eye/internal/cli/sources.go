@@ -9,9 +9,9 @@ import (
 	"text/tabwriter"
 	"time"
 
-	store "github.com/FullFran/eye/internal/observation/infrastructure"
-	providers "github.com/FullFran/eye/internal/provider/infrastructure"
-	source "github.com/FullFran/eye/internal/source/domain"
+	store "github.com/FullFran/cordvba/apps/eye/internal/observation/infrastructure"
+	providers "github.com/FullFran/cordvba/apps/eye/internal/provider/infrastructure"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 )
 
 // sourcesCommand lists the registry and, for each entry, whether eye is

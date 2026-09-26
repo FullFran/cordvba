@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FullFran/eye/internal/httpx"
-	observation "github.com/FullFran/eye/internal/observation/domain"
-	"github.com/FullFran/eye/internal/provider/infrastructure/dcat"
-	source "github.com/FullFran/eye/internal/source/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/httpx"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/provider/infrastructure/dcat"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 )
 
 // icaHeader is the distribution's column row, as published.

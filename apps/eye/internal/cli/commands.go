@@ -8,8 +8,8 @@ import (
 	"text/tabwriter"
 	"time"
 
-	application "github.com/FullFran/eye/internal/observation/application"
-	observation "github.com/FullFran/eye/internal/observation/domain"
+	application "github.com/FullFran/cordvba/apps/eye/internal/observation/application"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 )
 
 // newsCommand reads the local press. Newspapers catch what every official feed

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	domain "github.com/FullFran/eye/internal/source/domain"
+	domain "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 )
 
 // validSource returns a registry entry that passes Validate.

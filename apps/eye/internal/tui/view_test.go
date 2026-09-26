@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
-	"github.com/FullFran/eye/internal/render"
-	"github.com/FullFran/eye/internal/tui"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/render"
+	"github.com/FullFran/cordvba/apps/eye/internal/tui"
 )
 
 // errRead stands in for a store that could not be read.

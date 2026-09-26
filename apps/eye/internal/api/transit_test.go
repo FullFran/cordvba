@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FullFran/eye/internal/api"
-	"github.com/FullFran/eye/internal/logging"
-	observation "github.com/FullFran/eye/internal/observation/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/api"
+	"github.com/FullFran/cordvba/apps/eye/internal/logging"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 )
 
 // fakeTransit is a live reader that never leaves the process.

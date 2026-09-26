@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	domain "github.com/FullFran/eye/internal/source/domain"
-	registry "github.com/FullFran/eye/internal/source/infrastructure"
+	domain "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
+	registry "github.com/FullFran/cordvba/apps/eye/internal/source/infrastructure"
 )
 
 // The registry shipped with the repository must always load. It is a contract,

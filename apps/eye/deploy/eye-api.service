@@ -10,7 +10,7 @@
 
 [Unit]
 Description=eye read API
-Documentation=https://github.com/FullFran/eye
+Documentation=https://github.com/FullFran/cordvba/apps/eye
 After=network-online.target
 Wants=network-online.target
 # Not a hard dependency: the API serving a stale store is more useful than the

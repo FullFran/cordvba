@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 )
 
 // featureCollection is an RFC 7946 FeatureCollection.

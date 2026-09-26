@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	domain "github.com/FullFran/eye/internal/observation/domain"
+	domain "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 )
 
 // validProvenance returns the minimum evidence a record needs to be storable.

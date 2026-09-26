@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FullFran/eye/internal/httpx"
-	"github.com/FullFran/eye/internal/provider/infrastructure/rss"
+	"github.com/FullFran/cordvba/apps/eye/internal/httpx"
+	"github.com/FullFran/cordvba/apps/eye/internal/provider/infrastructure/rss"
 )
 
 // loadFixture reads a recorded feed and decodes it the way the provider will.

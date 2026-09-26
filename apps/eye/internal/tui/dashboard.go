@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/FullFran/eye/internal/render"
+	"github.com/FullFran/cordvba/apps/eye/internal/render"
 )
 
 // summaryPanelRows is the height of the topic and rate panels together, border

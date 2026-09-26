@@ -18,11 +18,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/FullFran/eye/internal/httpx"
-	observation "github.com/FullFran/eye/internal/observation/domain"
-	provider "github.com/FullFran/eye/internal/provider/domain"
-	"github.com/FullFran/eye/internal/provider/infrastructure/geojson"
-	source "github.com/FullFran/eye/internal/source/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/httpx"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	provider "github.com/FullFran/cordvba/apps/eye/internal/provider/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/provider/infrastructure/geojson"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 )
 
 // ErrWFS is returned when a service answers something eye cannot use.

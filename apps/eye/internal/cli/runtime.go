@@ -7,16 +7,16 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/FullFran/eye/configs"
-	"github.com/FullFran/eye/internal/config"
-	"github.com/FullFran/eye/internal/httpx"
-	observation "github.com/FullFran/eye/internal/observation/application"
-	observationdomain "github.com/FullFran/eye/internal/observation/domain"
-	store "github.com/FullFran/eye/internal/observation/infrastructure"
-	provider "github.com/FullFran/eye/internal/provider/domain"
-	providers "github.com/FullFran/eye/internal/provider/infrastructure"
-	source "github.com/FullFran/eye/internal/source/domain"
-	registry "github.com/FullFran/eye/internal/source/infrastructure"
+	"github.com/FullFran/cordvba/apps/eye/configs"
+	"github.com/FullFran/cordvba/apps/eye/internal/config"
+	"github.com/FullFran/cordvba/apps/eye/internal/httpx"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/application"
+	observationdomain "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	store "github.com/FullFran/cordvba/apps/eye/internal/observation/infrastructure"
+	provider "github.com/FullFran/cordvba/apps/eye/internal/provider/domain"
+	providers "github.com/FullFran/cordvba/apps/eye/internal/provider/infrastructure"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
+	registry "github.com/FullFran/cordvba/apps/eye/internal/source/infrastructure"
 )
 
 // runtime is everything a command needs to answer a question: the resolved

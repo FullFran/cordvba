@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 )
 
 // arrivalsTTL is how long a live arrivals answer is reused.

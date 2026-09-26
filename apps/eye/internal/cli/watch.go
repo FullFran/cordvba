@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/FullFran/eye/internal/logging"
-	observation "github.com/FullFran/eye/internal/observation/domain"
-	"github.com/FullFran/eye/internal/render"
+	"github.com/FullFran/cordvba/apps/eye/internal/logging"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/render"
 )
 
 // Defaults for the live board.

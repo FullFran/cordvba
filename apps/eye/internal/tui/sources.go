@@ -3,7 +3,7 @@ package tui
 import (
 	"fmt"
 
-	"github.com/FullFran/eye/internal/render"
+	"github.com/FullFran/cordvba/apps/eye/internal/render"
 )
 
 // Column widths for the registry table. They are fixed rather than computed by

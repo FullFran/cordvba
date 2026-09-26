@@ -32,7 +32,7 @@ var (
 const (
 	DefaultTimeout   = 30 * time.Second
 	DefaultMaxBytes  = 32 << 20 // 32 MiB — GTFS feeds are large; HTML is not
-	DefaultUserAgent = "eye/0.1 (+https://github.com/FullFran/eye)"
+	DefaultUserAgent = "eye/0.1 (+https://github.com/FullFran/cordvba/apps/eye)"
 )
 
 // Recorder stores a raw payload and returns its content hash. The raw cache

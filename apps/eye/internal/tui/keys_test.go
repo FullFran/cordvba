@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/FullFran/eye/internal/tui"
+	"github.com/FullFran/cordvba/apps/eye/internal/tui"
 )
 
 // The decoder is the whole of eye's input handling: there is no terminal

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/FullFran/eye/internal/version"
+	"github.com/FullFran/cordvba/apps/eye/internal/version"
 )
 
 func TestString(t *testing.T) {

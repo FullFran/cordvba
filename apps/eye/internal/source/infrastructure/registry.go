@@ -11,7 +11,7 @@ import (
 	"os"
 	"time"
 
-	domain "github.com/FullFran/eye/internal/source/domain"
+	domain "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 	"gopkg.in/yaml.v3"
 )
 

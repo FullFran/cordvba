@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FullFran/eye/internal/httpx"
-	observation "github.com/FullFran/eye/internal/observation/domain"
-	"github.com/FullFran/eye/internal/provider/infrastructure/firms"
-	source "github.com/FullFran/eye/internal/source/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/httpx"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/provider/infrastructure/firms"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 )
 
 // fixture reads a recorded response. Tests never reach the network.

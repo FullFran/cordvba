@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/FullFran/eye/internal/version"
+	"github.com/FullFran/cordvba/apps/eye/internal/version"
 )
 
 // openAPIVersion is the specification this document claims to follow.

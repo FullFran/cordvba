@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	domain "github.com/FullFran/eye/internal/observation/domain"
-	provider "github.com/FullFran/eye/internal/provider/domain"
+	domain "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	provider "github.com/FullFran/cordvba/apps/eye/internal/provider/domain"
 
 	// Pure-Go SQLite. No CGO, so eye still cross-compiles to a static
 	// binary — see ADR-0003. Swapping this for mattn/go-sqlite3 would

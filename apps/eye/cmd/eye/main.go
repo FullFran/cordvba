@@ -11,7 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/FullFran/eye/internal/cli"
+	"github.com/FullFran/cordvba/apps/eye/internal/cli"
 )
 
 func main() {

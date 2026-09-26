@@ -16,7 +16,7 @@ import (
 	"sort"
 	"text/tabwriter"
 
-	"github.com/FullFran/eye/internal/version"
+	"github.com/FullFran/cordvba/apps/eye/internal/version"
 )
 
 // ErrUnknownCommand is returned when the first argument matches no command.

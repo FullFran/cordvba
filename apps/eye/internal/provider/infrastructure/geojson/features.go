@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 )
 
 // FeatureCollection is the subset of GeoJSON eye reads.

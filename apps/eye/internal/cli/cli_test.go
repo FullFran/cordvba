@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/FullFran/eye/internal/cli"
+	"github.com/FullFran/cordvba/apps/eye/internal/cli"
 )
 
 // run executes the app and returns exit code, stdout and stderr.

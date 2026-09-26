@@ -13,12 +13,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/FullFran/eye/internal/api"
-	"github.com/FullFran/eye/internal/logging"
-	observationdomain "github.com/FullFran/eye/internal/observation/domain"
-	store "github.com/FullFran/eye/internal/observation/infrastructure"
-	"github.com/FullFran/eye/internal/provider/infrastructure/aucorsa"
-	"github.com/FullFran/eye/internal/web"
+	"github.com/FullFran/cordvba/apps/eye/internal/api"
+	"github.com/FullFran/cordvba/apps/eye/internal/logging"
+	observationdomain "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	store "github.com/FullFran/cordvba/apps/eye/internal/observation/infrastructure"
+	"github.com/FullFran/cordvba/apps/eye/internal/provider/infrastructure/aucorsa"
+	"github.com/FullFran/cordvba/apps/eye/internal/web"
 )
 
 // serveTimeouts keep a stalled client from holding a connection forever.

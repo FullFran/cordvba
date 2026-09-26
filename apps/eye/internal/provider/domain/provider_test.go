@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	domain "github.com/FullFran/eye/internal/provider/domain"
+	domain "github.com/FullFran/cordvba/apps/eye/internal/provider/domain"
 )
 
 func TestHealthStale(t *testing.T) {

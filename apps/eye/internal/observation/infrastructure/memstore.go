@@ -9,7 +9,7 @@ import (
 	"context"
 	"sync"
 
-	domain "github.com/FullFran/eye/internal/observation/domain"
+	domain "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 )
 
 // MemStore is a concurrency-safe in-memory implementation of every store port.

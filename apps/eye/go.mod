@@ -1,4 +1,4 @@
-module github.com/FullFran/eye
+module github.com/FullFran/cordvba/apps/eye
 
 go 1.25.0
 

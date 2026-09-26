@@ -11,9 +11,9 @@ import (
 	"text/tabwriter"
 	"time"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
-	"github.com/FullFran/eye/internal/provider/infrastructure/aucorsa"
-	source "github.com/FullFran/eye/internal/source/domain"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/provider/infrastructure/aucorsa"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 )
 
 // arrivalsFormat is the registry format this command reads.

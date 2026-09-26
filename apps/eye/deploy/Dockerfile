@@ -37,9 +37,9 @@ ENV CGO_ENABLED=0 GOOS=linux
 
 RUN go build -trimpath \
       -ldflags="-s -w \
-        -X github.com/FullFran/eye/internal/version.Version=${VERSION} \
-        -X github.com/FullFran/eye/internal/version.Commit=${COMMIT} \
-        -X github.com/FullFran/eye/internal/version.Date=${DATE}" \
+        -X github.com/FullFran/cordvba/apps/eye/internal/version.Version=${VERSION} \
+        -X github.com/FullFran/cordvba/apps/eye/internal/version.Commit=${COMMIT} \
+        -X github.com/FullFran/cordvba/apps/eye/internal/version.Date=${DATE}" \
       -o /out/eye ./cmd/eye
 
 # The state directory has to exist in the image and be owned by the user that

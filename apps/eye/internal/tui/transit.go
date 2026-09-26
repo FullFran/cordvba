@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sort"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
-	"github.com/FullFran/eye/internal/render"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/render"
 )
 
 // Panel heights for the transit view. The stop list and the arrivals share the

@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FullFran/eye/internal/logging"
-	observation "github.com/FullFran/eye/internal/observation/domain"
-	provider "github.com/FullFran/eye/internal/provider/domain"
-	"github.com/FullFran/eye/internal/scheduler"
-	source "github.com/FullFran/eye/internal/source/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/logging"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	provider "github.com/FullFran/cordvba/apps/eye/internal/provider/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/scheduler"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 )
 
 // instantClock fires every wait immediately and advances a virtual clock, so a

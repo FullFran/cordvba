@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 )
 
 // emptyStore is the smallest thing that satisfies the port.

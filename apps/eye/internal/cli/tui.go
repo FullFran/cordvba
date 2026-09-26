@@ -10,13 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/FullFran/eye/internal/logging"
-	observation "github.com/FullFran/eye/internal/observation/domain"
-	providers "github.com/FullFran/eye/internal/provider/infrastructure"
-	"github.com/FullFran/eye/internal/render"
-	source "github.com/FullFran/eye/internal/source/domain"
-	"github.com/FullFran/eye/internal/tui"
-	"github.com/FullFran/eye/internal/version"
+	"github.com/FullFran/cordvba/apps/eye/internal/logging"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	providers "github.com/FullFran/cordvba/apps/eye/internal/provider/infrastructure"
+	"github.com/FullFran/cordvba/apps/eye/internal/render"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/tui"
+	"github.com/FullFran/cordvba/apps/eye/internal/version"
 )
 
 // Defaults for the cockpit.

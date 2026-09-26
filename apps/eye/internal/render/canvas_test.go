@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/FullFran/eye/internal/render"
+	"github.com/FullFran/cordvba/apps/eye/internal/render"
 )
 
 // A braille cell packs a 2x4 dot grid into one character, and the bit order is

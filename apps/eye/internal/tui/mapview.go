@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
-	"github.com/FullFran/eye/internal/render"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/render"
 )
 
 // Map interaction constants.

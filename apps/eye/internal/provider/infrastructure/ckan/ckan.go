@@ -18,9 +18,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/FullFran/eye/internal/httpx"
-	observation "github.com/FullFran/eye/internal/observation/domain"
-	source "github.com/FullFran/eye/internal/source/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/httpx"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 )
 
 // ErrCKAN is returned when the portal answers something eye cannot use.

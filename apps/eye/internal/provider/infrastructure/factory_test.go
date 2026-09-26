@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FullFran/eye/internal/httpx"
-	provider "github.com/FullFran/eye/internal/provider/domain"
-	providers "github.com/FullFran/eye/internal/provider/infrastructure"
-	"github.com/FullFran/eye/internal/provider/infrastructure/aemet"
-	"github.com/FullFran/eye/internal/provider/infrastructure/firms"
-	source "github.com/FullFran/eye/internal/source/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/httpx"
+	provider "github.com/FullFran/cordvba/apps/eye/internal/provider/domain"
+	providers "github.com/FullFran/cordvba/apps/eye/internal/provider/infrastructure"
+	"github.com/FullFran/cordvba/apps/eye/internal/provider/infrastructure/aemet"
+	"github.com/FullFran/cordvba/apps/eye/internal/provider/infrastructure/firms"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 )
 
 // src builds a registry entry with the given format and automation state.

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	domain "github.com/FullFran/eye/internal/observation/domain"
+	domain "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 )
 
 // scanner is satisfied by *sql.Row and *sql.Rows.

@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FullFran/eye/internal/cli"
-	store "github.com/FullFran/eye/internal/observation/infrastructure"
+	"github.com/FullFran/cordvba/apps/eye/internal/cli"
+	store "github.com/FullFran/cordvba/apps/eye/internal/observation/infrastructure"
 )
 
 // fakePortal serves every source shape eye reads, so a command can be exercised

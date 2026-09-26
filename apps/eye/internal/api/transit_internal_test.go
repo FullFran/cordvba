@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
-	source "github.com/FullFran/eye/internal/source/domain"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 )
 
 // countingTransit answers instantly and remembers how often it was asked.

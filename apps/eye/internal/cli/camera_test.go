@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FullFran/eye/internal/cli"
+	"github.com/FullFran/cordvba/apps/eye/internal/cli"
 )
 
 // cameraPortal serves a DATEX II device inventory and the JPEG it points at.

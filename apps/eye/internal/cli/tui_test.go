@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/FullFran/eye/internal/tui"
+	"github.com/FullFran/cordvba/apps/eye/internal/tui"
 )
 
 // tuiRegistry writes a registry with one entry of each interesting shape, so

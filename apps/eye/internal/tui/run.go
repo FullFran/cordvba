@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/FullFran/eye/internal/render"
+	"github.com/FullFran/cordvba/apps/eye/internal/render"
 )
 
 // Reader is everything the cockpit needs from the outside world.

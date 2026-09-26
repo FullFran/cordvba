@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
-	"github.com/FullFran/eye/internal/render"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/render"
 )
 
 // errFake stands in for a source that could not be reached.

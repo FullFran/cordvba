@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
-	provider "github.com/FullFran/eye/internal/provider/domain"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	provider "github.com/FullFran/cordvba/apps/eye/internal/provider/domain"
 )
 
 // Defaults for the polling loop.

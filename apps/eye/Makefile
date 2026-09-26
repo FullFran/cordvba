@@ -9,7 +9,7 @@ VERSION  := $(shell git describe --tags --always --dirty 2>/dev/null || echo dev
 COMMIT   := $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
 DATE     := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 
-PKG      := github.com/FullFran/eye/internal/version
+PKG      := github.com/FullFran/cordvba/apps/eye/internal/version
 LDFLAGS  := -s -w \
             -X $(PKG).Version=$(VERSION) \
             -X $(PKG).Commit=$(COMMIT) \

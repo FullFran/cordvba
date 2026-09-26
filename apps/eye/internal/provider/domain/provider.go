@@ -7,8 +7,8 @@ import (
 	"context"
 	"time"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
-	source "github.com/FullFran/eye/internal/source/domain"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 )
 
 // Provider is a pull adapter: eye asks, the source answers. This covers the

@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FullFran/eye/internal/api"
-	"github.com/FullFran/eye/internal/logging"
-	observation "github.com/FullFran/eye/internal/observation/domain"
-	source "github.com/FullFran/eye/internal/source/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/api"
+	"github.com/FullFran/cordvba/apps/eye/internal/logging"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 )
 
 // fakeStore records the filter it was given, so the tests can assert that a

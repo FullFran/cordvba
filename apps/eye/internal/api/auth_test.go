@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/FullFran/eye/internal/api"
-	"github.com/FullFran/eye/internal/logging"
+	"github.com/FullFran/cordvba/apps/eye/internal/api"
+	"github.com/FullFran/cordvba/apps/eye/internal/logging"
 )
 
 // guarded builds a server whose /v1 endpoints need a token.

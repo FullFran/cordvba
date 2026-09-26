@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FullFran/eye/internal/api"
-	"github.com/FullFran/eye/internal/logging"
-	source "github.com/FullFran/eye/internal/source/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/api"
+	"github.com/FullFran/cordvba/apps/eye/internal/logging"
+	source "github.com/FullFran/cordvba/apps/eye/internal/source/domain"
 )
 
 // aggregatingStore answers the aggregate port as a real store would.

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/FullFran/eye/internal/logging"
+	"github.com/FullFran/cordvba/apps/eye/internal/logging"
 )
 
 func TestLevelOf(t *testing.T) {

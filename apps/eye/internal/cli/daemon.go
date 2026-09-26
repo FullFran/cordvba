@@ -8,11 +8,11 @@ import (
 	"io"
 	"time"
 
-	"github.com/FullFran/eye/internal/logging"
-	observation "github.com/FullFran/eye/internal/observation/domain"
-	store "github.com/FullFran/eye/internal/observation/infrastructure"
-	provider "github.com/FullFran/eye/internal/provider/domain"
-	"github.com/FullFran/eye/internal/scheduler"
+	"github.com/FullFran/cordvba/apps/eye/internal/logging"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
+	store "github.com/FullFran/cordvba/apps/eye/internal/observation/infrastructure"
+	provider "github.com/FullFran/cordvba/apps/eye/internal/provider/domain"
+	"github.com/FullFran/cordvba/apps/eye/internal/scheduler"
 )
 
 // daemonCommand runs the scheduler until interrupted.

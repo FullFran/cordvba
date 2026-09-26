@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FullFran/eye/internal/httpx"
+	"github.com/FullFran/cordvba/apps/eye/internal/httpx"
 )
 
 func TestGetSuccess(t *testing.T) {

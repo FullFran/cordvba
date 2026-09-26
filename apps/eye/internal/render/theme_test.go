@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/FullFran/eye/internal/render"
+	"github.com/FullFran/cordvba/apps/eye/internal/render"
 )
 
 // A pipe is not a terminal. `eye news --json | jq` and `eye status > report.txt`

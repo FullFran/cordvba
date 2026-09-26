@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 )
 
 // changeKindNames maps eye's internal change vocabulary onto the one this API

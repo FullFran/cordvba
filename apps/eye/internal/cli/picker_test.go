@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 )
 
 // cam builds a camera entity for picker tests.

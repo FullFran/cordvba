@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	observation "github.com/FullFran/eye/internal/observation/domain"
+	observation "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 )
 
 func TestNormalizeReducesATitleToItsCore(t *testing.T) {

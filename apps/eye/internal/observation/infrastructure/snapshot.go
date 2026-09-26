@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	domain "github.com/FullFran/eye/internal/observation/domain"
+	domain "github.com/FullFran/cordvba/apps/eye/internal/observation/domain"
 )
 
 // Snapshot returns what a source last reported.
