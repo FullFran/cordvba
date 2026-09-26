@@ -1,0 +1,134 @@
+/**
+ * Every visible string in the page, typed so a missing translation is a
+ * compile error (`satisfies Dictionary` on each locale file) and also
+ * caught at runtime by `dictionary.test.ts` (issue #124, AC-1). Machine
+ * tokens from the API contract (`OBSERVED`, `good`, …) are never part of
+ * this file — only their on-screen text is.
+ */
+export interface Dictionary {
+  header: {
+    title: string;
+    line1: string;
+    line2: string;
+    line3: string;
+    skipToContent: string;
+  };
+  localeSwitch: {
+    groupLabel: string;
+    es: string;
+    en: string;
+  };
+  loading: {
+    label: string;
+  };
+  networkError: {
+    message: string;
+    retry: string;
+  };
+  unavailable: {
+    timelinePrefix: string;
+    attributionPrefix: string;
+    mapPrefix: string;
+  };
+  map: {
+    ariaLabel: string;
+    caption: string;
+    beaconAirQuality: string;
+    beaconWind: string;
+    unknownIndex: string;
+    edgeIndicator: string;
+  };
+  wind: {
+    toggle: string;
+    label: string;
+  };
+  timeline: {
+    ariaLabel: string;
+    now: string;
+    scenario: string;
+  };
+  state: {
+    ariaLabel: string;
+    temperature: string;
+    humidity: string;
+    windSpeed: string;
+    windDirection: string;
+    apparentTemperature: string;
+    cityAirQuality: string;
+  };
+  scenario: {
+    ariaLabel: string;
+    temperatureLabel: string;
+    humidityLabel: string;
+    windLabel: string;
+    run: string;
+    running: string;
+    observedHeading: string;
+    simulatedHeading: string;
+  };
+  provenance: {
+    dialogLabel: string;
+    close: string;
+    source: string;
+    publisher: string;
+    licence: string;
+    observedAt: string;
+    fetchedAt: string;
+    quality: string;
+    model: string;
+    version: string;
+    reference: string;
+    uncertainty: string;
+  };
+  footer: {
+    tileAttribution: string;
+    updatedPrefix: string;
+  };
+  epistemicLabels: {
+    OBSERVED: string;
+    PUBLISHED: string;
+    INFERRED: string;
+    PREDICTED: string;
+    SIMULATED: string;
+  };
+  airQualityCategories: {
+    good: string;
+    fair: string;
+    moderate: string;
+    poor: string;
+    very_poor: string;
+    extremely_poor: string;
+  };
+  age: {
+    justNow: string;
+    minAgo: string;
+    hAgo: string;
+    hMinAgo: string;
+    inH: string;
+  };
+  /** 16-point compass, N first, clockwise — issue #119/#124. */
+  cardinals: readonly [
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+  ];
+}
+
+/** The Intl locale tag each app Locale resolves to (issue #124: es-ES decimal comma, en-GB). */
+export const INTL_TAG: Record<"es" | "en", string> = {
+  es: "es-ES",
+  en: "en-GB",
+};
