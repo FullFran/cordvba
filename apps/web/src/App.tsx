@@ -75,6 +75,19 @@ export function App() {
             {scenarioOpen ? (
               <ScenarioPanel onSimulate={postSimulate} onSelectValue={setSelectedValue} />
             ) : null}
+
+            {/* Attribution lives at the bottom of the state dock, not its
+                own corner (issue #119, maintainer review): a dedicated
+                bottom-left footer panel collided with the map's own
+                bottom-left legend once the wind/caption merge made that
+                legend taller. */}
+            {sources.status === "success" ? (
+              <Footer sources={sources.data.sources} />
+            ) : sources.status === "error" ? (
+              <p className="unavailable-notice">
+                {t.unavailable.attributionPrefix} {sources.message}
+              </p>
+            ) : null}
           </div>
         ) : null}
 
@@ -94,18 +107,6 @@ export function App() {
             </p>
           ) : null}
         </div>
-
-        {!allLoading ? (
-          <div className="app__panel app__panel--footer">
-            {sources.status === "success" ? (
-              <Footer sources={sources.data.sources} />
-            ) : sources.status === "error" ? (
-              <p className="unavailable-notice">
-                {t.unavailable.attributionPrefix} {sources.message}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
       </div>
 
       {selectedValue ? (

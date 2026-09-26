@@ -3,19 +3,30 @@ import { describe, expect, it } from "vitest";
 import { DICTIONARIES } from "./dictionaries";
 import { formatTemplate } from "./template";
 
-/** Flattens a nested dictionary to dotted leaf paths, e.g. "header.title". */
-function flattenKeys(value: unknown, prefix = ""): string[] {
+/**
+ * Flattens a nested dictionary to leaf paths (each a segment array, e.g.
+ * `["header", "title"]`) and their values. Segment arrays, not dot-joined
+ * strings: a dictionary value can itself legitimately contain a literal
+ * "." (e.g. the licence code "CC-BY-4.0" used as an object key in
+ * `footer.licences`), which would make a joined-then-re-split string
+ * ambiguous.
+ */
+function flattenEntries(value: unknown, prefix: string[] = []): Array<{ path: string[]; value: unknown }> {
   if (Array.isArray(value)) {
     // Treated as one leaf (e.g. `cardinals`): its own length-mismatch is
     // checked separately, not key-by-key.
-    return [prefix];
+    return [{ path: prefix, value }];
   }
   if (value !== null && typeof value === "object") {
     return Object.entries(value as Record<string, unknown>).flatMap(([key, v]) =>
-      flattenKeys(v, prefix ? `${prefix}.${key}` : key),
+      flattenEntries(v, [...prefix, key]),
     );
   }
-  return [prefix];
+  return [{ path: prefix, value }];
+}
+
+function flattenKeys(value: unknown): string[] {
+  return flattenEntries(value).map((e) => e.path.join("."));
 }
 
 describe("dictionaries: every key exists in both locales (issue 124, AC-1)", () => {
@@ -28,10 +39,10 @@ describe("dictionaries: every key exists in both locales (issue 124, AC-1)", () 
 
   it("neither locale has an empty string for any key (a missing translation, not just a missing key)", () => {
     for (const locale of ["es", "en"] as const) {
-      const keys = flattenKeys(DICTIONARIES[locale]);
-      for (const key of keys) {
-        const value = key.split(".").reduce<unknown>((acc, part) => (acc as Record<string, unknown>)[part], DICTIONARIES[locale]);
-        expect(typeof value === "string" ? value.length > 0 : true, `${locale}.${key} must not be empty`).toBe(true);
+      for (const { path, value } of flattenEntries(DICTIONARIES[locale])) {
+        expect(typeof value === "string" ? value.length > 0 : true, `${locale}.${path.join(".")} must not be empty`).toBe(
+          true,
+        );
       }
     }
   });

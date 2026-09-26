@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import environmentFixture from "@contracts/environment/v1/environment.example.json";
@@ -159,11 +160,29 @@ describe("MapView (issue 119: MapLibre dark 3D map + beacons)", () => {
     expect(mapInstances[0]?.remove).toHaveBeenCalled();
   });
 
-  it("shows the illustrative-wind toggle once the map is ready", async () => {
+  it("shows the wind toggle and its label immediately, before the map style even loads (issue 119, maintainer review: label must be visible on every breakpoint)", () => {
     render(<MapView environment={environment} />);
 
-    expect(await screen.findByRole("checkbox")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox")).toBeInTheDocument();
     expect(screen.getAllByText(/Illustrative wind/i).length).toBeGreaterThan(0);
+  });
+
+  it("merges the wind label and the extrusion-heights caption into one legend block, so neither can cover the other", () => {
+    const { container } = render(<MapView environment={environment} />);
+
+    const legends = container.querySelectorAll(".map-legend");
+    expect(legends).toHaveLength(1);
+    expect(legends[0]?.textContent).toContain("Illustrative wind");
+    expect(legends[0]?.textContent).toMatch(/no interpolated surface/i);
+  });
+
+  it("keeps the caption visible even after the wind layer is switched off", async () => {
+    render(<MapView environment={environment} />);
+
+    await userEvent.click(screen.getByRole("checkbox"));
+
+    expect(screen.queryByText(/Illustrative wind: /i)).not.toBeInTheDocument();
+    expect(screen.getByText(/no interpolated surface/i)).toBeInTheDocument();
   });
 
   it("shows an edge-clamped distance indicator for the airport when it projects outside the viewport", async () => {

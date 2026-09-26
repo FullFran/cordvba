@@ -11,6 +11,8 @@ export interface MapStyleLayer {
   id: string;
   type: string;
   paint?: Record<string, unknown>;
+  minzoom?: number;
+  maxzoom?: number;
   [key: string]: unknown;
 }
 
@@ -34,6 +36,10 @@ export interface MapPalette {
   buildingLow: string;
   buildingHigh: string;
   labelHalo: string;
+  roadMinor: string;
+  roadMid: string;
+  roadMajor: string;
+  roadLabel: string;
 }
 
 const OVERRIDE_IDS = new Set(["background", "water", "building-3d", "label_city"]);
@@ -63,6 +69,56 @@ const SUPPRESS_IDS = new Set([
 /** Labels kept, but at a low, non-competing opacity: landmark/major labels the reviewer asked to keep "at low contrast". */
 const MUTE_IDS = new Set(["highway-name-major", "airport", "label_town"]);
 const MUTE_OPACITY = 0.55;
+
+/**
+ * Roads, bridges, tunnels and aeroway lines (issue #119, maintainer
+ * review): OpenFreeMap's `liberty` style paints these in warm amber, the
+ * same hue family as the "moderate"/"poor" air-quality beacons. Generic
+ * lightness inversion alone keeps that hue, just darker — still visibly
+ * amber. These get an exact, curated neutral-slate colour instead, tiered
+ * by prominence so major roads stay only slightly brighter than minor
+ * ones, and casings (an outline behind the fill) render one tier down
+ * from their own fill.
+ */
+const ROAD_ID_PATTERN = /^(road_|bridge_|tunnel_|aeroway_)/;
+
+/**
+ * True only for a `line`/`fill` road-ish layer. The id pattern alone is
+ * not enough: `road_shield_us` (a US-highway shield icon) and
+ * `road_one_way_arrow[_opposite]` (already suppressed above) are
+ * `symbol` layers that also start with `road_`, and MapLibre's style
+ * schema rejects `line-color`/`fill-color` on a layer type that doesn't
+ * paint with them — this broke real OpenFreeMap layers once already.
+ */
+function isRoadLayer(layer: MapStyleLayer): boolean {
+  return ROAD_ID_PATTERN.test(layer.id) && (layer.type === "line" || layer.type === "fill");
+}
+
+function roadColor(id: string, palette: MapPalette): string {
+  if (id.includes("_casing")) {
+    return palette.roadMinor;
+  }
+  if (/motorway|trunk_primary|runway/.test(id)) {
+    return palette.roadMajor;
+  }
+  if (/secondary_tertiary|_link|taxiway/.test(id)) {
+    return palette.roadMid;
+  }
+  return palette.roadMinor;
+}
+
+/**
+ * The building layers' zoom range (issue #119, maintainer review: "3D is
+ * barely perceptible at the initial zoom"). OpenFreeMap's own cutover is
+ * 2D fill 13-14, extrusion from 14; lowered by two levels so the historic
+ * centre still reads as 3D at a `fitBounds` camera that (depending on how
+ * spread out the live API's real station coordinates are) might land
+ * below z14, without waiting on a specific zoom value to be true.
+ */
+const MINZOOM_OVERRIDES: Record<string, { minzoom?: number; maxzoom?: number }> = {
+  building: { minzoom: 11, maxzoom: 12 },
+  "building-3d": { minzoom: 12 },
+};
 
 function deepRecolor(value: unknown): unknown {
   if (typeof value === "string") {
@@ -113,39 +169,53 @@ function overridePaint(layer: MapStyleLayer, palette: MapPalette): Record<string
 /**
  * Turns OpenFreeMap's light "liberty" style dark (issue #119): a generic
  * lightness-inversion pass darkens every layer (the base style is
- * uniformly light, so this alone gets most of the way there), then a
- * small set of layers we care about specifically — background, water,
- * the 3D buildings, city labels — get an exact, curated colour instead.
- * Everything that is not a colour (ids, sources, source-layer, filters,
- * zoom ranges, numeric paint values, the height/base expressions that
- * carry OSM's real per-building data) passes through unchanged.
+ * uniformly light, so this alone gets most of the way there); background,
+ * water, the 3D buildings and city labels get an exact, curated colour;
+ * roads/bridges/tunnels/aeroways get a tiered neutral-slate colour instead
+ * of their original warm amber; basemap noise (POI/transit icons, minor
+ * labels) is hidden or muted. Everything that is not a colour (ids,
+ * sources, source-layer, filters, zoom ranges, numeric paint values, the
+ * height/base expressions that carry OSM's real per-building data) passes
+ * through unchanged.
  */
 export function buildDarkStyle(base: MapStyle, palette: MapPalette): MapStyle {
   const layers = base.layers.map((layer) => {
-    const needsPaint = OVERRIDE_IDS.has(layer.id) || SUPPRESS_IDS.has(layer.id) || MUTE_IDS.has(layer.id);
+    const zoomOverride = MINZOOM_OVERRIDES[layer.id];
+    const withZoom = zoomOverride ? { ...layer, ...zoomOverride } : layer;
+
+    const isRoad = isRoadLayer(layer);
+    const needsPaint = OVERRIDE_IDS.has(layer.id) || SUPPRESS_IDS.has(layer.id) || MUTE_IDS.has(layer.id) || isRoad;
 
     // A layer with no `paint` at all (some symbol/background layers) must
     // stay that way: MapLibre's style schema rejects an explicit
     // `paint: undefined` key, which `{ ...layer, paint: undefined }` would
     // otherwise introduce (it did — this broke real OpenFreeMap layers
     // that carry no paint object, e.g. several `label_*` symbol layers).
-    if (!layer.paint && !needsPaint) {
-      return layer;
+    if (!withZoom.paint && !needsPaint) {
+      return withZoom;
     }
 
-    const recoloredPaint = layer.paint ? (deepRecolor(layer.paint) as Record<string, unknown>) : {};
+    const recoloredPaint = withZoom.paint ? (deepRecolor(withZoom.paint) as Record<string, unknown>) : {};
 
     if (SUPPRESS_IDS.has(layer.id)) {
-      return { ...layer, paint: { ...recoloredPaint, "icon-opacity": 0, "text-opacity": 0 } };
+      return { ...withZoom, paint: { ...recoloredPaint, "icon-opacity": 0, "text-opacity": 0 } };
+    }
+    if (isRoad) {
+      const colorProp = layer.type === "fill" ? "fill-color" : "line-color";
+      return { ...withZoom, paint: { ...recoloredPaint, [colorProp]: roadColor(layer.id, palette) } };
     }
     if (MUTE_IDS.has(layer.id)) {
-      return { ...layer, paint: { ...recoloredPaint, "text-opacity": MUTE_OPACITY, "icon-opacity": MUTE_OPACITY } };
+      const labelOverride = layer.id === "highway-name-major" ? { "text-color": palette.roadLabel } : {};
+      return {
+        ...withZoom,
+        paint: { ...recoloredPaint, "text-opacity": MUTE_OPACITY, "icon-opacity": MUTE_OPACITY, ...labelOverride },
+      };
     }
     if (!OVERRIDE_IDS.has(layer.id)) {
-      return { ...layer, paint: recoloredPaint };
+      return { ...withZoom, paint: recoloredPaint };
     }
     const override = overridePaint(layer, palette);
-    return { ...layer, paint: { ...recoloredPaint, ...override } };
+    return { ...withZoom, paint: { ...recoloredPaint, ...override } };
   });
 
   return { ...base, layers };
@@ -175,6 +245,10 @@ export function readMapPalette(root: HTMLElement = document.documentElement): Ma
     buildingLow: read("--map-building-low", "#171d2b"),
     buildingHigh: read("--map-building-high", "#3a4a63"),
     labelHalo: read("--map-label-halo", "rgba(6,10,18,0.85)"),
+    roadMinor: read("--map-road-minor", "#1e2229"),
+    roadMid: read("--map-road-mid", "#262b36"),
+    roadMajor: read("--map-road-major", "#313949"),
+    roadLabel: read("--map-road-label", "#5a6272"),
   };
   // ds-allow-hardcode:end
 }

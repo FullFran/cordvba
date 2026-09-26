@@ -80,6 +80,15 @@ export const es = {
   footer: {
     tileAttribution: "OpenFreeMap © OpenMapTiles Datos de OpenStreetMap",
     updatedPrefix: "actualizado",
+    attributionTemplate: "{kind}: {publisher} ({licence})",
+    sourceKinds: {
+      "metar-cordoba": "Meteorología",
+      "miteco-ica": "Calidad del aire",
+    },
+    licences: {
+      "us-government-public-domain": "dominio público",
+      "CC-BY-4.0": "CC BY 4.0",
+    },
   },
   epistemicLabels: {
     OBSERVED: "Observado",

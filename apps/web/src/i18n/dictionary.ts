@@ -83,6 +83,12 @@ export interface Dictionary {
   footer: {
     tileAttribution: string;
     updatedPrefix: string;
+    /** "{kind}: {publisher} ({licence})" — built client-side from the contract's id/publisher/licence fields (issue #124), never the API's own pre-formatted (English-only) `attribution` string. */
+    attributionTemplate: string;
+    /** Keyed by `Source.id`; a source id with no entry falls back to the API's raw `attribution` string. */
+    sourceKinds: Record<string, string>;
+    /** Keyed by `Source.licence`; falls back to the raw licence code if unrecognised. */
+    licences: Record<string, string>;
   };
   epistemicLabels: {
     OBSERVED: string;

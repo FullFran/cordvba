@@ -49,12 +49,16 @@ describe("ScenarioPanel", () => {
 
   it("shows observed and simulated side by side, clearly labelled SIMULATED, after the scenario runs", async () => {
     const onSimulate = vi.fn().mockResolvedValue(simulateResponse);
-    render(<ScenarioPanel onSimulate={onSimulate} />);
+    // A fixed `now` (issue 119 regression: an unmocked wall-clock age can
+    // read e.g. "4 h 26 min ago", and its own "26" collides with the
+    // fixture's "26 °C" observed temperature under a loose /26/ match).
+    const now = new Date("2026-09-26T09:41:30Z");
+    render(<ScenarioPanel onSimulate={onSimulate} now={now} />);
 
     await userEvent.click(screen.getByRole("button", { name: /run scenario/i }));
 
-    expect(await screen.findByText(/26/)).toBeInTheDocument(); // observed air_temperature
-    expect(screen.getByText(/29/)).toBeInTheDocument(); // simulated air_temperature
+    expect(await screen.findByText("26 °C")).toBeInTheDocument(); // observed air_temperature
+    expect(screen.getByText("29 °C")).toBeInTheDocument(); // simulated air_temperature
     expect(screen.getAllByText(/Simulated/).length).toBeGreaterThan(0);
   });
 });
