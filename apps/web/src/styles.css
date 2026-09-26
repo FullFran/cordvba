@@ -366,6 +366,39 @@ a {
   pointer-events: auto;
 }
 
+/* Desktop only (parent review: "the bottom-left legend is clipped by the
+   timeline bar"): at >=48rem the scrubber (`.app__panel--scrubber`) is a
+   fixed bar hovering over the map's own bottom edge, occupying roughly
+   its own height plus `--space-4` of margin. `bottom: var(--space-3)`
+   alone put the legend's lower portion underneath that bar (a lower
+   stacking layer painted over by a higher one — not a CSS overflow clip,
+   but the same visible effect). Raised well clear of it here, with its
+   own max-height + scroll as a second safety net so a very long
+   (Spanish) legend body still can't reach past the visible map area. */
+@media (min-width: 48rem) {
+  .map-legend {
+    bottom: 6rem;
+    max-height: calc(100vh - 10rem);
+    overflow-y: auto;
+  }
+}
+
+.map-legend__disclosure summary {
+  cursor: pointer;
+  color: var(--color-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.map-legend__disclosure summary:focus-visible {
+  outline: var(--border-width-thick) solid var(--color-focus-ring);
+  outline-offset: var(--focus-outline-offset);
+}
+
+.map-legend__body {
+  margin-top: var(--space-2);
+}
+
 /* The camera-preset toggle group (parent review: "Casco histórico /
    Historic centre"), the same segmented-control shape as the locale
    switch (`.locale-switch`) so the two read as the same kind of control. */
@@ -519,24 +552,30 @@ a {
   font-size: 0.75rem;
 }
 
-/* --- Sun widget (issue #139): sunrise/solar-noon/sunset + altitude ------ */
+/* --- Sun widget (issue #139): sunrise/solar-noon/sunset + altitude ------
+   A single flowing row of inline items (parent review: "compact ... into
+   one row, so nothing is ever clipped"), not a fixed 2x2 grid of block
+   lines: `flex-wrap` lets it reflow to a second line gracefully on a
+   narrow dock instead of forcing a fixed height that only grows the
+   state dock's own overflow. */
 
 .sun-widget {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-1) var(--space-3);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg-elevated);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
 }
 
-.sun-widget__line {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin: 0;
+.sun-widget__item {
+  display: inline-flex;
+  gap: 0.3em;
+  white-space: nowrap;
 }
 
 .sun-widget__label {

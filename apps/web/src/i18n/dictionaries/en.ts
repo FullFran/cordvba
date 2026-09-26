@@ -40,6 +40,7 @@ export const en = {
     cameraPresetsLabel: "Camera view",
     presetOverview: "Overview",
     presetHistoric: "Historic centre",
+    legendSummary: "Legend",
   },
   wind: {
     toggle: "Illustrative wind",

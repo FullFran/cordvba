@@ -40,6 +40,7 @@ export const es = {
     cameraPresetsLabel: "Vista de cámara",
     presetOverview: "Vista general",
     presetHistoric: "Casco histórico",
+    legendSummary: "Leyenda",
   },
   wind: {
     toggle: "Viento ilustrativo",

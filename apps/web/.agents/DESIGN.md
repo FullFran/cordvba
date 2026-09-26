@@ -144,12 +144,16 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   instead of it silently vanishing. A caption states the two honesty notes
   verbatim ("Extrusion heights: OpenStreetMap, approximate…"; "Beacons
   show individual stations only — no interpolated surface") as a small
-  overlay chip, not layout-height text. Two camera states (parent review):
-  the station-framed overview (`flyToOverview`, reusing the exact
-  `fitBounds` the initial mount computed) and "Casco histórico / Historic
-  centre" (`flyToHistoricCentre`, zoom 16.5, pitch 60° over the Mezquita
-  — where building shadows actually read), a segmented-control toggle
-  (`.map-camera-presets`) in the map legend. Sun-driven (issue #139): a
+  overlay chip, not layout-height text. The legend's descriptive body is a
+  collapsible `<details>`/`<summary>` (parent review), open by default on
+  desktop and closed on mobile — see Decision Log. Two camera states
+  (parent review): the station-framed overview (`flyToOverview`, reusing
+  the exact `fitBounds` the initial mount computed) and "Casco histórico
+  / Historic centre" (`flyToHistoricCentre`, zoom 16.5, pitch 60° over
+  the Mezquita — where building shadows actually read), a segmented-
+  control toggle (`.map-camera-presets`) in the map legend, always
+  visible regardless of the disclosure's own open/closed state. Sun-driven
+  (issue #139): a
   `sun: SunPosition` prop (computed once in `App.tsx` from the timeline's
   selected time, `src/lib/sun.ts`'s `getSunPosition`) drives three effects
   — the extrusion light and background/water palette via
@@ -205,7 +209,10 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   (`formatDegrees`, no space before `°`, matching `formatWindDirection`'s
   existing convention). Lives in the state dock, next to `StatePanel`; a
   polar day/night's missing sunrise/sunset renders as an em dash, never
-  "Invalid Date".
+  "Invalid Date". One flowing `flex-wrap` row of items (parent review),
+  not a fixed grid — see Decision Log for the honest limit of that
+  compaction at this dock's width, and the dock's own scroll as the
+  other half of the fix.
 
 ## 5. Motion System
 
@@ -737,3 +744,39 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   `DESKTOP_FIT_PADDING` (unchanged) and a new small `MOBILE_FIT_PADDING`
   (40/40/24/24) at the same 768px breakpoint every other layout rule in
   this app already uses.
+- **2026-09-26 — Map legend: a native `<details>`/`<summary>` disclosure,
+  open on desktop and closed on mobile by default (parent review: "the
+  bottom-left legend is clipped by the timeline bar").** The legend's
+  actual bug was a stacking-order collision, not a CSS overflow clip: at
+  >=48rem the scrubber (`.app__panel--scrubber`) is a fixed bar hovering
+  over the map's bottom edge, and `.map-legend`'s own `bottom: var(--
+  space-3)` put its lower portion in the exact same screen region, one
+  layer underneath — confirmed by measuring both elements'
+  `getBoundingClientRect()`s in a real browser before touching anything.
+  Fixed on two fronts: `.map-legend` is raised to `bottom: 6rem` at that
+  breakpoint (clear of the scrubber, verified by the same measurement
+  afterwards — no overlap left) with its own `max-height`/`overflow-y:
+  auto` as a second safety net; and the legend's descriptive body (wind
+  toggle, captions) now lives inside a `<details>` (`.map-legend__body`),
+  native HTML with no extra JS for keyboard/screen-reader support,
+  defaulting open on desktop and closed on mobile via the same
+  `MOBILE_BREAKPOINT_PX` (768px) the rest of this app's layout already
+  keys off. The camera-preset toggle sits *outside* the disclosure,
+  since it is a control, not legend text, and stays reachable either way.
+- **2026-09-26 — Sun widget: one flowing row, not a fixed 2x2 grid
+  (parent review: "the right dock clips the attribution... compact the
+  sun widget into one row").** `SunWidget.tsx` changed from four stacked
+  `<p>` lines in a rigid grid to four inline `.sun-widget__item`s in a
+  `flex-wrap` row — no fixed cell height or forced gap between rows, so
+  it only ever takes the vertical space its actual (locale-dependent)
+  text needs. Measured honestly: Spanish's longer words ("Mediodía
+  solar") still wrap the four items across two lines at the state dock's
+  fixed 19rem width, not one — genuinely fitting all four on a single
+  line at that width is not achievable without abbreviating the labels
+  (a separate, larger decision about this app's epistemic vocabulary, not
+  taken lightly or in passing here). The state dock's pre-existing
+  `overflow-y: auto` (`.app__panel--state`, already there before this
+  change) is the requirement's other named option and was verified
+  directly: scrolling the dock to its end brings the attribution fully
+  into view (`getBoundingClientRect()` inside the dock's bounds), so nothing
+  is permanently unreachable even where the compaction alone falls short.

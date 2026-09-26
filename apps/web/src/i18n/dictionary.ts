@@ -45,6 +45,8 @@ export interface Dictionary {
     cameraPresetsLabel: string;
     presetOverview: string;
     presetHistoric: string;
+    /** The collapsible legend's <summary> text (parent review: never let it clip the timeline bar). */
+    legendSummary: string;
   };
   wind: {
     toggle: string;

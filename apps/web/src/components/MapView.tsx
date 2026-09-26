@@ -144,6 +144,17 @@ export function MapView({ environment, highlightStationId, sun }: MapViewProps) 
   const initialSunRef = useRef(sun);
   const overviewBoundsRef = useRef<maplibregl.LngLatBounds | null>(null);
   const [cameraPreset, setCameraPreset] = useState<CameraPreset>("overview");
+  // Open by default on desktop, closed on mobile (parent review) — the
+  // same 48rem/768px breakpoint DESIGN.md's own layout already uses
+  // (`MOBILE_BREAKPOINT_PX`), read once at mount; the visitor's own
+  // later toggle (`onToggle` above) is the only thing that changes it
+  // after that.
+  const [legendOpen, setLegendOpen] = useState<boolean>(
+    () =>
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia(`(min-width: ${MOBILE_BREAKPOINT_PX}px)`).matches,
+  );
 
   useEffect(() => {
     const container = containerRef.current;
@@ -654,21 +665,38 @@ export function MapView({ environment, highlightStationId, sun }: MapViewProps) 
               {t.map.presetHistoric}
             </button>
           </div>
-          <label htmlFor={windToggleId} className="map-legend__toggle">
-            <input
-              id={windToggleId}
-              type="checkbox"
-              checked={windEnabled}
-              onChange={(event) => setWindEnabled(event.target.checked)}
-            />
-            {t.wind.toggle}
-          </label>
-          {windEnabled ? <p className="map-legend__line">{t.wind.label}</p> : null}
-          <p className="map-legend__line map-legend__line--muted">{t.map.caption}</p>
-          <p className="map-legend__line map-legend__line--muted">{t.map.columnsLegend}</p>
-          {sun.altitudeDeg > 0 ? (
-            <p className="map-legend__line map-legend__line--muted">{t.sun.shadowLegend}</p>
-          ) : null}
+          {/* A collapsible disclosure (parent review: "the bottom-left
+              legend is clipped by the timeline bar"): open by default on
+              desktop, closed on mobile, native <details>/<summary> so it
+              needs no extra JS for keyboard/screen-reader support. Closing
+              it is also the fastest way to guarantee it never grows tall
+              enough to reach the scrubber bar below (see
+              `.map-legend`'s own raised desktop `bottom` offset in
+              styles.css for the other half of that fix). */}
+          <details
+            className="map-legend__disclosure"
+            open={legendOpen}
+            onToggle={(event) => setLegendOpen(event.currentTarget.open)}
+          >
+            <summary>{t.map.legendSummary}</summary>
+            <div className="map-legend__body">
+              <label htmlFor={windToggleId} className="map-legend__toggle">
+                <input
+                  id={windToggleId}
+                  type="checkbox"
+                  checked={windEnabled}
+                  onChange={(event) => setWindEnabled(event.target.checked)}
+                />
+                {t.wind.toggle}
+              </label>
+              {windEnabled ? <p className="map-legend__line">{t.wind.label}</p> : null}
+              <p className="map-legend__line map-legend__line--muted">{t.map.caption}</p>
+              <p className="map-legend__line map-legend__line--muted">{t.map.columnsLegend}</p>
+              {sun.altitudeDeg > 0 ? (
+                <p className="map-legend__line map-legend__line--muted">{t.sun.shadowLegend}</p>
+              ) : null}
+            </div>
+          </details>
         </div>
 
         {mapError ? (

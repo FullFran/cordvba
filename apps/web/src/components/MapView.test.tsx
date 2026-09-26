@@ -502,3 +502,42 @@ describe("MapView: historic-centre camera preset (parent review: 'shadows are in
     expect(historicButton).toHaveAttribute("aria-pressed", "true");
   });
 });
+
+describe("MapView: collapsible legend (parent review: 'the bottom-left legend is clipped by the timeline bar')", () => {
+  afterEach(() => {
+    mapInstances.length = 0;
+    markerInstances.length = 0;
+  });
+
+  it("renders the legend body as a native <details>/<summary> disclosure", () => {
+    render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: 40 }} />);
+
+    const details = document.querySelector(".map-legend__disclosure");
+    expect(details?.tagName.toLowerCase()).toBe("details");
+    expect(screen.getByText(/legend|leyenda/i)).toBeInTheDocument();
+  });
+
+  it("toggles open/closed when the summary is activated", async () => {
+    render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: 40 }} />);
+
+    const summary = screen.getByText(/legend|leyenda/i);
+    const details = summary.closest("details")!;
+    const initiallyOpen = details.hasAttribute("open");
+
+    await userEvent.click(summary);
+
+    expect(details.hasAttribute("open")).toBe(!initiallyOpen);
+  });
+
+  it("keeps the camera-preset controls visible regardless of the legend's open/closed state", async () => {
+    render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: 40 }} />);
+
+    const summary = screen.getByText(/legend|leyenda/i);
+    const details = summary.closest("details")!;
+    if (details.hasAttribute("open")) {
+      await userEvent.click(summary); // force closed
+    }
+
+    expect(screen.getByRole("button", { name: /historic/i })).toBeVisible();
+  });
+});
