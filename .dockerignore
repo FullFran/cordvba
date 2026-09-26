@@ -1,0 +1,7 @@
+# Keeps the build context small and out of the containers built from
+# apps/web/Dockerfile (built from the repo root; see that file).
+.git/
+node_modules/
+dist/
+*.tsbuildinfo
+.atl/
