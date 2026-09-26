@@ -205,3 +205,36 @@ func TestLoadRejectsANonPositiveRawCacheGrace(t *testing.T) {
 		t.Fatalf("Load() = %v, want ErrInvalidConfig", err)
 	}
 }
+
+// An unset EYE_OVERRIDES_FILE resolves under the config directory, the same
+// way sources.yaml and rules.yaml already do: a deployment that only sets
+// EYE_CONFIG_DIR gets a predictable place to put the optional file, without
+// having to name it too.
+func TestLoadOverridesPathDefaultsUnderConfigDir(t *testing.T) {
+	t.Setenv("EYE_CONFIG_DIR", "/custom/config")
+	t.Setenv("EYE_OVERRIDES_FILE", "")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load() = %v", err)
+	}
+	if want := filepath.Join("/custom/config", "overrides.yaml"); cfg.OverridesPath != want {
+		t.Errorf("OverridesPath = %q, want %q", cfg.OverridesPath, want)
+	}
+}
+
+// An explicit EYE_OVERRIDES_FILE wins outright, rather than composing under
+// ConfigDir the way sources.yaml does: a deployment that mounts the file
+// somewhere else must not also have to relocate its whole config directory.
+func TestLoadOverridesPathExplicitOverrideWins(t *testing.T) {
+	t.Setenv("EYE_CONFIG_DIR", "/custom/config")
+	t.Setenv("EYE_OVERRIDES_FILE", "/etc/eye/overrides.yaml")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load() = %v", err)
+	}
+	if cfg.OverridesPath != "/etc/eye/overrides.yaml" {
+		t.Errorf("OverridesPath = %q, want the explicit override", cfg.OverridesPath)
+	}
+}
