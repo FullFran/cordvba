@@ -24,8 +24,27 @@ const CORDOBA_HISTORIC_CENTRE: [number, number] = [-4.7794, 37.8789];
  */
 const INITIAL_PITCH = 58;
 const INITIAL_BEARING = -35;
-/** Generous, HUD-aware padding (issue #119, maintainer review): the state dock (right), scrubber (bottom) and header overlay (top) must never cover a station. */
-const FIT_PADDING = { top: 180, bottom: 150, left: 48, right: 340 };
+/** Generous, HUD-aware padding (issue #119, maintainer review): the state dock (right), scrubber (bottom) and header overlay (top) must never cover a station. Only applies at/above the `MOBILE_BREAKPOINT_PX` — see `resolveFitPadding`. */
+const DESKTOP_FIT_PADDING = { top: 180, bottom: 150, left: 48, right: 340 };
+/**
+ * Small, symmetric padding for <48rem (polish, maintainer report: "the
+ * left beacon is cut at the screen edge"). Below that breakpoint the HUD
+ * reverts to normal document flow above/below the map (DESIGN.md §3) — no
+ * fixed-position panel sits inside the map's own viewport to clear, so
+ * the desktop padding's asymmetric, HUD-shaped margins (right: 340 alone
+ * eating most of a 390px-wide screen) have nothing left to justify them
+ * and only starved `fitBounds` of room, zooming out to fit the whole
+ * country instead of Córdoba.
+ */
+const MOBILE_FIT_PADDING = { top: 40, bottom: 40, left: 24, right: 24 };
+/** Matches DESIGN.md §3's one layout breakpoint, 48rem at the default 16px root font size. */
+const MOBILE_BREAKPOINT_PX = 768;
+
+/** Picks the desktop or mobile `fitBounds` padding for the given viewport width (polish: see `MOBILE_FIT_PADDING`'s own comment for why these must differ). */
+export function resolveFitPadding(viewportWidthPx: number): typeof DESKTOP_FIT_PADDING {
+  return viewportWidthPx >= MOBILE_BREAKPOINT_PX ? DESKTOP_FIT_PADDING : MOBILE_FIT_PADDING;
+}
+
 const EDGE_MARGIN = 40;
 
 const SHADOW_SOURCE_ID = "building-shadows";
@@ -111,7 +130,7 @@ export function MapView({ environment, highlightStationId, sun }: MapViewProps) 
           attributionControl: false,
         });
         instance.fitBounds(bounds, {
-          padding: FIT_PADDING,
+          padding: resolveFitPadding(container.clientWidth),
           pitch: INITIAL_PITCH,
           bearing: INITIAL_BEARING,
           duration: prefersReducedMotion() ? 0 : 1200,

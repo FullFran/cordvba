@@ -79,4 +79,23 @@ describe("TimelineView", () => {
 
     expect(onSelectPoint).toHaveBeenCalledWith(firstAirQualityPoint);
   });
+
+  it("shows the clock time as the primary label and the forecast horizon as secondary text (polish: the old '+1h before now' confusion)", () => {
+    render(
+      <TimelineView points={airQualitySeries.points} now={timeline.now} onSelectPoint={vi.fn()} />,
+    );
+
+    const list = screen.getByRole("list", { name: /timeline/i });
+    const predictedPoint = airQualitySeries.points.find((p) => p.horizon_h === 1);
+    if (!predictedPoint) {
+      throw new Error("fixture is missing a +1h predicted point");
+    }
+    const clockTime = predictedPoint.at.slice(11, 16);
+    const item = within(list)
+      .getAllByRole("listitem")
+      .find((li) => li.textContent?.includes(clockTime));
+
+    expect(item?.textContent).toContain(clockTime);
+    expect(item?.textContent).toContain("+1h");
+  });
 });

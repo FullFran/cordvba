@@ -77,8 +77,9 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   full-width bar along the bottom edge, source attribution bottom-left,
   and a collapsible "Scenario" drawer under the state dock (closed by
   default — keeps the HUD from clutter until asked for). `fitBounds`
-  padding (`MapView.tsx`'s `FIT_PADDING`) keeps the initial camera from
-  ever framing a station behind these panels.
+  padding (`MapView.tsx`'s `resolveFitPadding`, `DESKTOP_FIT_PADDING` at
+  this breakpoint) keeps the initial camera from ever framing a station
+  behind these panels.
 - **<48rem (mobile):** everything reverts to normal document flow:
   `.app__stage` is a static `60vh` block on top, `.app__panel`s stack
   below it in order (header, state, scrubber, footer), matching the
@@ -114,7 +115,10 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   saturated elements). Pitched 55°, bearing -17°, and — since real station
   coordinates can differ from the fixtures — the initial camera always
   `fitBounds`es the three city stations plus the historic centre, with
-  HUD-aware padding (`FIT_PADDING`), rather than a fixed center/zoom.
+  breakpoint-aware padding (`resolveFitPadding`: the HUD-shaped
+  `DESKTOP_FIT_PADDING` at >=768px, a small symmetric `MOBILE_FIT_PADDING`
+  below it — see Decision Log's "the left beacon is cut" entry), rather
+  than a fixed center/zoom.
   Beacons (`src/map/beacons.ts`) are pills, not fixed small circles (a
   category word like "extremely poor"/"desfavorable" never fit a ~44px
   circle): a glow + two pulsing rings (CSS, frozen under reduced motion),
@@ -163,7 +167,11 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   `<button>`s (keyboard-native, unlike a custom slider widget would need to
   be), each carrying its epistemic symbol (●/■/▲/◌/◇) and a texture class
   (`textureForLabel`: solid/outline/dotted/hatched) so the four kinds never
-  rely on colour alone.
+  rely on colour alone. Its primary label is always the clock time
+  (`pointLabel`); a forecast horizon (e.g. "+1h") is muted secondary text
+  (`pointHorizonLabel`, `.timeline__point-horizon`) — polish fix for a
+  "+1h before now" confusion caused by persistence horizons anchoring on a
+  1-2h-lagged last observation.
 - **StatePanel / ScenarioPanel / ValueTile** — every value routes through
   `formatValue`/`formatWindDirection`/`formatAirQualityCategory` (locale +
   unit aware) and `Label` (locale-aware epistemic word). `ValueTile`'s
@@ -598,3 +606,27 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   `destinationPoint` (the same geodesic-offset helper issue #139's
   shadows already introduced) around each station at a fixed 14m radius,
   16 vertices — plenty round at the zoom this app frames stations at.
+- **2026-09-26 — Timeline label: always the clock time, horizon secondary
+  (polish, maintainer report: "+1h shows before now/ahora").** Persistence
+  horizons anchor on the last ICA observation, published with a 1-2h lag,
+  so a "+1h" prediction's own `at` can still fall before `now` — landing
+  it in the timeline's *past* section while showing only "+1h", with no
+  clock time to make sense of it there. `pointLabel` now always returns
+  the clock time; the horizon moves to a new `pointHorizonLabel`, rendered
+  as muted secondary text (`.timeline__point-horizon`) alongside it. Fixes
+  the meaning regardless of which section a point lands in, without
+  touching `splitTimeline`'s past/future split itself — that split (at
+  <= now is past) was already correct; only the label was confusing.
+- **2026-09-26 — Mobile `fitBounds` padding: small and symmetric below
+  768px, not the desktop HUD padding (polish, maintainer report: "the left
+  beacon is cut at the screen edge").** The desktop padding's right: 340
+  accounts for the fixed-position state dock, which only exists at
+  >=48rem (DESIGN.md §3); below that the HUD reverts to normal document
+  flow above/below the map, so applying that same padding on a 390px-wide
+  viewport left `fitBounds` under 2px of horizontal room, which zoomed out
+  to fit the whole country instead of Córdoba — a beacon "cut at the
+  edge" was actually the mild end of a much larger framing bug.
+  `resolveFitPadding(viewportWidthPx)` (`MapView.tsx`) picks between
+  `DESKTOP_FIT_PADDING` (unchanged) and a new small `MOBILE_FIT_PADDING`
+  (40/40/24/24) at the same 768px breakpoint every other layout rule in
+  this app already uses.

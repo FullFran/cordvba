@@ -138,7 +138,7 @@ vi.mock("../map/darkStyle", () => ({
   // ds-allow-hardcode:end
 }));
 
-import { MapView } from "./MapView";
+import { MapView, resolveFitPadding } from "./MapView";
 
 describe("MapView (issue 119: MapLibre dark 3D map + beacons)", () => {
   afterEach(() => {
@@ -383,5 +383,34 @@ describe("MapView: air quality as columns of light (issue #140)", () => {
     const dueTo = environment.air_quality.stations.find((s) => s.index.due_to)?.index.due_to;
     expect(dueTo).toBeTruthy();
     expect(markerInstances.some((m) => m.element.textContent?.includes(dueTo!))).toBe(true);
+  });
+});
+
+describe("resolveFitPadding (polish: the mobile beacon-clipping bug)", () => {
+  // The desktop padding's right:340 accounts for the fixed-position state
+  // dock, which only exists at >=48rem (768px) — DESIGN.md §3. Below that,
+  // the HUD reverts to normal document flow above/below the map, so
+  // applying that same padding squeezed a 390px-wide viewport's usable
+  // fitBounds area down to ~2px, zooming out to fit the whole country
+  // instead of Córdoba (the reported bug: "the left beacon is cut at the
+  // screen edge").
+  it("uses the generous HUD-aware padding at/above the 768px breakpoint", () => {
+    const padding = resolveFitPadding(1440);
+    expect(padding.right).toBeGreaterThan(200);
+  });
+
+  it("uses a small, symmetric padding below the 768px breakpoint — no fixed-position HUD to clear", () => {
+    const padding = resolveFitPadding(390);
+    expect(padding.right).toBeLessThan(100);
+    expect(padding.left).toBeLessThan(100);
+    // Symmetric, unlike desktop's HUD-shaped asymmetry: nothing on mobile
+    // singles out one edge over another.
+    expect(padding.left).toBe(padding.right);
+    expect(padding.top).toBe(padding.bottom);
+  });
+
+  it("leaves enough room on a 390px-wide viewport for an actual map area to fit bounds into", () => {
+    const padding = resolveFitPadding(390);
+    expect(padding.left + padding.right).toBeLessThan(390 * 0.5);
   });
 });
