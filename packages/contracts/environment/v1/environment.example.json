@@ -1,0 +1,137 @@
+{
+  "generated_at": "2026-09-26T09:40:00Z",
+  "place": { "name": "Córdoba", "lat": 37.8882, "lon": -4.7794 },
+  "weather": {
+    "station": { "id": "LEBA", "name": "Córdoba Airport", "lat": 37.842, "lon": -4.8488 },
+    "air_temperature": {
+      "value": 26.0, "unit": "Cel", "label": "OBSERVED", "at": "2026-09-26T09:00:00Z",
+      "provenance": {
+        "source": "metar-cordoba", "record_id": "rec_metar_0900",
+        "publisher": "NOAA Aviation Weather Center", "licence": "us-government-public-domain",
+        "source_url": "https://aviationweather.gov/api/data/metar",
+        "observed_at": "2026-09-26T09:00:00Z", "fetched_at": "2026-09-26T09:07:12Z", "quality": "preliminary"
+      },
+      "model": null
+    },
+    "dew_point": {
+      "value": 12.0, "unit": "Cel", "label": "OBSERVED", "at": "2026-09-26T09:00:00Z",
+      "provenance": {
+        "source": "metar-cordoba", "record_id": "rec_metar_0900",
+        "publisher": "NOAA Aviation Weather Center", "licence": "us-government-public-domain",
+        "source_url": "https://aviationweather.gov/api/data/metar",
+        "observed_at": "2026-09-26T09:00:00Z", "fetched_at": "2026-09-26T09:07:12Z", "quality": "preliminary"
+      },
+      "model": null
+    },
+    "relative_humidity": {
+      "value": 41.7, "unit": "%", "label": "INFERRED", "at": "2026-09-26T09:00:00Z",
+      "provenance": null,
+      "model": {
+        "name": "magnus-relative-humidity", "version": "1",
+        "reference": "Alduchov & Eskridge (1996), Magnus approximation",
+        "generated_at": "2026-09-26T09:40:00Z", "valid_from": "2026-09-26T09:00:00Z", "valid_until": "2026-09-26T09:00:00Z",
+        "input_snapshot": ["rec_metar_0900"], "uncertainty": "derived from reported temperature and dew point"
+      }
+    },
+    "wind_speed": {
+      "value": 4.1, "unit": "m/s", "label": "OBSERVED", "at": "2026-09-26T09:00:00Z",
+      "provenance": {
+        "source": "metar-cordoba", "record_id": "rec_metar_0900",
+        "publisher": "NOAA Aviation Weather Center", "licence": "us-government-public-domain",
+        "source_url": "https://aviationweather.gov/api/data/metar",
+        "observed_at": "2026-09-26T09:00:00Z", "fetched_at": "2026-09-26T09:07:12Z", "quality": "preliminary"
+      },
+      "model": null
+    },
+    "wind_direction": {
+      "value": 250, "unit": "deg", "label": "OBSERVED", "at": "2026-09-26T09:00:00Z",
+      "provenance": {
+        "source": "metar-cordoba", "record_id": "rec_metar_0900",
+        "publisher": "NOAA Aviation Weather Center", "licence": "us-government-public-domain",
+        "source_url": "https://aviationweather.gov/api/data/metar",
+        "observed_at": "2026-09-26T09:00:00Z", "fetched_at": "2026-09-26T09:07:12Z", "quality": "preliminary"
+      },
+      "model": null
+    },
+    "apparent_temperature": {
+      "value": 23.7, "unit": "Cel", "label": "INFERRED", "at": "2026-09-26T09:00:00Z",
+      "provenance": null,
+      "model": {
+        "name": "bom-apparent-temperature", "version": "1",
+        "reference": "Australian Bureau of Meteorology apparent temperature (Steadman 1994), with wind",
+        "generated_at": "2026-09-26T09:40:00Z", "valid_from": "2026-09-26T09:00:00Z", "valid_until": "2026-09-26T09:00:00Z",
+        "input_snapshot": ["rec_metar_0900"], "uncertainty": "shade value; no solar radiation term"
+      }
+    }
+  },
+  "air_quality": {
+    "city_state": {
+      "value": 4, "unit": "ica", "label": "INFERRED", "at": "2026-09-26T08:00:00Z",
+      "category": "poor", "category_source": "desfavorable",
+      "provenance": null,
+      "model": {
+        "name": "worst-city-station", "version": "1",
+        "reference": "maximum ICA index among Córdoba city stations reporting data",
+        "generated_at": "2026-09-26T09:40:00Z", "valid_from": "2026-09-26T08:00:00Z", "valid_until": "2026-09-26T09:00:00Z",
+        "input_snapshot": ["rec_ica_14021006", "rec_ica_14021007", "rec_ica_14021009"],
+        "uncertainty": "three stations; not representative of every street"
+      }
+    },
+    "stations": [
+      {
+        "id": "14021006", "name": "ASOMADILLA", "lat": 37.90274, "lon": -4.77958,
+        "index": {
+          "value": 3, "unit": "ica", "label": "OBSERVED", "at": "2026-09-26T08:00:00Z",
+          "category": "moderate", "category_source": "regular", "due_to": "O3",
+          "provenance": {
+            "source": "miteco-ica", "record_id": "rec_ica_14021006",
+            "publisher": "MITECO", "licence": "CC-BY-4.0",
+            "source_url": "https://ica.miteco.es/datos/ica-ultima-hora.csv",
+            "observed_at": "2026-09-26T08:00:00Z", "fetched_at": "2026-09-26T09:35:40Z", "quality": "preliminary"
+          },
+          "model": null
+        }
+      },
+      {
+        "id": "14021007", "name": "LEPANTO", "lat": 37.89261, "lon": -4.76234,
+        "index": {
+          "value": 3, "unit": "ica", "label": "OBSERVED", "at": "2026-09-26T08:00:00Z",
+          "category": "moderate", "category_source": "regular", "due_to": "O3",
+          "provenance": {
+            "source": "miteco-ica", "record_id": "rec_ica_14021007",
+            "publisher": "MITECO", "licence": "CC-BY-4.0",
+            "source_url": "https://ica.miteco.es/datos/ica-ultima-hora.csv",
+            "observed_at": "2026-09-26T08:00:00Z", "fetched_at": "2026-09-26T09:35:40Z", "quality": "preliminary"
+          },
+          "model": null
+        }
+      },
+      {
+        "id": "14021009", "name": "AVDA. AL-NASIR", "lat": 37.8926, "lon": -4.7801,
+        "index": {
+          "value": 4, "unit": "ica", "label": "OBSERVED", "at": "2026-09-26T08:00:00Z",
+          "category": "poor", "category_source": "desfavorable", "due_to": "NO2",
+          "provenance": {
+            "source": "miteco-ica", "record_id": "rec_ica_14021009",
+            "publisher": "MITECO", "licence": "CC-BY-4.0",
+            "source_url": "https://ica.miteco.es/datos/ica-ultima-hora.csv",
+            "observed_at": "2026-09-26T08:00:00Z", "fetched_at": "2026-09-26T09:35:40Z", "quality": "preliminary"
+          },
+          "model": null
+        }
+      }
+    ]
+  },
+  "forecast": {
+    "air_quality": {
+      "model": {
+        "name": "persistence", "version": "1",
+        "reference": "naive baseline: the forecast equals the last observed index",
+        "generated_at": "2026-09-26T09:40:00Z", "valid_from": "2026-09-26T09:00:00Z", "valid_until": "2026-09-26T15:00:00Z",
+        "input_snapshot": ["rec_ica_14021006", "rec_ica_14021007", "rec_ica_14021009"],
+        "uncertainty": "baseline, not evaluated"
+      },
+      "horizons_h": [1, 3, 6]
+    }
+  }
+}

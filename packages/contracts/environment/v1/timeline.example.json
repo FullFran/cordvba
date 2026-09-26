@@ -1,0 +1,87 @@
+{
+  "generated_at": "2026-09-26T09:40:00Z",
+  "now": "2026-09-26T09:40:00Z",
+  "series": [
+    {
+      "variable": "air_temperature",
+      "unit": "Cel",
+      "entity": { "id": "LEBA", "name": "Córdoba Airport" },
+      "points": [
+        {
+          "value": 24.0, "unit": "Cel", "label": "OBSERVED", "at": "2026-09-26T08:00:00Z",
+          "provenance": {
+            "source": "metar-cordoba", "record_id": "rec_metar_0800",
+            "publisher": "NOAA Aviation Weather Center", "licence": "us-government-public-domain",
+            "source_url": "https://aviationweather.gov/api/data/metar",
+            "observed_at": "2026-09-26T08:00:00Z", "fetched_at": "2026-09-26T08:05:41Z", "quality": "preliminary"
+          },
+          "model": null
+        },
+        {
+          "value": 26.0, "unit": "Cel", "label": "OBSERVED", "at": "2026-09-26T09:00:00Z",
+          "provenance": {
+            "source": "metar-cordoba", "record_id": "rec_metar_0900",
+            "publisher": "NOAA Aviation Weather Center", "licence": "us-government-public-domain",
+            "source_url": "https://aviationweather.gov/api/data/metar",
+            "observed_at": "2026-09-26T09:00:00Z", "fetched_at": "2026-09-26T09:07:12Z", "quality": "preliminary"
+          },
+          "model": null
+        }
+      ]
+    },
+    {
+      "variable": "air_quality_index",
+      "unit": "ica",
+      "entity": { "id": "14021009", "name": "AVDA. AL-NASIR" },
+      "points": [
+        {
+          "value": 4, "unit": "ica", "label": "OBSERVED", "at": "2026-09-26T08:00:00Z",
+          "category": "poor", "category_source": "desfavorable", "due_to": "NO2",
+          "provenance": {
+            "source": "miteco-ica", "record_id": "rec_ica_14021009",
+            "publisher": "MITECO", "licence": "CC-BY-4.0",
+            "source_url": "https://ica.miteco.es/datos/ica-ultima-hora.csv",
+            "observed_at": "2026-09-26T08:00:00Z", "fetched_at": "2026-09-26T09:35:40Z", "quality": "preliminary"
+          },
+          "model": null
+        },
+        {
+          "value": 4, "unit": "ica", "label": "PREDICTED", "at": "2026-09-26T10:00:00Z",
+          "category": "poor", "category_source": "desfavorable",
+          "horizon_h": 1,
+          "provenance": null,
+          "model": {
+            "name": "persistence", "version": "1",
+            "reference": "naive baseline: the forecast equals the last observed index",
+            "generated_at": "2026-09-26T09:40:00Z", "valid_from": "2026-09-26T10:00:00Z", "valid_until": "2026-09-26T10:00:00Z",
+            "input_snapshot": ["rec_ica_14021009"], "uncertainty": "baseline, not evaluated"
+          }
+        },
+        {
+          "value": 4, "unit": "ica", "label": "PREDICTED", "at": "2026-09-26T12:00:00Z",
+          "category": "poor", "category_source": "desfavorable",
+          "horizon_h": 3,
+          "provenance": null,
+          "model": {
+            "name": "persistence", "version": "1",
+            "reference": "naive baseline: the forecast equals the last observed index",
+            "generated_at": "2026-09-26T09:40:00Z", "valid_from": "2026-09-26T12:00:00Z", "valid_until": "2026-09-26T12:00:00Z",
+            "input_snapshot": ["rec_ica_14021009"], "uncertainty": "baseline, not evaluated"
+          }
+        },
+        {
+          "value": 4, "unit": "ica", "label": "PREDICTED", "at": "2026-09-26T15:00:00Z",
+          "category": "poor", "category_source": "desfavorable",
+          "horizon_h": 6,
+          "provenance": null,
+          "model": {
+            "name": "persistence", "version": "1",
+            "reference": "naive baseline: the forecast equals the last observed index",
+            "generated_at": "2026-09-26T09:40:00Z", "valid_from": "2026-09-26T15:00:00Z", "valid_until": "2026-09-26T15:00:00Z",
+            "input_snapshot": ["rec_ica_14021009"], "uncertainty": "baseline, not evaluated"
+          }
+        }
+      ]
+    }
+  ]
+}

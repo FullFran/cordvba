@@ -47,6 +47,14 @@ jobs:
             build
             release
             main
+            eye
+            web
+            twin
+            intelligence
+            eye-client
+            contracts
+            evals
+            infra
           requireScope: false
           disallowScopes: ""
           subjectPattern: "^[a-z].+$"

@@ -1,0 +1,28 @@
+{
+  "generated_at": "2026-09-26T09:41:00Z",
+  "scenario": { "temperature_delta_c": 3, "humidity_delta_pct": 10, "wind_factor": 0.5 },
+  "model": {
+    "name": "thermal-scenario", "version": "1",
+    "reference": "observed state with the scenario deltas applied; apparent temperature per the Australian Bureau of Meteorology formula",
+    "generated_at": "2026-09-26T09:41:00Z", "valid_from": "2026-09-26T09:00:00Z", "valid_until": "2026-09-26T09:00:00Z",
+    "input_snapshot": ["rec_metar_0900"], "uncertainty": "counterfactual; not a forecast"
+  },
+  "observed": {
+    "air_temperature": { "value": 26.0, "unit": "Cel", "label": "OBSERVED", "at": "2026-09-26T09:00:00Z",
+      "provenance": { "source": "metar-cordoba", "record_id": "rec_metar_0900", "publisher": "NOAA Aviation Weather Center", "licence": "us-government-public-domain", "source_url": "https://aviationweather.gov/api/data/metar", "observed_at": "2026-09-26T09:00:00Z", "fetched_at": "2026-09-26T09:07:12Z", "quality": "preliminary" },
+      "model": null },
+    "relative_humidity": { "value": 41.7, "unit": "%", "label": "INFERRED", "at": "2026-09-26T09:00:00Z", "provenance": null,
+      "model": { "name": "magnus-relative-humidity", "version": "1", "reference": "Alduchov & Eskridge (1996), Magnus approximation", "generated_at": "2026-09-26T09:41:00Z", "valid_from": "2026-09-26T09:00:00Z", "valid_until": "2026-09-26T09:00:00Z", "input_snapshot": ["rec_metar_0900"], "uncertainty": "derived from reported temperature and dew point" } },
+    "wind_speed": { "value": 4.1, "unit": "m/s", "label": "OBSERVED", "at": "2026-09-26T09:00:00Z",
+      "provenance": { "source": "metar-cordoba", "record_id": "rec_metar_0900", "publisher": "NOAA Aviation Weather Center", "licence": "us-government-public-domain", "source_url": "https://aviationweather.gov/api/data/metar", "observed_at": "2026-09-26T09:00:00Z", "fetched_at": "2026-09-26T09:07:12Z", "quality": "preliminary" },
+      "model": null },
+    "apparent_temperature": { "value": 23.7, "unit": "Cel", "label": "INFERRED", "at": "2026-09-26T09:00:00Z", "provenance": null,
+      "model": { "name": "bom-apparent-temperature", "version": "1", "reference": "Australian Bureau of Meteorology apparent temperature (Steadman 1994), with wind", "generated_at": "2026-09-26T09:41:00Z", "valid_from": "2026-09-26T09:00:00Z", "valid_until": "2026-09-26T09:00:00Z", "input_snapshot": ["rec_metar_0900"], "uncertainty": "shade value; no solar radiation term" } }
+  },
+  "simulated": {
+    "air_temperature": { "value": 29.0, "unit": "Cel", "label": "SIMULATED", "at": "2026-09-26T09:00:00Z", "provenance": null, "model": { "name": "thermal-scenario", "version": "1", "reference": "observed value + temperature_delta_c", "generated_at": "2026-09-26T09:41:00Z", "valid_from": "2026-09-26T09:00:00Z", "valid_until": "2026-09-26T09:00:00Z", "input_snapshot": ["rec_metar_0900"], "uncertainty": "counterfactual; not a forecast" } },
+    "relative_humidity": { "value": 51.7, "unit": "%", "label": "SIMULATED", "at": "2026-09-26T09:00:00Z", "provenance": null, "model": { "name": "thermal-scenario", "version": "1", "reference": "derived value + humidity_delta_pct, clamped to 0-100", "generated_at": "2026-09-26T09:41:00Z", "valid_from": "2026-09-26T09:00:00Z", "valid_until": "2026-09-26T09:00:00Z", "input_snapshot": ["rec_metar_0900"], "uncertainty": "counterfactual; not a forecast" } },
+    "wind_speed": { "value": 2.05, "unit": "m/s", "label": "SIMULATED", "at": "2026-09-26T09:00:00Z", "provenance": null, "model": { "name": "thermal-scenario", "version": "1", "reference": "observed value * wind_factor", "generated_at": "2026-09-26T09:41:00Z", "valid_from": "2026-09-26T09:00:00Z", "valid_until": "2026-09-26T09:00:00Z", "input_snapshot": ["rec_metar_0900"], "uncertainty": "counterfactual; not a forecast" } },
+    "apparent_temperature": { "value": 30.4, "unit": "Cel", "label": "SIMULATED", "at": "2026-09-26T09:00:00Z", "provenance": null, "model": { "name": "bom-apparent-temperature", "version": "1", "reference": "Australian Bureau of Meteorology apparent temperature (Steadman 1994), with wind", "generated_at": "2026-09-26T09:41:00Z", "valid_from": "2026-09-26T09:00:00Z", "valid_until": "2026-09-26T09:00:00Z", "input_snapshot": ["rec_metar_0900"], "uncertainty": "counterfactual; not a forecast" } }
+  }
+}

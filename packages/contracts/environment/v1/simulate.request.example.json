@@ -1,0 +1,5 @@
+{
+  "temperature_delta_c": 3,
+  "humidity_delta_pct": 10,
+  "wind_factor": 0.5
+}
