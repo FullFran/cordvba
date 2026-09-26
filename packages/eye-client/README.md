@@ -1,6 +1,21 @@
 # eye-client
 
-**Status:** planned, no code yet.
+**Status:** implemented (issue #99).
+
+## Usage
+
+```python
+from eye_client import EyeClient
+
+client = EyeClient(base_url="http://127.0.0.1:8080", token="...", timeout=10.0)
+records = client.records(source="metar-cordoba", topic="weather", limit=100)
+entities = client.entities(topic="transit")
+sources = client.sources()
+```
+
+`records()`, `entities()` and `sources()` raise `EyeAuthError` (401),
+`EyeHTTPError` (other 4xx), `EyeServerError` (5xx) or `EyeTimeoutError` on a
+timeout. The bearer token is never logged or included in `repr()`.
 
 ## Responsibility
 
