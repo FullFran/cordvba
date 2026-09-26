@@ -11,14 +11,16 @@
 
 	# /api/* reaches api with the prefix stripped, so a request for
 	# /api/v1/environment arrives at api as /v1/environment.
+	# Upstreams use the stack's unique aliases (see compose.yml): the edge may
+	# share a network with other stacks whose services are called api or web.
 	handle_path /api/* {
-		reverse_proxy api:8000
+		reverse_proxy cordvba-api:8000
 	}
 
 	# Everything else is the static web app (SPA fallback lives in
 	# apps/web/nginx.conf, not here).
 	handle {
-		reverse_proxy web:80
+		reverse_proxy cordvba-web:80
 	}
 
 	header {
