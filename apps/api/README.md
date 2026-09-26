@@ -24,8 +24,12 @@ Response models (`apps/api/src/api/schemas.py`) match
 those examples and validate them against the models.
 
 Config: `EYE_BASE_URL`, `EYE_API_TOKEN`, `TWIN_BASE_URL`, `WEB_ORIGIN`
-(CORS) — see `api.config`. No response contains eye's token or either
-internal base URL (tested).
+(CORS) — see `api.config`. `WEB_ORIGIN` accepts one origin or a
+comma-separated list of origins (e.g.
+`https://a.example, https://b.example`); each entry is trimmed and must be
+a bare `scheme://host[:port]` with no path, or the process refuses to
+start. No response contains eye's token or either internal base URL
+(tested).
 
 Run locally: `make api` (root Makefile) or
 `docker build -f apps/api/Dockerfile -t cordvba-api .` from the
