@@ -31,9 +31,12 @@ export const en = {
     caption:
       "Extrusion heights: OpenStreetMap, approximate where building levels are unknown. Beacons show individual stations only — no interpolated surface.",
     beaconAirQuality: "{name}: air quality {category}, index {index}",
+    beaconAirQualityWithPollutant: "{name}: air quality {category}, index {index}, due to {pollutant}",
     beaconWind: "{name}: wind {direction}, {speed}",
     unknownIndex: "unknown",
     edgeIndicator: "{name}, {distance} km away",
+    columnsLegend:
+      "Each column is one station; height = ICA index; nothing is interpolated between stations.",
   },
   wind: {
     toggle: "Illustrative wind",

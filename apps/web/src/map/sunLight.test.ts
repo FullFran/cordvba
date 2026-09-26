@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { sunLight } from "./sunLight";
 
+// ds-allow-hardcode:start (test fixture: arbitrary literal colours exercising that sunLight() passes its given colour straight through — not this app's own design decisions)
 describe("sunLight (issue #139: MapLibre extrusion light driven by the real sun position)", () => {
   it("points straight down (polar 0) when the sun is directly overhead", () => {
     const light = sunLight({ azimuthDeg: 120, altitudeDeg: 90 }, "#cfe0f5");
@@ -38,3 +39,4 @@ describe("sunLight (issue #139: MapLibre extrusion light driven by the real sun 
     expect(sunLight({ azimuthDeg: 0, altitudeDeg: 30 }, "#cfe0f5").anchor).toBe("map");
   });
 });
+// ds-allow-hardcode:end

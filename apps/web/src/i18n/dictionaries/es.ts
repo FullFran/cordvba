@@ -31,9 +31,12 @@ export const es = {
     caption:
       "Alturas de extrusión: OpenStreetMap, aproximadas donde se desconoce el número de plantas. Las balizas muestran estaciones individuales — sin superficie interpolada.",
     beaconAirQuality: "{name}: calidad del aire {category}, índice {index}",
+    beaconAirQualityWithPollutant: "{name}: calidad del aire {category}, índice {index}, debido a {pollutant}",
     beaconWind: "{name}: viento {direction}, {speed}",
     unknownIndex: "desconocido",
     edgeIndicator: "{name}, a {distance} km",
+    columnsLegend:
+      "Cada columna es una estación; altura = índice ICA; no se interpola entre estaciones.",
   },
   wind: {
     toggle: "Viento ilustrativo",

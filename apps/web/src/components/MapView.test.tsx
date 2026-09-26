@@ -123,6 +123,7 @@ vi.mock("../map/darkStyle", () => ({
   // Issue #139's sun-driven lighting reads this at runtime; the real
   // implementation is covered by its own darkStyle.test.ts, so this only
   // needs to return a plausible-shaped palette here.
+  // ds-allow-hardcode:start (test fixture, mirrors tokens.css's --map-* values)
   readMapPalette: vi.fn(() => ({
     background: "#060a12",
     water: "#0c1c33",
@@ -134,6 +135,7 @@ vi.mock("../map/darkStyle", () => ({
     roadMajor: "#313949",
     roadLabel: "#5a6272",
   })),
+  // ds-allow-hardcode:end
 }));
 
 import { MapView } from "./MapView";
@@ -342,5 +344,44 @@ describe("MapView: sun-driven lighting and building shadows (issue #139)", () =>
 
     rerender(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: -5 }} />);
     expect(screen.queryByText(/inferred/i)).not.toBeInTheDocument();
+  });
+});
+
+describe("MapView: air quality as columns of light (issue #140)", () => {
+  afterEach(() => {
+    mapInstances.length = 0;
+    markerInstances.length = 0;
+  });
+
+  it("adds one column feature per station — never an interpolated surface between them", async () => {
+    render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: 40 }} />);
+    await waitFor(() => expect(mapInstances).toHaveLength(1));
+    const instance = mapInstances[0] as unknown as {
+      addSource: ReturnType<typeof vi.fn>;
+      addLayer: ReturnType<typeof vi.fn>;
+      getSource: ReturnType<typeof vi.fn>;
+    };
+
+    expect(instance.addSource).toHaveBeenCalledWith("air-quality-columns", expect.objectContaining({ type: "geojson" }));
+    expect(instance.addLayer).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "air-quality-columns-layer", type: "fill-extrusion" }),
+    );
+    const source = instance.getSource("air-quality-columns") as { setData: ReturnType<typeof vi.fn> };
+    const lastCall = source.setData.mock.calls[source.setData.mock.calls.length - 1];
+    expect(lastCall![0].features).toHaveLength(environment.air_quality.stations.length);
+  });
+
+  it("shows the columns-are-not-interpolated legend line, always (not conditional on the sun)", () => {
+    render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: -5 }} />);
+    expect(screen.getByText(/nothing is interpolated between stations/i)).toBeInTheDocument();
+  });
+
+  it("shows the pollutant responsible on the air-quality beacon marker", async () => {
+    render(<MapView environment={environment} sun={{ azimuthDeg: 200, altitudeDeg: 40 }} />);
+    await waitFor(() => expect(markerInstances.length).toBeGreaterThan(0));
+
+    const dueTo = environment.air_quality.stations.find((s) => s.index.due_to)?.index.due_to;
+    expect(dueTo).toBeTruthy();
+    expect(markerInstances.some((m) => m.element.textContent?.includes(dueTo!))).toBe(true);
   });
 });

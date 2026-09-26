@@ -672,6 +672,13 @@ a:focus-visible {
   letter-spacing: 0.02em;
 }
 
+/* The pollutant responsible for the index (issue #140), e.g. "O3" — a
+   plain-text detail, muted so the category word above still reads first. */
+.beacon__pollutant {
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+}
+
 /* The severity icon: a small solid glyph, shape-coded circle -> star. */
 .beacon__shape {
   flex: 0 0 auto;

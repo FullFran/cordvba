@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { categoryShape, createBeaconElement, createEdgeIndicatorElement, windArrowRotation } from "./beacons";
+import {
+  breathingDurationMs,
+  categoryShape,
+  createBeaconElement,
+  createEdgeIndicatorElement,
+  windArrowRotation,
+} from "./beacons";
 
 describe("categoryShape", () => {
   it("gives every ICA category a distinct shape, softest for good and sharpest for extremely poor", () => {
@@ -13,6 +19,25 @@ describe("categoryShape", () => {
 
   it("falls back to a generic shape for an unrecognised category, instead of throwing", () => {
     expect(() => categoryShape("unknown-category")).not.toThrow();
+  });
+});
+
+describe("breathingDurationMs (issue #140: the air-quality beacon's breathing halo — slower for good air, faster for poor)", () => {
+  it("breathes slower for good air than for poor air", () => {
+    expect(breathingDurationMs("good")).toBeGreaterThan(breathingDurationMs("poor"));
+  });
+
+  it("is monotonically faster across the full good -> extremely_poor severity ramp", () => {
+    const categories = ["good", "fair", "moderate", "poor", "very_poor", "extremely_poor"] as const;
+    const durations = categories.map(breathingDurationMs);
+    for (let i = 1; i < durations.length; i++) {
+      expect(durations[i]).toBeLessThan(durations[i - 1]!);
+    }
+  });
+
+  it("falls back to a sane duration for an unrecognised category, instead of throwing or returning 0", () => {
+    expect(() => breathingDurationMs("unknown-category")).not.toThrow();
+    expect(breathingDurationMs("unknown-category")).toBeGreaterThan(0);
   });
 });
 
@@ -76,6 +101,48 @@ describe("createBeaconElement", () => {
 
     expect(el.textContent).toContain("muy desfavorable");
     expect(el.getAttribute("aria-label")).toMatch(/calidad del aire/i);
+  });
+
+  it("shows the pollutant responsible as text alongside the category and index (issue #140)", () => {
+    const el = createBeaconElement({
+      kind: "air-quality",
+      name: "AVDA. AL-NASIR",
+      category: "poor",
+      index: 4,
+      highlighted: false,
+      pollutant: "NO2",
+    });
+
+    expect(el.textContent).toContain("NO2");
+    expect(el.getAttribute("aria-label")).toContain("NO2");
+  });
+
+  it("omits the pollutant text entirely when none is reported, rather than showing 'undefined'", () => {
+    const el = createBeaconElement({
+      kind: "air-quality",
+      name: "ASOMADILLA",
+      category: "good",
+      index: 1,
+      highlighted: false,
+    });
+
+    expect(el.textContent).not.toContain("undefined");
+  });
+
+  it("sets the breathing ring's animation duration from the category (issue #140: slower for good air)", () => {
+    const good = createBeaconElement({ kind: "air-quality", name: "A", category: "good", index: 1, highlighted: false });
+    const poor = createBeaconElement({
+      kind: "air-quality",
+      name: "B",
+      category: "extremely_poor",
+      index: 6,
+      highlighted: false,
+    });
+
+    const goodRing = good.querySelector<HTMLElement>(".beacon__ring");
+    const poorRing = poor.querySelector<HTMLElement>(".beacon__ring");
+    const parseMs = (value: string) => Number.parseFloat(value);
+    expect(parseMs(goodRing!.style.animationDuration)).toBeGreaterThan(parseMs(poorRing!.style.animationDuration));
   });
 
   it("renders a wind beacon with the arrow pointing where the wind blows TO and formatted speed/direction", () => {
