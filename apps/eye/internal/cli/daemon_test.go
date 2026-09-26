@@ -56,6 +56,35 @@ func TestDaemonPollsThenStopsOnCancellation(t *testing.T) {
 	}
 }
 
+// Each prune cycle logs both what it removed and what remains, so an
+// operator watching the raw cache grow does not have to infer it from a full
+// disk later.
+func TestDaemonLogsRetentionEachPruneCycle(t *testing.T) {
+	t.Parallel()
+
+	registry := setup(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	var stdout, stderr bytes.Buffer
+	cli.New().Run(ctx,
+		[]string{"daemon", "--registry", registry, "--data-dir", t.TempDir(), "--prune-every", "200ms"},
+		&stdout, &stderr)
+
+	logs := stderr.String()
+	if !strings.Contains(logs, `"msg":"retention enforced"`) {
+		t.Fatalf("no prune cycle logged within the run:\n%s", logs)
+	}
+	for _, want := range []string{
+		`"expired_records"`, `"payloads_removed"`, `"payload_bytes_freed"`, `"store_bytes"`, `"raw_cache_bytes"`,
+	} {
+		if !strings.Contains(logs, want) {
+			t.Errorf("prune log is missing %s:\n%s", want, logs)
+		}
+	}
+}
+
 func TestDaemonLogsAreStructuredJSON(t *testing.T) {
 	t.Parallel()
 

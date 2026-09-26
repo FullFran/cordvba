@@ -117,6 +117,11 @@ func TestRawCachePrune(t *testing.T) {
 
 	keepHash, _ := c.Put([]byte("still referenced by a record"))
 	dropHash, _ := c.Put([]byte("no record points at this any more"))
+	dropPath := filepath.Join(dir, dropHash[0:2], dropHash[2:4], dropHash)
+	dropInfo, err := os.Stat(dropPath)
+	if err != nil {
+		t.Fatalf("stat the payload before pruning it: %v", err)
+	}
 
 	// Age both entries past the cutoff.
 	past := time.Now().Add(-48 * time.Hour)
@@ -127,7 +132,7 @@ func TestRawCachePrune(t *testing.T) {
 		}
 	}
 
-	removed, err := c.Prune(time.Now().Add(-time.Hour), func(hash string) bool {
+	removed, freedBytes, err := c.Prune(time.Now().Add(-time.Hour), func(hash string) bool {
 		return hash == keepHash
 	})
 	if err != nil {
@@ -135,6 +140,9 @@ func TestRawCachePrune(t *testing.T) {
 	}
 	if removed != 1 {
 		t.Errorf("removed = %d, want 1", removed)
+	}
+	if freedBytes != dropInfo.Size() {
+		t.Errorf("freedBytes = %d, want the removed payload's own size %d", freedBytes, dropInfo.Size())
 	}
 	if !c.Has(keepHash) {
 		t.Error("a payload the keep function protected was deleted")
@@ -150,12 +158,15 @@ func TestRawCachePruneKeepsRecentPayloads(t *testing.T) {
 	c := store.NewRawCache(t.TempDir())
 	hash, _ := c.Put([]byte("fetched just now"))
 
-	removed, err := c.Prune(time.Now().Add(-time.Hour), nil)
+	removed, freedBytes, err := c.Prune(time.Now().Add(-time.Hour), nil)
 	if err != nil {
 		t.Fatalf("Prune() = %v", err)
 	}
 	if removed != 0 {
 		t.Errorf("removed = %d, want 0", removed)
+	}
+	if freedBytes != 0 {
+		t.Errorf("freedBytes = %d, want 0", freedBytes)
 	}
 	if !c.Has(hash) {
 		t.Error("a payload newer than the cutoff was deleted")
@@ -166,8 +177,47 @@ func TestRawCachePruneOnAnEmptyCache(t *testing.T) {
 	t.Parallel()
 
 	c := store.NewRawCache(filepath.Join(t.TempDir(), "never-written"))
-	if _, err := c.Prune(time.Now(), nil); err != nil {
+	if _, _, err := c.Prune(time.Now(), nil); err != nil {
 		t.Errorf("Prune() on an empty cache = %v, want nil", err)
+	}
+}
+
+// Size is what the daemon logs as "the raw cache now holds" after a prune
+// cycle: files removed and bytes freed tell an operator what just happened,
+// and the remaining size tells them where they stand.
+func TestRawCacheSize(t *testing.T) {
+	t.Parallel()
+
+	c := store.NewRawCache(t.TempDir())
+	if _, err := c.Put([]byte("one payload")); err != nil {
+		t.Fatalf("Put() = %v", err)
+	}
+	if _, err := c.Put([]byte("a second, different payload")); err != nil {
+		t.Fatalf("Put() = %v", err)
+	}
+
+	files, bytes, err := c.Size()
+	if err != nil {
+		t.Fatalf("Size() = %v", err)
+	}
+	if files != 2 {
+		t.Errorf("files = %d, want 2", files)
+	}
+	if bytes <= 0 {
+		t.Errorf("bytes = %d, want > 0", bytes)
+	}
+}
+
+func TestRawCacheSizeOnAnEmptyCache(t *testing.T) {
+	t.Parallel()
+
+	c := store.NewRawCache(filepath.Join(t.TempDir(), "never-written"))
+	files, bytes, err := c.Size()
+	if err != nil {
+		t.Fatalf("Size() = %v", err)
+	}
+	if files != 0 || bytes != 0 {
+		t.Errorf("Size() = %d files, %d bytes, want 0, 0", files, bytes)
 	}
 }
 

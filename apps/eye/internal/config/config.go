@@ -9,7 +9,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
+
+// defaultRawCacheGrace is long enough that a payload fetched but not yet
+// normalized into a record survives an ordinary prune cycle.
+const defaultRawCacheGrace = 24 * time.Hour
 
 // ErrInvalidConfig is returned when the environment cannot produce a usable
 // configuration.
@@ -63,6 +68,15 @@ type Config struct {
 	// are the operator's own decision about their own machine, so the machine
 	// has to say so too: EYE_ALLOW_PERSONAL_SOURCES=1.
 	AllowPersonalSources bool
+
+	// RawCacheGrace is how long a cached payload survives after the records
+	// that would reference it become eligible for removal, before the raw
+	// cache prune considers it unreferenced.
+	//
+	// It exists so a payload fetched but not yet normalized into a record —
+	// the daemon is mid-poll, or a run crashed between the two steps — is
+	// never removed: EYE_RAW_CACHE_GRACE, default 24h.
+	RawCacheGrace time.Duration
 }
 
 // validLogLevels is the accepted set for EYE_LOG_LEVEL.
@@ -94,6 +108,12 @@ func Load() (Config, error) {
 	if !validLogLevels[cfg.LogLevel] {
 		return Config{}, fmt.Errorf("%w: EYE_LOG_LEVEL %q is not one of debug, info, warn, error", ErrInvalidConfig, cfg.LogLevel)
 	}
+
+	grace, err := parseRawCacheGrace(os.Getenv("EYE_RAW_CACHE_GRACE"))
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.RawCacheGrace = grace
 
 	cfg.SourcesPath = filepath.Join(cfg.ConfigDir, "sources.yaml")
 	cfg.RulesPath = filepath.Join(cfg.ConfigDir, "rules.yaml")
@@ -141,4 +161,23 @@ func envOr(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// parseRawCacheGrace resolves EYE_RAW_CACHE_GRACE. An unset value falls back
+// to the default; a set one must parse and must be strictly positive; a grace
+// of zero or less would mean a payload could be removed before the record
+// depending on it was ever written.
+func parseRawCacheGrace(raw string) (time.Duration, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return defaultRawCacheGrace, nil
+	}
+	d, err := time.ParseDuration(raw)
+	if err != nil {
+		return 0, fmt.Errorf("%w: EYE_RAW_CACHE_GRACE %q: %w", ErrInvalidConfig, raw, err)
+	}
+	if d <= 0 {
+		return 0, fmt.Errorf("%w: EYE_RAW_CACHE_GRACE %q must be positive", ErrInvalidConfig, raw)
+	}
+	return d, nil
 }

@@ -284,6 +284,60 @@ func (s *SQLiteStore) Prune(ctx context.Context, now time.Time) (int, error) {
 	return int(n), nil
 }
 
+// rawHashLookup is the query the raw cache prune loop runs once per cached
+// payload: is this hash still referenced by a surviving record, or by an
+// entity (entities carry Provenance.RawHash too, for the inventory refresh
+// that fetched them)? EXISTS short-circuits on the first match, so neither
+// half of the UNION needs to run to completion.
+const rawHashLookup = `SELECT EXISTS(
+	SELECT 1 FROM records  WHERE raw_hash = ?
+	UNION ALL
+	SELECT 1 FROM entities WHERE raw_hash = ?
+)`
+
+// RawHashInUse reports whether any surviving record or entity still
+// references a raw cache payload by hash. It backs the keep() function
+// RawCache.Prune calls once per cached file.
+func (s *SQLiteStore) RawHashInUse(ctx context.Context, hash string) (bool, error) {
+	if hash == "" {
+		return false, nil
+	}
+	var inUse bool
+	if err := s.db.QueryRowContext(ctx, rawHashLookup, hash, hash).Scan(&inUse); err != nil {
+		return false, fmt.Errorf("%w: raw hash lookup %s: %w", ErrStore, hash, err)
+	}
+	return inUse, nil
+}
+
+// ExplainRawHashLookup returns SQLite's own query plan for RawHashInUse's
+// query, rendered as text. It exists so the decision to add records_raw_hash
+// and entities_raw_hash can be checked against a real query plan rather than
+// asserted, both here and by whoever next touches this schema.
+func (s *SQLiteStore) ExplainRawHashLookup(ctx context.Context, hash string) (string, error) {
+	rows, err := s.db.QueryContext(ctx, "EXPLAIN QUERY PLAN "+rawHashLookup, hash, hash)
+	if err != nil {
+		return "", fmt.Errorf("%w: explain raw hash lookup: %w", ErrStore, err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var sb strings.Builder
+	for rows.Next() {
+		var (
+			id, parent, notUsed int
+			detail              string
+		)
+		if err := rows.Scan(&id, &parent, &notUsed, &detail); err != nil {
+			return "", fmt.Errorf("%w: explain raw hash lookup: %w", ErrStore, err)
+		}
+		sb.WriteString(detail)
+		sb.WriteString("\n")
+	}
+	if err := rows.Err(); err != nil {
+		return "", fmt.Errorf("%w: explain raw hash lookup: %w", ErrStore, err)
+	}
+	return sb.String(), nil
+}
+
 // Counts reports how much the store holds.
 func (s *SQLiteStore) Counts(ctx context.Context) (records, entities int, err error) {
 	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM records`).Scan(&records); err != nil {

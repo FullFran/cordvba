@@ -53,6 +53,18 @@ CREATE INDEX IF NOT EXISTS records_expires_at   ON records (expires_at) WHERE ex
 CREATE INDEX IF NOT EXISTS records_bbox         ON records (lat, lon) WHERE lat IS NOT NULL;
 CREATE INDEX IF NOT EXISTS records_dedupe       ON records (dedupe_key) WHERE dedupe_key IS NOT NULL;
 
+-- The raw cache prune loop looks up one hash per cached payload, every
+-- cycle, to decide whether any surviving record still references it. Without
+-- an index that lookup is a full table SCAN per payload; with one it is a
+-- SEARCH, which is what keeps the prune loop's cost independent of how many
+-- payloads have accumulated.
+--
+-- Not a partial index: EXPLAIN QUERY PLAN showed that "WHERE raw_hash != ''"
+-- makes SQLite fall back to a full scan for a bound parameter, because it
+-- cannot prove at plan time that the bound value is non-empty. A plain index
+-- covers the same equality lookup and is what the planner actually uses.
+CREATE INDEX IF NOT EXISTS records_raw_hash     ON records (raw_hash);
+
 CREATE TABLE IF NOT EXISTS entities (
     id          TEXT PRIMARY KEY,
     source      TEXT    NOT NULL,
@@ -82,6 +94,7 @@ CREATE TABLE IF NOT EXISTS entities (
 CREATE INDEX IF NOT EXISTS entities_kind      ON entities (kind);
 CREATE INDEX IF NOT EXISTS entities_topic     ON entities (topic);
 CREATE INDEX IF NOT EXISTS entities_bbox      ON entities (lat, lon) WHERE lat IS NOT NULL;
+CREATE INDEX IF NOT EXISTS entities_raw_hash  ON entities (raw_hash);
 
 -- Per-source polling state, so a restart does not re-download everything the
 -- publisher already told us has not changed.

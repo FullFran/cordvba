@@ -114,7 +114,7 @@ func daemonCommand() Command {
 func runOnce(ctx context.Context, rt *runtime, ps []provider.Provider, stdout io.Writer) error {
 	results := rt.collect(ctx, ps)
 
-	pruned, err := rt.prune(ctx)
+	pr, err := rt.prune(ctx)
 	if err != nil {
 		return err
 	}
@@ -132,10 +132,12 @@ func runOnce(ctx context.Context, rt *runtime, ps []provider.Provider, stdout io
 		return err
 	}
 
-	_, _ = fmt.Fprintf(stdout, "%s polled · %s new · %s pruned\n",
+	_, _ = fmt.Fprintf(stdout, "%s polled · %s new · %s pruned · %s pruned (%s)\n",
 		plural(len(results), "source", "sources"),
 		plural(stored, "record", "records"),
-		plural(pruned, "expired record", "expired records"))
+		plural(pr.Records, "expired record", "expired records"),
+		plural(pr.Payloads, "raw payload", "raw payloads"),
+		formatBytes(pr.PayloadBytes))
 	if failed > 0 {
 		_, _ = fmt.Fprintf(stdout, "%d failed\n", failed)
 	}
@@ -143,6 +145,7 @@ func runOnce(ctx context.Context, rt *runtime, ps []provider.Provider, stdout io
 		plural(records, "record", "records"),
 		plural(entities, "asset", "assets"),
 		rt.store.Path())
+	_, _ = fmt.Fprintf(stdout, "raw cache holds %s\n", formatBytes(pr.RawBytes))
 	return nil
 }
 
@@ -160,16 +163,37 @@ func pruneLoop(ctx context.Context, rt *runtime, every time.Duration, log *logge
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			pruned, err := rt.prune(ctx)
+			pr, err := rt.prune(ctx)
 			if err != nil {
 				log.Error("prune failed", "error", err)
 				continue
 			}
-			if pruned > 0 {
-				log.Info("retention enforced", "expired_records", pruned)
-			}
+			// Logged every cycle, not only when something was removed: the
+			// remaining sizes are exactly what tells an operator the raw
+			// cache is staying bounded, or is not.
+			log.Info("retention enforced",
+				"expired_records", pr.Records,
+				"payloads_removed", pr.Payloads,
+				"payload_bytes_freed", pr.PayloadBytes,
+				"store_bytes", pr.StoreBytes,
+				"raw_cache_bytes", pr.RawBytes)
 		}
 	}
+}
+
+// formatBytes renders a byte count the way an operator reads a directory
+// listing, without pulling in a dependency for it.
+func formatBytes(n int64) string {
+	const unit = 1024
+	if n < unit {
+		return fmt.Sprintf("%d B", n)
+	}
+	div, exp := int64(unit), 0
+	for m := n / unit; m >= unit; m /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %ciB", float64(n)/float64(div), "KMGTPE"[exp])
 }
 
 // daemonSink persists what the scheduler collects and remembers each source's

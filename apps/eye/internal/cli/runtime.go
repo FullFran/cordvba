@@ -181,10 +181,58 @@ func (r *runtime) query(ctx context.Context, f observationdomain.Filter) ([]obse
 	return r.store.Query(ctx, f)
 }
 
-// prune enforces retention. Expired movement records are deleted because a
-// DELETE runs, not because a document says they should be.
-func (r *runtime) prune(ctx context.Context) (int, error) {
-	return r.store.Prune(ctx, time.Now().UTC())
+// PruneResult reports what one retention pass removed, and how much the
+// store and raw cache hold once it finished.
+type PruneResult struct {
+	// Records is how many expired records store.Prune deleted.
+	Records int
+	// Payloads and PayloadBytes are how many raw cache payloads — and how
+	// many bytes — were removed because no surviving record or entity
+	// referenced them any more, once they were older than the configured
+	// grace period.
+	Payloads     int
+	PayloadBytes int64
+	// StoreBytes and RawBytes are what the store and the raw cache hold on
+	// disk after this pass, so an operator can see both stay bounded rather
+	// than infer it later from a full disk.
+	StoreBytes int64
+	RawBytes   int64
+}
+
+// prune enforces retention in two steps. Expired records are deleted first,
+// because a DELETE runs, not because a document says they should be. Then any
+// raw cache payload no surviving record or entity references is removed,
+// once it is older than the configured grace period — long enough that a
+// payload fetched but not yet normalized into a record is never caught by
+// the same pass that stored it.
+func (r *runtime) prune(ctx context.Context) (PruneResult, error) {
+	records, err := r.store.Prune(ctx, time.Now().UTC())
+	if err != nil {
+		return PruneResult{}, err
+	}
+
+	cutoff := time.Now().UTC().Add(-r.cfg.RawCacheGrace)
+	payloads, payloadBytes, err := r.cache.Prune(cutoff, func(hash string) bool {
+		inUse, lookupErr := r.store.RawHashInUse(ctx, hash)
+		if lookupErr != nil {
+			// An unanswerable lookup must not delete evidence: fail
+			// closed and leave the payload for a later cycle.
+			return true
+		}
+		return inUse
+	})
+	if err != nil {
+		return PruneResult{Records: records}, err
+	}
+
+	res := PruneResult{Records: records, Payloads: payloads, PayloadBytes: payloadBytes}
+	if info, statErr := os.Stat(r.store.Path()); statErr == nil {
+		res.StoreBytes = info.Size()
+	}
+	if _, rawBytes, sizeErr := r.cache.Size(); sizeErr == nil {
+		res.RawBytes = rawBytes
+	}
+	return res, nil
 }
 
 // filterByTopic narrows a registry to the given topics.
