@@ -73,6 +73,55 @@ sources:
 	}
 }
 
+// A registry entry that never mentions retention keeps today's behaviour: the
+// adapter's own TTL applies.
+func TestParseDefaultsRetentionToEphemeral(t *testing.T) {
+	t.Parallel()
+
+	sources, err := registry.Parse([]byte(`
+sources:
+  - id: diario-cordoba
+    authority: Diario Cordoba
+    topic: press
+    url: https://www.diariocordoba.com/rss/
+    format: rss
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 30m
+`))
+	if err != nil {
+		t.Fatalf("Parse() = %v", err)
+	}
+	if sources[0].Historical() {
+		t.Error("a source with no retention field must not be historical")
+	}
+}
+
+func TestParseHistoricalRetention(t *testing.T) {
+	t.Parallel()
+
+	sources, err := registry.Parse([]byte(`
+sources:
+  - id: metar-cordoba
+    authority: NOAA
+    topic: weather
+    url: https://aviationweather.gov/api/data/metar
+    format: metar-json
+    license: us-government-public-domain
+    access: documented_api
+    automation: enabled
+    interval: 20m
+    retention: historical
+`))
+	if err != nil {
+		t.Fatalf("Parse() = %v", err)
+	}
+	if !sources[0].Historical() {
+		t.Error("retention: historical must produce a historical source")
+	}
+}
+
 func TestParseRejects(t *testing.T) {
 	t.Parallel()
 
@@ -120,6 +169,59 @@ func TestParseRejects(t *testing.T) {
 			name: "undocumented backend enabled",
 			yaml: base(`access: undocumented_backend`),
 			want: "undocumented backends are never pollable",
+		},
+		{
+			name: "unknown retention",
+			yaml: `
+sources:
+  - id: test-source
+    authority: Test Authority
+    topic: press
+    url: https://example.org/rss
+    format: rss
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 30m
+    retention: forever
+`,
+			want: "unknown retention",
+		},
+		{
+			name: "historical together with a ttl option",
+			yaml: `
+sources:
+  - id: test-source
+    authority: Test Authority
+    topic: press
+    url: https://example.org/rss
+    format: rss
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 30m
+    retention: historical
+    options:
+      ttl: 720h
+`,
+			want: "ttl option",
+		},
+		{
+			name: "compact retention is reserved",
+			yaml: `
+sources:
+  - id: test-source
+    authority: Test Authority
+    topic: press
+    url: https://example.org/rss
+    format: rss
+    license: unspecified
+    access: documented_api
+    automation: enabled
+    interval: 30m
+    retention: compact
+`,
+			want: "reserved for #22",
 		},
 	}
 

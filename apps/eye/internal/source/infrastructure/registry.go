@@ -30,6 +30,7 @@ type yamlSource struct {
 	License        string            `yaml:"license"`
 	Access         string            `yaml:"access"`
 	Automation     string            `yaml:"automation"`
+	Retention      string            `yaml:"retention"`
 	Interval       string            `yaml:"interval"`
 	PublishedEvery string            `yaml:"published_every"`
 	SampledKinds   []string          `yaml:"sampled_kinds"`
@@ -57,6 +58,15 @@ var (
 		domain.AutomationReviewTerms: true,
 		domain.AutomationManualLink:  true,
 		domain.AutomationDisabled:    true,
+	}
+	// knownRetention accepts "compact" at parse time even though Validate
+	// rejects it: a typo in the field is an unknown value, a reserved value
+	// is a known one the domain is not ready to honour yet, and the two
+	// deserve different error messages.
+	knownRetention = map[domain.Retention]bool{
+		domain.RetentionEphemeral:  true,
+		domain.RetentionHistorical: true,
+		domain.RetentionCompact:    true,
 	}
 )
 
@@ -107,6 +117,11 @@ func convert(e yamlSource) (domain.Source, error) {
 		return domain.Source{}, fmt.Errorf("published_every: %w", err)
 	}
 
+	retention := domain.Retention(e.Retention)
+	if retention == "" {
+		retention = domain.RetentionEphemeral
+	}
+
 	src := domain.Source{
 		ID:             e.ID,
 		Authority:      e.Authority,
@@ -116,6 +131,7 @@ func convert(e yamlSource) (domain.Source, error) {
 		License:        e.License,
 		Access:         domain.Access(e.Access),
 		Automation:     domain.AutomationStatus(e.Automation),
+		Retention:      retention,
 		Interval:       interval,
 		PublishedEvery: published,
 		SampledKinds:   e.SampledKinds,
@@ -128,6 +144,9 @@ func convert(e yamlSource) (domain.Source, error) {
 	}
 	if !knownAutomation[src.Automation] {
 		return domain.Source{}, fmt.Errorf("unknown automation %q", e.Automation)
+	}
+	if !knownRetention[src.Retention] {
+		return domain.Source{}, fmt.Errorf("unknown retention %q", e.Retention)
 	}
 	if err := src.Validate(); err != nil {
 		return domain.Source{}, err

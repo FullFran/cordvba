@@ -149,3 +149,97 @@ func TestSourceOptionOnNilMap(t *testing.T) {
 		t.Errorf("Option() on nil map = %q, want the fallback", got)
 	}
 }
+
+func TestRetentionHistorical(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name      string
+		retention domain.Retention
+		want      bool
+	}{
+		{name: "ephemeral is not historical", retention: domain.RetentionEphemeral, want: false},
+		{name: "historical is historical", retention: domain.RetentionHistorical, want: true},
+		{name: "compact is not historical", retention: domain.RetentionCompact, want: false},
+		{name: "the zero value defaults to ephemeral", retention: domain.Retention(""), want: false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := tc.retention.Historical(); got != tc.want {
+				t.Errorf("Historical() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// A source that never mentions retention keeps behaving exactly as it always
+// has: the adapter's own TTL applies.
+func TestSourceHistoricalDefaultsToEphemeral(t *testing.T) {
+	t.Parallel()
+
+	s := validSource()
+	if s.Historical() {
+		t.Error("a source with no retention set must not be treated as historical")
+	}
+}
+
+func TestSourceValidateRetention(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name    string
+		mutate  func(*domain.Source)
+		wantErr bool
+	}{
+		{
+			name: "historical with no ttl option is valid",
+			mutate: func(s *domain.Source) {
+				s.Retention = domain.RetentionHistorical
+			},
+		},
+		{
+			name: "historical together with a ttl option is rejected",
+			mutate: func(s *domain.Source) {
+				s.Retention = domain.RetentionHistorical
+				s.Options = map[string]string{"ttl": "720h"}
+			},
+			wantErr: true,
+		},
+		{
+			name: "ephemeral with a ttl option is unaffected",
+			mutate: func(s *domain.Source) {
+				s.Retention = domain.RetentionEphemeral
+				s.Options = map[string]string{"ttl": "720h"}
+			},
+		},
+		{
+			name: "compact is reserved and rejected",
+			mutate: func(s *domain.Source) {
+				s.Retention = domain.RetentionCompact
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			s := validSource()
+			tc.mutate(&s)
+			err := s.Validate()
+
+			if tc.wantErr {
+				if !errors.Is(err, domain.ErrInvalidSource) {
+					t.Fatalf("Validate() = %v, want ErrInvalidSource", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Validate() = %v, want nil", err)
+			}
+		})
+	}
+}

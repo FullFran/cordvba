@@ -104,6 +104,8 @@ func (c *Collector) collectOne(ctx context.Context, p provider.Provider) Result 
 		return res
 	}
 
+	applyRetention(info, records)
+
 	if stored, err := c.records.Append(ctx, records); err == nil {
 		res.Records = stored
 	} else {
@@ -125,6 +127,31 @@ func (c *Collector) collectOne(ctx context.Context, p provider.Provider) Result 
 	res.Health.LastSuccess = c.Now()
 	res.Health.Records = len(records)
 	return res
+}
+
+// applyRetention overrides ExpiresAt for a historical source's freshly polled
+// records, in place.
+//
+// Every adapter still computes its own ExpiresAt from its own TTL — that code
+// is unchanged, on purpose: rewriting three adapters to each ask the registry
+// "am I historical?" would mean the same policy re-implemented three times,
+// with a fourth mistake waiting the next time a source is added. The
+// collector is instead the single seam every source's Poll() result passes
+// through before it reaches the store, regardless of adapter, so the
+// registry's retention decision is enforced exactly once, here, for every
+// source there is or ever will be.
+//
+// Change records never reach this function: they are produced by
+// detectChanges below, through a separate Append call, and keep their own
+// fixed 30-day TTL untouched — that belongs to the change-feed ADR, not to a
+// source's retention policy.
+func applyRetention(info source.Source, records []domain.Record) {
+	if !info.Historical() {
+		return
+	}
+	for i := range records {
+		records[i].ExpiresAt = nil
+	}
 }
 
 // detectChanges compares this poll against the previous one and stores what

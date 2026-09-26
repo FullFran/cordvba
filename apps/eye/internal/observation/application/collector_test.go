@@ -3,6 +3,7 @@ package application_test
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -15,16 +16,17 @@ import (
 
 // fakeProvider is a provider under test control.
 type fakeProvider struct {
-	id       string
-	topic    string
-	records  []domain.Record
-	entities []domain.Entity
-	err      error
-	delay    time.Duration
+	id        string
+	topic     string
+	retention source.Retention
+	records   []domain.Record
+	entities  []domain.Entity
+	err       error
+	delay     time.Duration
 }
 
 func (f *fakeProvider) Info() source.Source {
-	return source.Source{ID: f.id, Topic: f.topic, Format: "fake"}
+	return source.Source{ID: f.id, Topic: f.topic, Format: "fake", Retention: f.retention}
 }
 
 func (f *fakeProvider) Poll(ctx context.Context) ([]domain.Record, error) {
@@ -165,5 +167,130 @@ func TestCollectHandlesNoProviders(t *testing.T) {
 	s := store.NewMemStore()
 	if got := application.NewCollector(s, s).Collect(context.Background(), nil); len(got) != 0 {
 		t.Errorf("Collect(nil) = %d results, want 0", len(got))
+	}
+}
+
+// sampleRecordWithExpiry builds a valid record carrying an adapter-computed
+// ExpiresAt, the shape every provider's Poll returns today.
+func sampleRecordWithExpiry(id string, expires time.Time) domain.Record {
+	r := sampleRecord(id)
+	r.ExpiresAt = &expires
+	return r
+}
+
+// A historical source is an environmental series eye cannot re-fetch once the
+// window has passed: the adapter may still compute an ExpiresAt (every current
+// adapter does), but the collector — the one seam every source's records pass
+// through before they reach the store — must clear it before persisting.
+func TestCollectClearsExpiryForHistoricalSources(t *testing.T) {
+	t.Parallel()
+
+	s := store.NewMemStore()
+	c := application.NewCollector(s, s)
+
+	expires := time.Now().UTC().Add(30 * 24 * time.Hour)
+	results := c.Collect(context.Background(), []provider.Provider{
+		&fakeProvider{
+			id: "aemet-observation", topic: "weather", retention: source.RetentionHistorical,
+			records: []domain.Record{sampleRecordWithExpiry("1", expires)},
+		},
+	})
+	if !results[0].OK() {
+		t.Fatalf("result error: %v", results[0].Err)
+	}
+
+	got, err := s.Query(context.Background(), domain.Filter{})
+	if err != nil {
+		t.Fatalf("Query() = %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("stored = %d records, want 1", len(got))
+	}
+	if got[0].ExpiresAt != nil {
+		t.Errorf("ExpiresAt = %v, want nil for a historical source", got[0].ExpiresAt)
+	}
+}
+
+// An ephemeral source (the default, and every source that never mentions
+// retention) keeps behaving exactly as it always has: the adapter's own TTL
+// survives untouched.
+func TestCollectKeepsExpiryForEphemeralSources(t *testing.T) {
+	t.Parallel()
+
+	s := store.NewMemStore()
+	c := application.NewCollector(s, s)
+
+	expires := time.Now().UTC().Add(24 * time.Hour)
+	results := c.Collect(context.Background(), []provider.Provider{
+		&fakeProvider{
+			id: "adsb-lol", topic: "aviation",
+			records: []domain.Record{sampleRecordWithExpiry("1", expires)},
+		},
+	})
+	if !results[0].OK() {
+		t.Fatalf("result error: %v", results[0].Err)
+	}
+
+	got, err := s.Query(context.Background(), domain.Filter{})
+	if err != nil {
+		t.Fatalf("Query() = %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("stored = %d records, want 1", len(got))
+	}
+	if got[0].ExpiresAt == nil || !got[0].ExpiresAt.Equal(expires) {
+		t.Errorf("ExpiresAt = %v, want %v unchanged for an ephemeral source", got[0].ExpiresAt, expires)
+	}
+}
+
+// This is the end-to-end proof #73 asks for: a historical source's records
+// carry a nil ExpiresAt all the way into the durable store, and the daemon's
+// own prune mechanism (SQLiteStore.Prune) never touches them — even when the
+// adapter computed an ExpiresAt already in the past. An ephemeral source
+// polled alongside it is pruned exactly as before: nothing about #73 changes
+// what already worked.
+func TestHistoricalRecordsSurvivePruneAlongsideEphemeralOnes(t *testing.T) {
+	t.Parallel()
+
+	s, err := store.OpenSQLite(filepath.Join(t.TempDir(), "eye.db"))
+	if err != nil {
+		t.Fatalf("OpenSQLite() = %v", err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+
+	c := application.NewCollector(s, s)
+	now := time.Now().UTC()
+	longPastExpiry := now.Add(-72 * time.Hour) // what a 30-day TTL adapter would have computed weeks ago
+
+	results := c.Collect(context.Background(), []provider.Provider{
+		&fakeProvider{
+			id: "aemet-observation", topic: "weather", retention: source.RetentionHistorical,
+			records: []domain.Record{sampleRecordWithExpiry("historical-1", longPastExpiry)},
+		},
+		&fakeProvider{
+			id: "adsb-lol", topic: "aviation",
+			records: []domain.Record{sampleRecordWithExpiry("ephemeral-1", longPastExpiry)},
+		},
+	})
+	for _, r := range results {
+		if !r.OK() {
+			t.Fatalf("%s: %v", r.Source, r.Err)
+		}
+	}
+
+	pruned, err := s.Prune(context.Background(), now)
+	if err != nil {
+		t.Fatalf("Prune() = %v", err)
+	}
+	if pruned != 1 {
+		t.Errorf("pruned = %d, want 1 (only the ephemeral record)", pruned)
+	}
+
+	got, err := s.Query(context.Background(), domain.Filter{})
+	if err != nil {
+		t.Fatalf("Query() = %v", err)
+	}
+	if len(got) != 1 || got[0].ID != "historical-1" {
+		t.Fatalf("after prune the store holds %+v, want only historical-1", got)
 	}
 }
