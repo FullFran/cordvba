@@ -1,6 +1,6 @@
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { useLocale } from "../i18n/LocaleContext";
 import { prefersReducedMotion } from "../lib/motion";
@@ -13,8 +13,13 @@ import { WindParticles } from "./WindParticles";
 
 /** The historic centre of Córdoba, folded into the initial camera bounds alongside the stations (issue #119). */
 const CORDOBA_HISTORIC_CENTRE: [number, number] = [-4.7794, 37.8789];
-const INITIAL_PITCH = 55;
-const INITIAL_BEARING = -17;
+/**
+ * Pitch/bearing (issue #119, maintainer review: "3D is barely
+ * perceptible"): a steeper pitch and a bearing away from due north/east
+ * shows building facades, not just rooftops from directly above.
+ */
+const INITIAL_PITCH = 58;
+const INITIAL_BEARING = -35;
 /** Generous, HUD-aware padding (issue #119, maintainer review): the state dock (right), scrubber (bottom) and header overlay (top) must never cover a station. */
 const FIT_PADDING = { top: 180, bottom: 150, left: 48, right: 340 };
 const EDGE_MARGIN = 40;
@@ -45,6 +50,8 @@ export function MapView({ environment, highlightStationId }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [map, setMap] = useState<maplibregl.Map | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [windEnabled, setWindEnabled] = useState(true);
+  const windToggleId = useId();
 
   useEffect(() => {
     const container = containerRef.current;
@@ -79,7 +86,11 @@ export function MapView({ environment, highlightStationId }: MapViewProps) {
           bearing: INITIAL_BEARING,
           duration: prefersReducedMotion() ? 0 : 1200,
         });
-        instance.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+        // bottom-right, not top-right (issue #119, maintainer review): the
+        // state dock HUD panel already occupies the top-right corner on
+        // desktop and was covering this control. styles.css offsets
+        // `.maplibregl-ctrl-bottom-right` above the bottom scrubber bar.
+        instance.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "bottom-right");
         setMap(instance);
       })
       .catch((err: unknown) => {
@@ -206,17 +217,36 @@ export function MapView({ environment, highlightStationId }: MapViewProps) {
             map={map}
             directionDeg={windDirectionDeg}
             speedMs={environment.weather.wind_speed.value}
-            label={t.wind.label}
-            toggleLabel={t.wind.toggle}
+            enabled={windEnabled}
           />
         ) : null}
+
+        {/* One merged legend (issue #119, maintainer review): the wind
+            toggle/label and the extrusion-heights caption used to be two
+            separate absolutely-positioned boxes that could overlap each
+            other, or the wind label could go unnoticed on its own. Always
+            rendered, not gated on `map`, so it is visible on every
+            breakpoint regardless of load state. */}
+        <div className="map-legend">
+          <label htmlFor={windToggleId} className="map-legend__toggle">
+            <input
+              id={windToggleId}
+              type="checkbox"
+              checked={windEnabled}
+              onChange={(event) => setWindEnabled(event.target.checked)}
+            />
+            {t.wind.toggle}
+          </label>
+          {windEnabled ? <p className="map-legend__line">{t.wind.label}</p> : null}
+          <p className="map-legend__line map-legend__line--muted">{t.map.caption}</p>
+        </div>
+
+        {mapError ? (
+          <p className="unavailable-notice">
+            {t.unavailable.mapPrefix} {mapError}
+          </p>
+        ) : null}
       </div>
-      {mapError ? (
-        <p className="unavailable-notice">
-          {t.unavailable.mapPrefix} {mapError}
-        </p>
-      ) : null}
-      <p className="map-view__caption">{t.map.caption}</p>
       {/* visually-hidden text summary, for anyone who cannot read the canvas at all */}
       <p className="visually-hidden">
         {environment.air_quality.stations

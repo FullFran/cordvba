@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import type maplibregl from "maplibre-gl";
 
 import { prefersReducedMotion } from "../lib/motion";
@@ -8,8 +8,8 @@ export interface WindParticlesProps {
   map: maplibregl.Map;
   directionDeg: number | null;
   speedMs: number | string | null;
-  label: string;
-  toggleLabel: string;
+  /** Whether the layer is switched on; the toggle control itself lives in `MapView`'s merged legend (issue #119, maintainer review). */
+  enabled: boolean;
 }
 
 const PARTICLE_COUNT = 140;
@@ -20,20 +20,19 @@ interface Particle {
 }
 
 /**
- * An animated particle field showing the single METAR station's wind
- * (issue #119): explicitly illustrative, one station, not spatially
- * varied across the city, and labelled as such whenever it is on.
- * Frozen to one static frame under `prefers-reduced-motion`, and
- * toggleable so a visitor can turn it off entirely.
+ * The canvas half of the illustrative wind layer (issue #119): driven by
+ * the single METAR reading, frozen to one static frame under
+ * `prefers-reduced-motion`. Its honesty label and on/off toggle live in
+ * `MapView`'s merged legend, not here, so they can never be covered by
+ * (or cover) the extrusion-heights caption, and stay visible regardless
+ * of whether this canvas is animating.
  */
-export function WindParticles({ map, directionDeg, speedMs, label, toggleLabel }: WindParticlesProps) {
+export function WindParticles({ map, directionDeg, speedMs, enabled }: WindParticlesProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [enabled, setEnabled] = useState(true);
-  const toggleId = useId();
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !enabled) {
+    if (!canvas) {
       return undefined;
     }
     const ctx = canvas.getContext("2d");
@@ -48,6 +47,13 @@ export function WindParticles({ map, directionDeg, speedMs, label, toggleLabel }
     };
     resize();
     map.on("resize", resize);
+
+    if (!enabled) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      return () => {
+        map.off("resize", resize);
+      };
+    }
 
     const { vx, vy } = windVelocity(directionDeg, speedMs);
     let particles: Particle[] = Array.from({ length: PARTICLE_COUNT }, () => ({
@@ -96,21 +102,5 @@ export function WindParticles({ map, directionDeg, speedMs, label, toggleLabel }
     };
   }, [map, enabled, directionDeg, speedMs]);
 
-  return (
-    <div className="wind-particles">
-      <canvas ref={canvasRef} className="wind-particles__canvas" aria-hidden="true" />
-      <div className="wind-particles__controls">
-        <label htmlFor={toggleId} className="wind-particles__toggle">
-          <input
-            id={toggleId}
-            type="checkbox"
-            checked={enabled}
-            onChange={(event) => setEnabled(event.target.checked)}
-          />
-          {toggleLabel}
-        </label>
-        {enabled ? <p className="wind-particles__label">{label}</p> : null}
-      </div>
-    </div>
-  );
+  return <canvas ref={canvasRef} className="wind-particles__canvas" aria-hidden="true" />;
 }

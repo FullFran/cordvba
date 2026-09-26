@@ -75,6 +75,48 @@ const baseStyle: MapStyle = {
       "source-layer": "transportation_name",
       paint: { "text-color": "#666" }, // ds-allow-hardcode
     },
+    {
+      id: "road_motorway",
+      type: "line",
+      source: "openmaptiles",
+      "source-layer": "transportation",
+      minzoom: 5,
+      paint: { "line-color": "hsl(35,60%,70%)" }, // ds-allow-hardcode (fixture: original warm amber road colour)
+    },
+    {
+      id: "road_motorway_casing",
+      type: "line",
+      source: "openmaptiles",
+      "source-layer": "transportation",
+      paint: { "line-color": "hsl(35,40%,50%)" }, // ds-allow-hardcode
+    },
+    {
+      id: "road_minor",
+      type: "line",
+      source: "openmaptiles",
+      "source-layer": "transportation",
+      paint: { "line-color": "hsl(0,0%,100%)" }, // ds-allow-hardcode
+    },
+    {
+      id: "aeroway_fill",
+      type: "fill",
+      source: "openmaptiles",
+      "source-layer": "aeroway",
+      minzoom: 11,
+      paint: { "fill-color": "hsl(0,0%,88%)" }, // ds-allow-hardcode
+    },
+    {
+      // A real OpenFreeMap layer (issue 119: this exact shape once broke
+      // the style, "unknown property line-color" on a symbol layer): a
+      // road-id-prefixed layer that is NOT line/fill, so it must not get
+      // a line-color/fill-color override.
+      id: "road_shield_us",
+      type: "symbol",
+      source: "openmaptiles",
+      "source-layer": "transportation_name",
+      minzoom: 9,
+      layout: { "icon-image": "shield", "text-field": "ref" },
+    },
   ],
 };
 
@@ -84,6 +126,10 @@ const palette: MapPalette = {
   buildingLow: "#171d2b", // ds-allow-hardcode (mirrors --map-building-low)
   buildingHigh: "#3a4a63", // ds-allow-hardcode (mirrors --map-building-high)
   labelHalo: "rgba(6,10,18,0.85)", // ds-allow-hardcode (mirrors --map-label-halo)
+  roadMinor: "#1e2229", // ds-allow-hardcode (mirrors --map-road-minor)
+  roadMid: "#262b36", // ds-allow-hardcode (mirrors --map-road-mid)
+  roadMajor: "#313949", // ds-allow-hardcode (mirrors --map-road-major)
+  roadLabel: "#5a6272", // ds-allow-hardcode (mirrors --map-road-label)
 };
 
 describe("buildDarkStyle", () => {
@@ -128,17 +174,18 @@ describe("buildDarkStyle", () => {
     expect(water?.["source-layer"]).toBe("water");
     expect(water?.filter).toEqual(["!=", ["get", "brunnel"], "tunnel"]);
 
-    const building = dark.layers.find((l) => l.id === "building");
-    expect(building?.minzoom).toBe(13);
-    expect(building?.maxzoom).toBe(14);
+    // building's minzoom/maxzoom are a deliberate override too (13/14 ->
+    // 11/12, see MINZOOM_OVERRIDES and the "extrusion visibility"
+    // describe block below); a layer with no override at all (water,
+    // checked above) is the proof this generic pass never touches
+    // zoom ranges on its own.
 
     // building-3d's opacity is a deliberate override (0.8 -> 0.85, see
     // overridePaint), covered by the height-ramp test above; here we check
     // that a layer with NO curated override keeps its numeric paint values
     // exactly, proving the generic pass never touches non-colour data.
     const building2d = dark.layers.find((l) => l.id === "building");
-    expect(building2d?.minzoom).toBe(13);
-    expect(building2d?.maxzoom).toBe(14);
+    expect(building2d?.paint?.["fill-outline-color"]).toBeDefined();
   });
 
   it("recolours a symbol layer's text and halo colours for contrast against the dark map", () => {
@@ -195,5 +242,80 @@ describe("buildDarkStyle: basemap noise reduction (issue 119, maintainer review)
     const cityLabel = dark.layers.find((l) => l.id === "label_city");
     expect(cityLabel?.paint?.["icon-opacity"]).toBeUndefined();
     expect(cityLabel?.paint?.["text-opacity"]).toBeUndefined();
+  });
+
+  it("gives a muted major-road label the exact curated colour, not just any non-original colour", () => {
+    const dark = buildDarkStyle(baseStyle, palette);
+    const major = dark.layers.find((l) => l.id === "highway-name-major");
+    expect(major?.paint?.["text-color"]).toBe(palette.roadLabel);
+  });
+});
+
+describe("buildDarkStyle: road network muted to neutral slate (issue 119, maintainer review)", () => {
+  it("recolours a major road (motorway) to the curated major-road colour, not its original warm amber", () => {
+    const dark = buildDarkStyle(baseStyle, palette);
+    const motorway = dark.layers.find((l) => l.id === "road_motorway");
+    expect(motorway?.paint?.["line-color"]).toBe(palette.roadMajor);
+  });
+
+  it("recolours a road casing to the minor tier, one step darker than its own fill's tier", () => {
+    const dark = buildDarkStyle(baseStyle, palette);
+    const casing = dark.layers.find((l) => l.id === "road_motorway_casing");
+    expect(casing?.paint?.["line-color"]).toBe(palette.roadMinor);
+  });
+
+  it("recolours a minor road to the minor-tier colour", () => {
+    const dark = buildDarkStyle(baseStyle, palette);
+    const minor = dark.layers.find((l) => l.id === "road_minor");
+    expect(minor?.paint?.["line-color"]).toBe(palette.roadMinor);
+  });
+
+  it("recolours a fill-type road layer (aeroway) via fill-color, not line-color", () => {
+    const dark = buildDarkStyle(baseStyle, palette);
+    const aeroway = dark.layers.find((l) => l.id === "aeroway_fill");
+    expect(aeroway?.paint?.["fill-color"]).toBe(palette.roadMinor);
+    expect(aeroway?.paint?.["line-color"]).toBeUndefined();
+  });
+
+  it("never applies line-color/fill-color to a symbol layer whose id happens to start with a road prefix (real regression: MapLibre rejected 'unknown property line-color' on road_shield_us)", () => {
+    const dark = buildDarkStyle(baseStyle, palette);
+    const shield = dark.layers.find((l) => l.id === "road_shield_us");
+    expect(shield?.paint).toBeUndefined();
+    expect(shield?.layout).toEqual({ "icon-image": "shield", "text-field": "ref" });
+  });
+
+  it("keeps a major road no more than ~2.5x the minor tier's relative luminance (verified against the WCAG relative-luminance formula, not just 'brighter')", () => {
+    // Palette values already chosen so minor/mid/major stay comfortably
+    // under 25-30% of the darkest beacon's luminance (see tokens.css);
+    // this only guards the *ratio* between tiers stays modest.
+    function relLuminance(hex: string): number {
+      const n = parseInt(hex.slice(1), 16);
+      const lin = (c: number) => {
+        const cs = c / 255;
+        return cs <= 0.03928 ? cs / 12.92 : ((cs + 0.055) / 1.055) ** 2.4;
+      };
+      const r = lin((n >> 16) & 255);
+      const g = lin((n >> 8) & 255);
+      const b = lin(n & 255);
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+    const minorLum = relLuminance(palette.roadMinor);
+    const majorLum = relLuminance(palette.roadMajor);
+    expect(majorLum / minorLum).toBeLessThan(3);
+  });
+});
+
+describe("buildDarkStyle: extrusion visibility (issue 119, maintainer review: '3D barely perceptible')", () => {
+  it("lowers building-3d's minzoom so extrusions render at a wider fitBounds camera", () => {
+    const dark = buildDarkStyle(baseStyle, palette);
+    const b3d = dark.layers.find((l) => l.id === "building-3d");
+    expect(b3d?.minzoom).toBeLessThan(14);
+  });
+
+  it("lowers the flat 2D building layer's maxzoom to match, so there is no gap or double-render", () => {
+    const dark = buildDarkStyle(baseStyle, palette);
+    const building2d = dark.layers.find((l) => l.id === "building");
+    const b3d = dark.layers.find((l) => l.id === "building-3d");
+    expect(building2d?.maxzoom).toBeLessThanOrEqual(b3d?.minzoom as number);
   });
 });

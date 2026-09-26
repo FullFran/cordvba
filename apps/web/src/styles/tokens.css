@@ -64,14 +64,24 @@
   --texture-predicted: var(--color-accent);
   --texture-simulated: #f5a524;
 
-  /* --- Map ------------------------------------------------------------ */
+  /* --- Map ------------------------------------------------------------
+     Road colours (issue #119, maintainer review): the basemap must stay
+     muted so beacons and wind are the only saturated, brightest
+     elements. Neutral slate (hue ~220, matching --color-border), not the
+     original style's warm amber (which shared a hue family with the
+     moderate/poor AQ beacons). Relative luminance (WCAG formula) is
+     0.016/0.024/0.041 for minor/mid/major — comfortably under 25% of
+     even the darkest beacon colour (`--color-aq-very-poor`, luminance
+     ~0.33) — verified in DESIGN.md §8. */
   --map-bg: #060a12;
   --map-water: #0c1c33;
   --map-park: #0f2418;
   --map-building-low: #171d2b;
   --map-building-high: #3a4a63;
-  --map-road: #2a3348;
-  --map-road-major: #4a5670;
+  --map-road-minor: #1e2229;
+  --map-road-mid: #262b36;
+  --map-road-major: #313949;
+  --map-road-label: #5a6272;
   --map-label-halo: rgba(6, 10, 18, 0.85);
 
   /* --- Typography -----------------------------------------------------
