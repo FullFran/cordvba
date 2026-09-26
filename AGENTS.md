@@ -2,26 +2,45 @@
 
 Agent governance for the cordvba monorepo root. Every component owns its own
 `AGENTS.md` and rules; this file covers only what is true across all of them.
+See [`docs/architecture/system-overview.md`](./docs/architecture/system-overview.md)
+for the full component table, dependency graph and request flows, and
+[`docs/product/vision.md`](./docs/product/vision.md) for what CORDVBA is.
 
-## Layout
+## Layout criterion
 
-```
-apps/eye/    the city data plane — a local OSINT gateway that assembles a
-             live model of Córdoba from public sources only, shipped as a
-             single Go binary with no mandatory services.
-```
+Where does a new thing go?
 
-Only `apps/eye` exists so far. More components (an API, a web frontend, an
-intelligence layer, and a digital-twin worker) will be added by a follow-up
-PR, each under `apps/<name>` with its own `AGENTS.md`.
+| Kind | Meaning |
+|---|---|
+| `apps/` | Components with their own entry point for people or operators (eye, api, web). |
+| `services/` | Internal computation services reachable only by other components, never by the browser (intelligence, twin). |
+| `packages/` | Libraries and contracts, never deployed alone. |
+| `infra/` | How things run: compose, deployment, observability. |
+| `experiments/` | Notebooks and prototypes; never imported by production code, never deployed. |
 
-## The one boundary that already applies
+Only `apps/eye` has code today. api, web, intelligence and twin are
+documentation-only placeholders — see each component's own `README.md` and
+`AGENTS.md` once it starts.
 
-Nothing outside `apps/eye/` reads eye's SQLite store or raw cache, and nothing
-outside `apps/eye/` imports eye's `internal` packages. Consumers talk to eye
-over its HTTP API instead — see [`apps/eye/AGENTS.md`](./apps/eye/AGENTS.md)
-and the schema it serves at `/openapi.json`. eye owns its persistence and
-internals completely; this boundary is hexagonal, not a suggestion.
+## Boundary rules
+
+1. Nothing outside `apps/eye/` reads eye's SQLite store or raw cache.
+2. Nothing outside `apps/eye/` imports eye's `internal` Go packages.
+   Consumers talk to eye over its HTTP API — see
+   [`apps/eye/AGENTS.md`](./apps/eye/AGENTS.md) and the schema it serves at
+   `/openapi.json`.
+3. eye depends on nobody else in this repository.
+4. twin and intelligence never write to eye; they only read its public API.
+5. api composes eye, twin and intelligence through their public contracts,
+   never their internals or persistence.
+6. web talks only to api.
+
+Every component owns its persistence and internals completely; these
+boundaries are hexagonal, not a suggestion. `infra/ci/check-boundaries.sh`
+enforces rules 1–3 mechanically.
+
+Every component owns its own `AGENTS.md`; add one when a component's code
+starts.
 
 ## Commits and pull requests
 

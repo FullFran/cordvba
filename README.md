@@ -1,16 +1,23 @@
 # cordvba
 
-A monorepo for a live model of Córdoba: a city data plane, and the consumers
-built on top of it.
+CORDVBA is an experimental, personal, non-commercial computational model of
+the city of Córdoba (Spain). Not a chatbot: the city is the interface. It
+integrates observable reality, documentary knowledge, current city state,
+prediction, simulation, natural-language interaction, geospatial and
+temporal exploration, and clearly-labelled illustrative renderings. See
+[`docs/product/vision.md`](./docs/product/vision.md) for the full picture
+and [`docs/architecture/system-overview.md`](./docs/architecture/system-overview.md)
+for how the components fit together.
 
 ## Components
 
-- [`apps/eye`](./apps/eye/README.md) — the city data plane. A local OSINT
-  gateway that assembles a live model of Córdoba from public sources only,
-  shipped as a single Go binary with no mandatory services.
-
-More components (an API, a web frontend, an intelligence layer, and a
-digital-twin worker) will land in a follow-up PR.
+| Component | Status | Responsibility |
+|---|---|---|
+| [`apps/eye`](./apps/eye/README.md) | Active | The city data plane: a local OSINT gateway that assembles a live model of Córdoba from public sources only, shipped as a single Go binary with no mandatory services. |
+| [`apps/api`](./apps/api/README.md) | Planned | The product backend — the only backend web talks to. |
+| [`apps/web`](./apps/web/README.md) | Planned | Makes the city explorable: map, timeline, ask, forecast, simulate. |
+| [`services/intelligence`](./services/intelligence/README.md) | Planned | Understands questions and builds answers from eye and twin. |
+| [`services/twin`](./services/twin/README.md) | Planned | Models what the city may do next: derived state, forecasts, simulations. |
 
 ## Building and testing
 
