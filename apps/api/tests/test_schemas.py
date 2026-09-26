@@ -9,6 +9,7 @@ from pathlib import Path
 
 from api.schemas import (
     EnvironmentResponse,
+    PulseResponse,
     SimulateRequest,
     SimulateResponse,
     SourcesResponse,
@@ -16,6 +17,7 @@ from api.schemas import (
 )
 
 CONTRACT_DIR = Path(__file__).parents[3] / "packages" / "contracts" / "environment" / "v1"
+PULSE_CONTRACT_DIR = Path(__file__).parents[3] / "packages" / "contracts" / "pulse" / "v1"
 
 
 def _load(name: str) -> dict:
@@ -73,3 +75,23 @@ def test_sources_example_matches_the_model_exactly():
     model = SourcesResponse.model_validate(raw)
 
     assert model.model_dump(mode="json", exclude_none=True) == _strip_none(raw)
+
+
+def _load_pulse(name: str) -> dict:
+    return json.loads((PULSE_CONTRACT_DIR / name).read_text())
+
+
+def test_pulse_example_matches_the_model_exactly():
+    raw = _load_pulse("pulse.example.json")
+
+    model = PulseResponse.model_validate(raw)
+
+    assert model.model_dump(mode="json", exclude_none=True) == _strip_none(raw)
+
+
+def test_pulse_example_covers_every_kind():
+    raw = _load_pulse("pulse.example.json")
+
+    kinds = {item["kind"] for item in raw["items"]}
+
+    assert kinds == {"warning", "fire", "quake", "event", "headline", "bulletin"}

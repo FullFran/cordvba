@@ -8,14 +8,16 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from eye_client import EyeClient
-from fastapi import Depends, FastAPI
+from eye_client import EyeClient, Record
+from fastapi import Depends, FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.compose import environment_from_twin, sources_from_eye, timeline_from_eye_and_twin
 from api.config import Settings, load_settings
+from api.pulse import PULSE_SOURCE_IDS, pulse_from_eye
 from api.schemas import (
     EnvironmentResponse,
+    PulseResponse,
     SimulateRequest,
     SimulateResponse,
     SourcesResponse,
@@ -110,5 +112,16 @@ def create_app() -> FastAPI:
     @app.get("/v1/sources", response_model=SourcesResponse)
     def get_sources(eye: EyeClient = Depends(get_eye_client)) -> SourcesResponse:
         return sources_from_eye(eye.sources())
+
+    @app.get("/v1/pulse", response_model=PulseResponse)
+    def get_pulse(
+        hours: int = Query(24, ge=1, le=72),
+        eye: EyeClient = Depends(get_eye_client),
+    ) -> PulseResponse:
+        since = f"{hours}h"
+        records: list[Record] = []
+        for source_id in PULSE_SOURCE_IDS:
+            records.extend(eye.records(source=source_id, since=since, limit=200))
+        return pulse_from_eye(records, eye.sources(), window_hours=hours)
 
     return app

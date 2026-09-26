@@ -49,6 +49,8 @@ class Record(_Lenient):
     description: str | None = None
     observed_at: datetime
     fetched_at: datetime
+    valid_from: datetime | None = None
+    valid_until: datetime | None = None
     position: Point | None = None
     quality: str
     severity: int

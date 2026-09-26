@@ -18,10 +18,17 @@ public v1 environment endpoints.
 - `GET /v1/sources`: publisher, licence and freshness for `metar-cordoba`
   and `miteco-ica` only (the only redistributable v0.1 sources), each with
   an attribution string.
+- `GET /v1/pulse?hours=24`: the city's pulse (#141) — AEMET warnings, NASA
+  FIRMS fires, IGN earthquakes, the UCO agenda, local headlines and BOE
+  bulletins, composed from eye, newest first and bounded to 50 items.
+  `hours` accepts 1–72; anything outside is a 422. Only sources eye reports
+  as redistributable are included. See
+  `packages/contracts/pulse/v1/README.md`.
 
 Response models (`apps/api/src/api/schemas.py`) match
-`packages/contracts/environment/v1/*.example.json` exactly; tests load
-those examples and validate them against the models.
+`packages/contracts/environment/v1/*.example.json` and
+`packages/contracts/pulse/v1/pulse.example.json` exactly; tests load those
+examples and validate them against the models.
 
 Config: `EYE_BASE_URL`, `EYE_API_TOKEN`, `TWIN_BASE_URL`, `WEB_ORIGIN`
 (CORS) — see `api.config`. `WEB_ORIGIN` accepts one origin or a
