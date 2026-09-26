@@ -1,0 +1,85 @@
+name: Pages
+
+# Builds apps/web under the /cordvba/ sub-path and deploys it to GitHub
+# Pages (issue #115), so the page is also reachable at
+# https://www.fullfran.com/cordvba/ next to the VPS/Funnel deployment.
+# packages/contracts is included in the trigger paths because apps/web's
+# build imports its example fixtures (see apps/web/vite.config.ts).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "packages/contracts/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build the page
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/web/package.json
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Verify CORDVBA_PUBLIC_API_BASE_URL is set
+        if: ${{ vars.CORDVBA_PUBLIC_API_BASE_URL == '' }}
+        run: |
+          echo "::error::The repository variable CORDVBA_PUBLIC_API_BASE_URL is empty. Set it under Settings > Secrets and variables > Actions > Variables to the deployed API's public base URL (the Funnel origin) before this workflow can build the page." >&2
+          exit 1
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+        env:
+          VITE_BASE_PATH: /cordvba/
+          VITE_API_BASE_URL: ${{ vars.CORDVBA_PUBLIC_API_BASE_URL }}
+
+      - name: Set up Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: apps/web/dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
