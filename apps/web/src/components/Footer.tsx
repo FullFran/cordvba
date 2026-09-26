@@ -1,5 +1,6 @@
 import { useLocale } from "../i18n/LocaleContext";
 import { formatAge } from "../lib/age";
+import { formatSourceAttribution } from "../lib/attribution";
 import type { Source } from "../types/environment";
 
 export interface FooterProps {
@@ -13,7 +14,10 @@ export interface FooterProps {
  * Leaflet/OSM raster tiles to MapLibre/OpenFreeMap vector tiles (issue
  * #119), so the required attribution changed with it: "OpenFreeMap ©
  * OpenMapTiles Data from OpenStreetMap" replaces the old bare "Map data ©
- * OpenStreetMap contributors" line.
+ * OpenStreetMap contributors" line. The per-source line is built
+ * client-side from id/publisher/licence (`formatSourceAttribution`), not
+ * the API's own pre-formatted, English-only `attribution` string (issue
+ * #124, maintainer review: it showed English inside the Spanish UI).
  */
 export function Footer({ sources, now }: FooterProps) {
   const { locale, t } = useLocale();
@@ -23,7 +27,8 @@ export function Footer({ sources, now }: FooterProps) {
       <ul>
         {sources.map((source) => (
           <li key={source.id}>
-            {source.attribution} — {t.footer.updatedPrefix} {formatAge(source.last_ok, now, locale)}
+            {formatSourceAttribution(source, locale)} — {t.footer.updatedPrefix}{" "}
+            {formatAge(source.last_ok, now, locale)}
           </li>
         ))}
         <li>{t.footer.tileAttribution}</li>

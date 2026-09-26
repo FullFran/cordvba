@@ -47,6 +47,7 @@ never this app's own design decisions).
 | `--texture-simulated` | `#f5a524` (amber) | Reserved *exclusively* for SIMULATED — a counterfactual, never real — so it never competes with the teal live-signal accent |
 | `--color-aq-good` … `--color-aq-extremely-poor` | 6 hues | Air-quality category hint; never the only encoding (shape + text always carry it too) |
 | `--map-bg`, `--map-water`, `--map-building-low/-high`, `--map-label-halo` | dark navy/green/grey | The MapLibre style's curated overrides (`src/map/darkStyle.ts`) |
+| `--map-road-minor/-mid/-major`, `--map-road-label` | neutral slate (hue ~220) | Roads/bridges/tunnels/aeroways and their labels — deliberately *not* the basemap's original warm amber, which shared a hue family with the moderate/poor beacons (see Decision Log) |
 | `--font-sans` | `"IBM Plex Sans", -apple-system, …` | UI text |
 | `--font-mono` | `"IBM Plex Mono", ui-monospace, …` | Numeric readouts, the network-error reason |
 | `--space-1`…`--space-8` | 4px-based scale | Spacing |
@@ -377,3 +378,78 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   objects — confirming, on real data, that `pointLabel`'s
   `typeof horizon_h === "number"` guard (issue #119's original "+nullh"
   fix) is not a hypothetical edge case but the API's actual behaviour.
+- **2026-09-26 — Road network recoloured to neutral slate, verified
+  against the WCAG relative-luminance formula, not eyeballed (second
+  maintainer review).** OpenFreeMap's `liberty` style paints every road,
+  bridge, tunnel and aeroway line/fill in warm amber — the generic
+  lightness-inversion pass kept that hue, just darker, so the whole city
+  still read as amber/orange and shared a hue family with the moderate/
+  poor beacons. `darkStyle.ts`'s `roadColor()` gives roads an exact,
+  tiered neutral-slate colour instead (hue ~220, matching
+  `--color-border`): minor/mid/major tiers at relative luminance
+  0.016/0.024/0.041 (`darkStyle.test.ts` asserts the major:minor ratio
+  stays under 3x), comfortably under 25-30% of even the darkest beacon
+  colour (`--color-aq-very-poor`, luminance ~0.33). A road-id-prefixed
+  layer that is not actually a line/fill (`road_shield_us`, a US-highway
+  shield icon; `symbol` type) is explicitly excluded from this treatment —
+  a real regression caught in the browser (MapLibre rejected "unknown
+  property line-color" on it) before this line landed, now covered by a
+  fixture test.
+- **2026-09-26 — Wind label + extrusion-heights caption merged into one
+  legend block (second maintainer review).** Two separate absolutely-
+  positioned boxes could go unnoticed (the wind label, easy to miss next
+  to the animating canvas) or overlap each other (both competed for the
+  map stage's bottom corners on a narrow viewport). `WindParticles.tsx`
+  was reduced to just the canvas; the toggle state moved up into
+  `MapView.tsx`, which now owns one `.map-legend` box holding the toggle,
+  the wind label (shown only while the layer is on) and the caption
+  (always shown) together. This in turn freed the map stage's bottom-left
+  corner for `MapView`'s own attribution-panel needs — see the next
+  entry.
+- **2026-09-26 — Attribution moved from its own HUD corner into the
+  state dock (second maintainer review).** Merging the wind/caption
+  legend made that box taller, which then collided with the app-level
+  Footer panel occupying the same bottom-left corner. Rather than hunt
+  for a fifth free corner (there are only four, and the scrubber already
+  claims the bottom edge), attribution now renders at the bottom of
+  `.app__panel--state` (the state dock), below the Scenario toggle — it
+  is low-priority "fine print" content, a natural fit for the bottom of
+  an already-scrollable panel rather than its own dedicated screen
+  region.
+- **2026-09-26 — Attribution built client-side from id/publisher/licence,
+  never the API's own `attribution` string (second maintainer review).**
+  The contract's `Source.attribution` field is pre-formatted server-side
+  in English only; showing it verbatim produced an English sentence
+  ("Weather: NOAA...") inside an otherwise-Spanish page. `src/lib/
+  attribution.ts`'s `formatSourceAttribution()` instead builds the line
+  from `Source.id` (through `footer.sourceKinds`), `Source.publisher`
+  (used as-is; it is already a short form like "MITECO", not translated)
+  and `Source.licence` (through `footer.licences`), via
+  `footer.attributionTemplate`. A source id or licence code with no
+  dictionary entry falls back to the raw value (`Source.attribution` for
+  an unknown id) rather than showing `undefined` — forward-compatible
+  with a source the current dictionaries don't know about yet.
+- **2026-09-26 — MapLibre's own zoom/compass control moved to
+  bottom-right (second maintainer review).** It defaults into a corner
+  MapLibre positions inside the map container; at "top-right" it was
+  partly covered by the state-dock HUD panel occupying that same corner.
+  Moved to `bottom-right` in `MapView.tsx`, with a
+  `.maplibregl-ctrl-bottom-right` CSS offset lifting it above the bottom
+  scrubber bar.
+- **2026-09-26 — Pitch/bearing increased, and both building layers'
+  zoom range lowered (second maintainer review: "3D is barely
+  perceptible").** Pitch 55°→58°, bearing -17°→-35° (a bearing close to
+  due north showed rooftops more than facades). Independently, since a
+  `fitBounds` camera's resulting zoom depends on the live API's actual
+  station spread (not just the fixture's), `building`/`building-3d`'s
+  minzoom/maxzoom were lowered by two levels each
+  (`MINZOOM_OVERRIDES`) so the historic centre still reads as a 3D
+  skyline even if that zoom lands below OpenFreeMap's default cutover
+  (14), rather than depending on a specific zoom value being true.
+- **2026-09-26 — A pre-existing test flakiness fixed in passing:
+  `ScenarioPanel.test.tsx`'s third test never passed a fixed `now`, so an
+  unmocked wall-clock age (e.g. "4 h 26 min ago") could coincidentally
+  contain the same digits as the fixture's "26 °C" observed temperature
+  under a loose `/26/` regex match — caught when it actually flaked
+  during this round's verification. Fixed with an explicit `now` and
+  exact-string assertions ("26 °C", not `/26/`).

@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { Footer } from "./Footer";
+import { LocaleProvider } from "../i18n/LocaleContext";
 import type { Source } from "../types/environment";
 
 const sources: Source[] = [
@@ -44,5 +45,18 @@ describe("Footer", () => {
     expect(screen.getByText(/32 min ago/)).toBeInTheDocument();
     // 09:40 - 09:35:40 = 4 min 20s -> floors to 4 min ago
     expect(screen.getByText(/4 min ago/)).toBeInTheDocument();
+  });
+
+  it("builds attribution in Spanish, never the API's own English attribution string (issue 124, maintainer review)", () => {
+    render(
+      <LocaleProvider>
+        <Footer sources={sources} now={new Date("2026-09-26T09:40:00Z")} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByText(/Meteorología: NOAA Aviation Weather Center \(dominio público\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Calidad del aire: MITECO \(CC BY 4\.0\)/)).toBeInTheDocument();
+    expect(screen.queryByText(/Air quality:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Ministerio para la Transición/)).not.toBeInTheDocument();
   });
 });
