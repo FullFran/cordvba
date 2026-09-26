@@ -47,6 +47,14 @@ boundaries: ## Check that nothing outside apps/eye touches eye's store or intern
 	bash infra/ci/check-boundaries_test.sh
 	bash infra/ci/check-boundaries.sh
 
+.PHONY: up
+up: ## Bring up the mvp stack (infra/compose), needs infra/compose/.env
+	docker compose -p cordvba-mvp -f infra/compose/compose.yml up -d --build
+
+.PHONY: down
+down: ## Tear down the mvp stack (infra/compose)
+	docker compose -p cordvba-mvp -f infra/compose/compose.yml down
+
 .PHONY: ci
 ci: boundaries ## Run the full local CI pipeline for every component
 	$(MAKE) -C apps/eye ci-local
