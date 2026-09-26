@@ -30,6 +30,17 @@ type Config struct {
 	SourcesPath string
 	// RulesPath is the resolved path of the correlation rules.
 	RulesPath string
+	// OverridesPath is the resolved path of the optional per-deployment
+	// overrides file: EYE_OVERRIDES_FILE, default <ConfigDir>/overrides.yaml.
+	//
+	// Unlike SourcesPath and RulesPath, an explicit EYE_OVERRIDES_FILE wins
+	// outright rather than composing under ConfigDir: a deployment that
+	// mounts the file somewhere else (a Docker secret, a different volume)
+	// must not also have to relocate its whole config directory to use it.
+	// A missing file at this path is not an error — see
+	// source/infrastructure.LoadOverridesFile — it is today's behaviour,
+	// unchanged.
+	OverridesPath string
 
 	// LogLevel is one of debug, info, warn, error.
 	LogLevel string
@@ -117,6 +128,11 @@ func Load() (Config, error) {
 
 	cfg.SourcesPath = filepath.Join(cfg.ConfigDir, "sources.yaml")
 	cfg.RulesPath = filepath.Join(cfg.ConfigDir, "rules.yaml")
+
+	cfg.OverridesPath = strings.TrimSpace(os.Getenv("EYE_OVERRIDES_FILE"))
+	if cfg.OverridesPath == "" {
+		cfg.OverridesPath = filepath.Join(cfg.ConfigDir, "overrides.yaml")
+	}
 
 	return cfg, nil
 }
