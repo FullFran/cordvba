@@ -29,6 +29,25 @@ export function haversineDistanceKm(a: LatLon, b: LatLon): number {
   return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
+/** Metres per degree of latitude (WGS84 mean; matches `src/map/wind.ts`'s constant — plenty precise at city scale). */
+const METERS_PER_DEGREE_LAT = 111_320;
+
+/**
+ * The point `distanceM` metres away from `origin` along compass `bearingDeg`
+ * (0 = north, clockwise), correcting longitude for the shrinking length of a
+ * degree of longitude away from the equator (`cos(latitude)`). A flat-earth
+ * approximation — entirely adequate at the few-hundred-metre scale of a
+ * building's shadow (issue #139), the same trade-off `wind.ts`'s geographic
+ * advection already makes.
+ */
+export function destinationPoint(origin: LatLon, bearingDeg: number, distanceM: number): LatLon {
+  const bearingRad = toRad(bearingDeg);
+  const dLat = (distanceM * Math.cos(bearingRad)) / METERS_PER_DEGREE_LAT;
+  const metersPerDegreeLon = METERS_PER_DEGREE_LAT * Math.cos(toRad(origin.lat));
+  const dLon = metersPerDegreeLon !== 0 ? (distanceM * Math.sin(bearingRad)) / metersPerDegreeLon : 0;
+  return { lat: origin.lat + dLat, lon: origin.lon + dLon };
+}
+
 export interface ScreenPoint {
   x: number;
   y: number;

@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   formatAirQualityCategory,
   formatCardinalDirection,
+  formatClockTime,
+  formatDegrees,
   formatValue,
   formatWindDirection,
 } from "./format";
@@ -141,5 +143,26 @@ describe("formatCardinalDirection / formatWindDirection: es locale (issue 124)",
 
   it("combines the Spanish cardinal with the degree value", () => {
     expect(formatWindDirection(250, "es")).toBe("OSO 250°");
+  });
+});
+
+describe("formatDegrees (issue #139: the sun widget's altitude, no space before °)", () => {
+  it("rounds to the nearest whole degree", () => {
+    expect(formatDegrees(42.3)).toBe("42°");
+    expect(formatDegrees(42.6)).toBe("43°");
+  });
+
+  it("has no space before the ° sign, matching formatWindDirection's convention", () => {
+    expect(formatDegrees(0)).toBe("0°");
+  });
+});
+
+describe("formatClockTime (issue #139: sunrise/solar-noon/sunset in Córdoba's own local time)", () => {
+  it("formats a fixed UTC instant in Europe/Madrid time (CEST, UTC+2, in late September)", () => {
+    expect(formatClockTime(new Date("2026-09-26T05:57:00Z"))).toBe("07:57");
+  });
+
+  it("returns an em dash for a null date (a polar day/night with no sunrise/sunset), not 'Invalid Date'", () => {
+    expect(formatClockTime(null)).toBe("—");
   });
 });

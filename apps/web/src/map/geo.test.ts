@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { clampToEdge, haversineDistanceKm } from "./geo";
+import { clampToEdge, destinationPoint, haversineDistanceKm } from "./geo";
 
 describe("haversineDistanceKm", () => {
   it("returns 0 for the same point", () => {
@@ -12,6 +12,33 @@ describe("haversineDistanceKm", () => {
     const km = haversineDistanceKm({ lat: 37.8882, lon: -4.7794 }, { lat: 37.842, lon: -4.8488 });
     expect(km).toBeGreaterThan(6);
     expect(km).toBeLessThan(9);
+  });
+});
+
+describe("destinationPoint (issue #139: building-shadow projection)", () => {
+  const origin = { lat: 37.8882, lon: -4.7794 };
+
+  it("moves due east (bearing 90°) with no latitude change", () => {
+    const dest = destinationPoint(origin, 90, 100);
+    expect(dest.lon).toBeGreaterThan(origin.lon);
+    expect(dest.lat).toBeCloseTo(origin.lat, 6);
+  });
+
+  it("moves due south (bearing 180°) with no longitude change", () => {
+    const dest = destinationPoint(origin, 180, 100);
+    expect(dest.lat).toBeLessThan(origin.lat);
+    expect(dest.lon).toBeCloseTo(origin.lon, 6);
+  });
+
+  it("scales distance from origin linearly with the given metres", () => {
+    const near = destinationPoint(origin, 45, 50);
+    const far = destinationPoint(origin, 45, 100);
+    const km = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) => haversineDistanceKm(a, b);
+    expect(km(origin, far)).toBeCloseTo(km(origin, near) * 2, 2);
+  });
+
+  it("returns the origin unchanged for zero distance", () => {
+    expect(destinationPoint(origin, 45, 0)).toEqual(origin);
   });
 });
 

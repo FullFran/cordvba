@@ -75,6 +75,36 @@ export function formatWindDirection(deg: number | string | null, locale: Locale 
 }
 
 /**
+ * A rounded degree value with no space before the `°` (e.g. "42°"),
+ * matching `formatWindDirection`'s existing convention rather than
+ * `formatValue`'s "number space unit" shape (which would read as the
+ * ungainly "42 °").
+ */
+export function formatDegrees(value: number): string {
+  return `${Math.round(value)}°`;
+}
+
+/**
+ * Córdoba's own local clock time (issue #139's sun widget: sunrise, solar
+ * noon, sunset — all facts about a place, shown in that place's own time
+ * regardless of the visitor's browser timezone, the same reasoning
+ * `Intl.DateTimeFormat` needs an explicit `timeZone` for). `null` (a
+ * polar day/night with no sunrise/sunset) renders as an em dash, never
+ * "Invalid Date".
+ */
+export function formatClockTime(date: Date | null, locale: Locale = "en"): string {
+  if (date === null) {
+    return "—";
+  }
+  return new Intl.DateTimeFormat(INTL_TAG[locale], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Europe/Madrid",
+  }).format(date);
+}
+
+/**
  * MITECO's ICA category slug as words, in the given locale (issue #119,
  * #124): English words for `en`, MITECO's own Spanish wording for `es`
  * (`category_source` on the API value also keeps that Spanish wording,

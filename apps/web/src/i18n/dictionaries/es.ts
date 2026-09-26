@@ -39,6 +39,15 @@ export const es = {
     toggle: "Viento ilustrativo",
     label: "Viento ilustrativo: una sola estación, no varía espacialmente.",
   },
+  sun: {
+    ariaLabel: "Sol",
+    sunrise: "Amanecer",
+    solarNoon: "Mediodía solar",
+    sunset: "Atardecer",
+    altitude: "Altitud",
+    shadowLegend:
+      "Sombras: inferidas a partir de las alturas de OpenStreetMap y la posición del sol; alturas aproximadas.",
+  },
   timeline: {
     ariaLabel: "Línea de tiempo",
     now: "ahora",

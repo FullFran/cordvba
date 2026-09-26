@@ -1,4 +1,5 @@
 import { invertColorLightness, isColorString } from "./color";
+import type { SunPhase } from "../lib/sun";
 
 /**
  * A loose MapLibre style-spec shape: only what this module reads or
@@ -228,20 +229,32 @@ export const OPENFREEMAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liber
  * Reads the `--map-*` design tokens from `:root` (tokens.css), so the
  * MapLibre style — which needs literal colour values, not CSS custom
  * properties — still has exactly one source of truth for its palette.
+ *
+ * `phase` (issue #139: sun-driven day/dusk/night lighting) selects which
+ * background/water tokens to read — `--map-bg`/`--map-water` for `night`
+ * (the app's original, unchanged default), `--map-bg-day`/`--map-water-day`
+ * and `--map-bg-dusk`/`--map-water-dusk` for the other two phases. Every
+ * other token (buildings, roads, label halo) stays the same regardless of
+ * phase: only the sky/water tint changes with the sun, not the whole
+ * basemap.
  */
-export function readMapPalette(root: HTMLElement = document.documentElement): MapPalette {
+export function readMapPalette(
+  root: HTMLElement = document.documentElement,
+  phase: SunPhase = "night",
+): MapPalette {
   const style = getComputedStyle(root);
   const read = (name: string, fallback: string) => {
     const value = style.getPropertyValue(name).trim();
     return value.length > 0 ? value : fallback;
   };
+  const phaseSuffix = phase === "night" ? "" : `-${phase}`;
   // Fallbacks only, for a browser/test environment that cannot resolve the
   // CSS custom property; tokens.css remains the source of truth whenever
   // getComputedStyle actually resolves it.
   // ds-allow-hardcode:start
   return {
-    background: read("--map-bg", "#060a12"),
-    water: read("--map-water", "#0c1c33"),
+    background: read(`--map-bg${phaseSuffix}`, "#060a12"),
+    water: read(`--map-water${phaseSuffix}`, "#0c1c33"),
     buildingLow: read("--map-building-low", "#171d2b"),
     buildingHigh: read("--map-building-high", "#3a4a63"),
     labelHalo: read("--map-label-halo", "rgba(6,10,18,0.85)"),
@@ -253,12 +266,20 @@ export function readMapPalette(root: HTMLElement = document.documentElement): Ma
   // ds-allow-hardcode:end
 }
 
-/** Fetches OpenFreeMap's style and returns it recoloured dark, ready to hand to `new maplibregl.Map({ style })`. */
-export async function loadDarkStyle(root?: HTMLElement): Promise<MapStyle> {
+/**
+ * Fetches OpenFreeMap's style and returns it recoloured dark, ready to
+ * hand to `new maplibregl.Map({ style })`. `phase` (issue #139) seeds the
+ * *initial* background/water palette with the correct day/dusk/night
+ * tint from the very first frame, instead of always starting at "night"
+ * and waiting for the first `setPaintProperty` call to correct it; every
+ * later phase change is applied live by that same runtime call, not by
+ * recreating the style.
+ */
+export async function loadDarkStyle(root?: HTMLElement, phase: SunPhase = "night"): Promise<MapStyle> {
   const response = await fetch(OPENFREEMAP_STYLE_URL);
   if (!response.ok) {
     throw new Error(`failed to load the base map style (status ${response.status})`);
   }
   const base = (await response.json()) as MapStyle;
-  return buildDarkStyle(base, readMapPalette(root));
+  return buildDarkStyle(base, readMapPalette(root, phase));
 }

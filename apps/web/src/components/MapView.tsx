@@ -5,9 +5,12 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useLocale } from "../i18n/LocaleContext";
 import { prefersReducedMotion } from "../lib/motion";
 import { formatAirQualityCategory } from "../lib/format";
+import { sunPhase, type SunPosition } from "../lib/sun";
 import { createBeaconElement, createEdgeIndicatorElement, windArrowRotation } from "../map/beacons";
-import { loadDarkStyle } from "../map/darkStyle";
+import { loadDarkStyle, readMapPalette } from "../map/darkStyle";
 import { clampToEdge, haversineDistanceKm } from "../map/geo";
+import { buildingShadow, footprintFromGeometry, shadowToGeoJSONCoordinates } from "../map/shadows";
+import { sunLight } from "../map/sunLight";
 import type { EnvironmentResponse } from "../types/environment";
 import { WindParticles } from "./WindParticles";
 
@@ -24,10 +27,22 @@ const INITIAL_BEARING = -35;
 const FIT_PADDING = { top: 180, bottom: 150, left: 48, right: 340 };
 const EDGE_MARGIN = 40;
 
+const SHADOW_SOURCE_ID = "building-shadows";
+const SHADOW_LAYER_ID = "building-shadows-layer";
+const EMPTY_FEATURE_COLLECTION: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
+/** Reads the tokens.css light-tint variable for a given sun phase (issue #139); falls back to a sane default so a missing token never breaks `map.setLight`. */
+const LIGHT_TOKEN_FALLBACK: Record<ReturnType<typeof sunPhase>, string> = {
+  day: "#cfe0f5",
+  dusk: "#f2b783",
+  night: "#6b7ba8",
+};
+
 export interface MapViewProps {
   environment: EnvironmentResponse;
   /** The station id to visually call out, e.g. from a selected timeline point. */
   highlightStationId?: string;
+  /** The sun's position at the timeline's selected time (issue #139), computed once by `App.tsx` from the same `getSunPosition` call the sun widget uses — drives this map's lighting, day/dusk/night palette and building shadows. */
+  sun: SunPosition;
 }
 
 /**
@@ -44,7 +59,7 @@ export interface MapViewProps {
  * wind particle field lives alongside it, wired to the single METAR
  * reading.
  */
-export function MapView({ environment, highlightStationId }: MapViewProps) {
+export function MapView({ environment, highlightStationId, sun }: MapViewProps) {
   const { locale, t } = useLocale();
   const stageRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -52,6 +67,7 @@ export function MapView({ environment, highlightStationId }: MapViewProps) {
   const [mapError, setMapError] = useState<string | null>(null);
   const [windEnabled, setWindEnabled] = useState(true);
   const windToggleId = useId();
+  const initialSunRef = useRef(sun);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -66,14 +82,23 @@ export function MapView({ environment, highlightStationId }: MapViewProps) {
       new maplibregl.LngLatBounds(CORDOBA_HISTORIC_CENTRE, CORDOBA_HISTORIC_CENTRE),
     );
 
-    loadDarkStyle()
+    loadDarkStyle(undefined, sunPhase(initialSunRef.current.altitudeDeg))
       .then((style) => {
         if (cancelled) {
           return;
         }
+        // A default paint-property transition (issue #139): scrubbing the
+        // timeline calls `setPaintProperty`/`setLight` below, and without
+        // this the sky/water/light snap instantly on every tick. Zeroed
+        // under `prefers-reduced-motion`, same as every other animation in
+        // this app (see DESIGN.md §5).
+        const styleWithTransition = {
+          ...style,
+          transition: { duration: prefersReducedMotion() ? 0 : 800, delay: 0 },
+        };
         instance = new maplibregl.Map({
           container,
-          style: style as unknown as maplibregl.StyleSpecification,
+          style: styleWithTransition as unknown as maplibregl.StyleSpecification,
           center: bounds.getCenter(),
           zoom: 14,
           pitch: INITIAL_PITCH,
@@ -223,6 +248,126 @@ export function MapView({ environment, highlightStationId }: MapViewProps) {
     };
   }, [map, environment.weather, locale]);
 
+  // Sun-driven lighting and day/dusk/night base-map palette (issue #139).
+  // Cheap enough to run directly whenever the sun's position changes
+  // (a handful of setPaintProperty/setLight calls); no throttling needed
+  // here, unlike the shadow recompute below.
+  useEffect(() => {
+    if (!map) {
+      return undefined;
+    }
+
+    function applyLighting() {
+      if (!map) return;
+      const phase = sunPhase(sun.altitudeDeg);
+      const palette = readMapPalette(document.documentElement, phase);
+      map.setPaintProperty("background", "background-color", palette.background);
+      map.setPaintProperty("water", "fill-color", palette.water);
+
+      const style = getComputedStyle(document.documentElement);
+      const lightColor =
+        style.getPropertyValue(`--map-light-${phase}`).trim() || LIGHT_TOKEN_FALLBACK[phase];
+      map.setLight(sunLight(sun, lightColor));
+    }
+
+    if (map.isStyleLoaded()) {
+      applyLighting();
+    } else {
+      map.once("load", applyLighting);
+    }
+
+    return () => {
+      map.off("load", applyLighting);
+    };
+  }, [map, sun.azimuthDeg, sun.altitudeDeg]);
+
+  // Historic-centre building shadows (issue #139): an inferred, translucent
+  // layer projecting each currently rendered building-3d footprint along
+  // the sun's shadow vector (`src/map/shadows.ts`). Recomputed whenever the
+  // sun's position changes and whenever the camera settles ("moveend" —
+  // which, unlike "move", fires once per gesture rather than every frame,
+  // the throttle this layer needs) — see DESIGN.md for the trade-offs
+  // (main-thread, convex-hull approximation) this scope accepted. Hidden
+  // once the sun is at or below the horizon (AC-3).
+  useEffect(() => {
+    if (!map) {
+      return undefined;
+    }
+
+    function ensureShadowLayer() {
+      if (!map) return;
+      if (!map.getSource(SHADOW_SOURCE_ID)) {
+        map.addSource(SHADOW_SOURCE_ID, { type: "geojson", data: EMPTY_FEATURE_COLLECTION });
+      }
+      if (!map.getLayer(SHADOW_LAYER_ID)) {
+        const shadowFill =
+          getComputedStyle(document.documentElement).getPropertyValue("--map-shadow-fill").trim() ||
+          "rgba(3, 6, 12, 0.4)"; // ds-allow-hardcode (runtime CSS-variable fallback, same convention as darkStyle.ts's readMapPalette)
+        map.addLayer({
+          id: SHADOW_LAYER_ID,
+          type: "fill",
+          source: SHADOW_SOURCE_ID,
+          paint: { "fill-color": shadowFill, "fill-opacity": 1 },
+        });
+      }
+    }
+
+    function recomputeShadows() {
+      if (!map) return;
+      const source = map.getSource(SHADOW_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+      if (!source) return;
+
+      if (sun.altitudeDeg <= 0) {
+        source.setData(EMPTY_FEATURE_COLLECTION);
+        return;
+      }
+
+      performance.mark("cordvba-shadow-compute-start");
+      const rendered = map.queryRenderedFeatures(undefined, { layers: ["building-3d"] });
+      const features: GeoJSON.Feature[] = [];
+      for (const feature of rendered) {
+        const heightM = Number(feature.properties?.["render_height"]) || 0;
+        const footprint = footprintFromGeometry(feature.geometry as { type: string; coordinates: unknown });
+        if (!footprint) continue;
+        const shadow = buildingShadow({ footprint, heightM }, sun);
+        if (!shadow) continue;
+        features.push({
+          type: "Feature",
+          properties: {},
+          geometry: { type: "Polygon", coordinates: shadowToGeoJSONCoordinates(shadow) },
+        });
+      }
+      source.setData({ type: "FeatureCollection", features });
+      performance.mark("cordvba-shadow-compute-end");
+      performance.measure(
+        "cordvba-shadow-compute",
+        "cordvba-shadow-compute-start",
+        "cordvba-shadow-compute-end",
+      );
+    }
+
+    function setUpAndRecompute() {
+      ensureShadowLayer();
+      recomputeShadows();
+    }
+
+    if (map.isStyleLoaded()) {
+      setUpAndRecompute();
+    } else {
+      map.once("load", setUpAndRecompute);
+    }
+    map.on("moveend", recomputeShadows);
+
+    return () => {
+      map.off("load", setUpAndRecompute);
+      map.off("moveend", recomputeShadows);
+    };
+    // Re-registering "moveend" on every sun change is cheap (a handful of
+    // times per timeline interaction, never per animation frame) and keeps
+    // `recomputeShadows` a plain closure over the current `sun` prop rather
+    // than needing a ref to stay fresh.
+  }, [map, sun.azimuthDeg, sun.altitudeDeg]);
+
   const windDirectionDeg =
     typeof environment.weather.wind_direction.value === "number"
       ? environment.weather.wind_direction.value
@@ -259,6 +404,9 @@ export function MapView({ environment, highlightStationId }: MapViewProps) {
           </label>
           {windEnabled ? <p className="map-legend__line">{t.wind.label}</p> : null}
           <p className="map-legend__line map-legend__line--muted">{t.map.caption}</p>
+          {sun.altitudeDeg > 0 ? (
+            <p className="map-legend__line map-legend__line--muted">{t.sun.shadowLegend}</p>
+          ) : null}
         </div>
 
         {mapError ? (

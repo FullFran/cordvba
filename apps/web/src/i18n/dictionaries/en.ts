@@ -39,6 +39,15 @@ export const en = {
     toggle: "Illustrative wind",
     label: "Illustrative wind: one station, not spatially varied.",
   },
+  sun: {
+    ariaLabel: "Sun",
+    sunrise: "Sunrise",
+    solarNoon: "Solar noon",
+    sunset: "Sunset",
+    altitude: "Altitude",
+    shadowLegend:
+      "Shadows: inferred from OpenStreetMap building heights and the sun's position; heights approximate.",
+  },
   timeline: {
     ariaLabel: "Timeline",
     now: "now",

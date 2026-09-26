@@ -46,8 +46,11 @@ never this app's own design decisions).
 | `--color-focus-ring` | `#7dd3fc` | Keyboard focus outline |
 | `--texture-simulated` | `#f5a524` (amber) | Reserved *exclusively* for SIMULATED — a counterfactual, never real — so it never competes with the teal live-signal accent |
 | `--color-aq-good` … `--color-aq-extremely-poor` | 6 hues | Air-quality category hint; never the only encoding (shape + text always carry it too) |
-| `--map-bg`, `--map-water`, `--map-building-low/-high`, `--map-label-halo` | dark navy/green/grey | The MapLibre style's curated overrides (`src/map/darkStyle.ts`) |
+| `--map-bg`, `--map-water`, `--map-building-low/-high`, `--map-label-halo` | dark navy/green/grey | The MapLibre style's curated overrides (`src/map/darkStyle.ts`); `--map-bg`/`--map-water` double as the **night** phase of the sun-driven palette below |
 | `--map-road-minor/-mid/-major`, `--map-road-label` | neutral slate (hue ~220) | Roads/bridges/tunnels/aeroways and their labels — deliberately *not* the basemap's original warm amber, which shared a hue family with the moderate/poor beacons (see Decision Log) |
+| `--map-bg-day/-dusk`, `--map-water-day/-dusk` | lighter cool slate / warm dark amber | The sun-driven day/dusk base-map tint (issue #139): `sunPhase(altitude)` selects which of these `readMapPalette` reads; still the Void Signal dark aesthetic at every phase, never a light theme |
+| `--map-light-day/-dusk/-night` | `#cfe0f5` / `#f2b783` / `#6b7ba8` | The extrusion light's colour per sun phase (`src/map/sunLight.ts`), read straight through with no literal in JS |
+| `--map-shadow-fill` | `rgba(3, 6, 12, 0.4)` | The historic-centre building-shadow layer's translucent fill — a plain dark tint at every phase (a shadow is a shadow); not drawn once the sun is down (AC-3) |
 | `--font-sans` | `"IBM Plex Sans", -apple-system, …` | UI text |
 | `--font-mono` | `"IBM Plex Mono", ui-monospace, …` | Numeric readouts, the network-error reason |
 | `--space-1`…`--space-8` | 4px-based scale | Spacing |
@@ -123,7 +126,20 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   instead of it silently vanishing. A caption states the two honesty notes
   verbatim ("Extrusion heights: OpenStreetMap, approximate…"; "Beacons
   show individual stations only — no interpolated surface") as a small
-  overlay chip, not layout-height text.
+  overlay chip, not layout-height text. Sun-driven (issue #139): a
+  `sun: SunPosition` prop (computed once in `App.tsx` from the timeline's
+  selected time, `src/lib/sun.ts`'s `getSunPosition`) drives three effects
+  — the extrusion light and background/water palette via
+  `map.setPaintProperty`/`setLight` (`sunPhase` picks day/dusk/night;
+  `src/map/sunLight.ts` computes the light spec), a translucent
+  `building-shadows` GeoJSON layer recomputed from currently rendered
+  `building-3d` footprints projected along the sun's shadow vector
+  (`src/map/shadows.ts`'s `buildingShadow`, a convex-hull approximation —
+  see Decision Log), and the legend's shadow-honesty line (shown only
+  while the sun is up). Shadows recompute on `moveend` (fires once per
+  gesture, not per frame — the layer's throttle) and whenever the sun's
+  position changes; hidden entirely once the sun is at or below the
+  horizon (AC-3).
 - **WindParticles** (`WindParticles.tsx`) — an illustrative canvas particle
   field over the map, driven by the single METAR reading. Particles are
   advected in longitude/latitude (`src/map/wind.ts`'s pure geographic
@@ -153,6 +169,14 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   old bare "Could not load CORDVBA: <message>" line.
 - **Footer** — per-source attribution + age, plus the new required
   OpenFreeMap/OpenMapTiles/OpenStreetMap credit line.
+- **SunWidget** (`SunWidget.tsx`, issue #139) — sunrise, solar noon,
+  sunset (`src/lib/sun.ts`'s `getSunTimes`, shown in Córdoba's own
+  `Europe/Madrid` local time regardless of the visitor's browser
+  timezone — `formatClockTime`) and the sun's current altitude
+  (`formatDegrees`, no space before `°`, matching `formatWindDirection`'s
+  existing convention). Lives in the state dock, next to `StatePanel`; a
+  polar day/night's missing sunrise/sunset renders as an em dash, never
+  "Invalid Date".
 
 ## 5. Motion System
 
@@ -172,6 +196,15 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   live"; the skeleton shimmer means "this is loading"; the wind particles
   mean "this is what the wind is doing." No entrance animation exists for
   its own sake.
+- **Sun-driven map lighting (issue #139):** a third mechanism, alongside
+  the two above, for a case neither covers — a MapLibre *style-level*
+  paint-property transition (`style.transition`, set once at map creation
+  in `MapView.tsx`), not a CSS variable or a `requestAnimationFrame` loop.
+  Scrubbing the timeline calls `setPaintProperty`/`setLight`; this makes
+  the sky/water/light ease between values (800ms, `--duration-slow`'s
+  spirit) instead of snapping, and is set to `{ duration: 0 }` under
+  `prefers-reduced-motion`, read once via `prefersReducedMotion()` at
+  creation time (the same helper the other two mechanisms use).
 
 ## 6. Accessibility Baselines
 
@@ -480,3 +513,57 @@ above a grid of cards. Two layout modes, one breakpoint at `48rem` (768px):
   small bearing-aware `project()` mock at 0°/-35°/90° proving the
   geographic step never itself depends on bearing (`wind.test.ts`), plus
   `windArrowRotation`'s own bearing-corrected cases (`beacons.test.ts`).
+- **2026-09-26 — Sun library: `suncalc` (BSD-2-Clause), not a hand-rolled
+  or heavier alternative (issue #139).** `suncalc@2.0.2`: BSD-2-Clause
+  (permissive, compatible with this project's MIT licence), a single
+  ~15KB (~4.6KB gzipped) `suncalc.cjs` module with no dependencies of its
+  own. Its `getPosition`/`getTimes` already return exactly the shapes this
+  app needs (north-based-clockwise azimuth and refraction-corrected
+  altitude in plain degrees; sunrise/solarNoon/sunset as `Date`s) — no
+  radian or south-based conversion required, unlike its pre-2.0 API. A
+  from-scratch NOAA-solar-position-algorithm implementation (Julian
+  century ephemeris → equation of time → hour angle → zenith/azimuth,
+  the same formulas behind NOAA's own solar calculator) was written
+  independently to cross-check it: both agree to within 0.11° at three
+  test times for Córdoba, comfortably inside AC-1's 1° budget
+  (`sun.test.ts` bakes in the NOAA-side numbers as the reference).
+- **2026-09-26 — Sun-driven palette: two tokens change (background,
+  water), not the whole basemap (issue #139).** "A day/dusk/night palette
+  for the base map" could have meant recolouring roads/buildings/labels
+  too; scoped to just the sky/water tint (`--map-bg-*`/`--map-water-*`)
+  so the change stays legible as "the light changed," not "the whole city
+  changed colour," and so beacons/roads/labels keep their one already
+  carefully-tuned contrast ratio (§8, "Road network recoloured…")
+  regardless of time of day. `sunPhase` is a plain 3-way categorical read
+  (day / dusk within ±6° of the horizon / night) rather than continuously
+  interpolating a colour ramp from raw altitude — simpler, testable in
+  three fixed cases, and the extrusion *light* (continuous, via
+  `sunLight`'s `intensity`/`position`) already carries the smooth part of
+  "the sun is moving."
+- **2026-09-26 — Building shadows: convex hull of footprint ∪
+  shadow-cast translation, not a full silhouette sweep (issue #139).**
+  `shadows.ts`'s `buildingShadow` translates every footprint vertex by
+  `height / tan(altitude)` along the anti-solar bearing and takes the
+  convex hull of the original and translated vertices. Exact for a convex
+  footprint (most OSM building footprints); a defensible, cheap
+  over-approximation for a concave one, instead of classifying which
+  edges are sun-facing (a full extruded-polygon shadow silhouette) —
+  named as a trade-off, not hidden, and consistent with the layer's own
+  INFERRED label and legend line. Shadow length is clamped
+  (`DEFAULT_MAX_SHADOW_LENGTH_M`, 400m) so a near-horizon sun does not
+  draw an absurd shadow across the whole map.
+- **2026-09-26 — Shadow recompute: throttled by `moveend`, on the main
+  thread, not a Web Worker (issue #139, scope/time trade-off, named per
+  the issue's own "throttled *or* in a worker" wording).** MapLibre's
+  `moveend` event already fires once per camera gesture rather than per
+  frame, which is exactly the throttle this layer needs (`query
+  RenderedFeatures` + a convex hull per building is not something to run
+  60 times a second); a fixed-interval debounce on top would only add
+  latency without a measured benefit. `performance.mark`/`measure`
+  (`cordvba-shadow-compute`) brackets each recompute so its cost is
+  reported (see the PR/report) rather than assumed. A Web Worker would
+  need MapLibre's queried GeoJSON features serialised across the worker
+  boundary for a computation already cheap enough on the main thread at
+  this scale (see the report's timing numbers) — real future work if the
+  historic centre's building count grows enough to matter, not a
+  currently-measured problem.
