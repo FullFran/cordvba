@@ -1,97 +1,123 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import { getEnvironment, getSources, getTimeline, postSimulate } from "./api/client";
+import { postSimulate } from "./api/client";
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
 import { MapView } from "./components/MapView";
+import { NetworkErrorPanel } from "./components/NetworkErrorPanel";
 import { ProvenancePanel } from "./components/ProvenancePanel";
 import { ScenarioPanel } from "./components/ScenarioPanel";
+import { LoadingStatus, Skeleton } from "./components/Skeleton";
 import { StatePanel } from "./components/StatePanel";
 import { TimelineView } from "./components/TimelineView";
-import type { EnvironmentResponse, SourcesResponse, TimelineResponse, Value } from "./types/environment";
+import { useEnvironmentTwin } from "./hooks/useEnvironmentTwin";
+import { useLocale } from "./i18n/LocaleContext";
+import type { Value } from "./types/environment";
 
-const HOURS_BACK = 12;
-const HORIZONS_H = [1, 3, 6];
-
+/**
+ * Full-bleed map with a restrained HUD over it (issue #119, maintainer
+ * review): the map IS the page, not "a map in a box above a grid of
+ * cards". `.app__hud-*` panels are opaque token surfaces
+ * (`--color-bg-elevated` + a subtle border) positioned as an overlay on
+ * desktop and stacked in normal document flow on mobile; see
+ * `.app__hud` in styles.css for the breakpoint.
+ */
 export function App() {
-  const [environment, setEnvironment] = useState<EnvironmentResponse | null>(null);
-  const [timeline, setTimeline] = useState<TimelineResponse | null>(null);
-  const [sources, setSources] = useState<SourcesResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { environment, timeline, sources, retry } = useEnvironmentTwin();
+  const { t } = useLocale();
   const [selectedValue, setSelectedValue] = useState<Value | null>(null);
   const [highlightStationId, setHighlightStationId] = useState<string | undefined>(undefined);
+  const [scenarioOpen, setScenarioOpen] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
+  const allLoading =
+    environment.status === "loading" && timeline.status === "loading" && sources.status === "loading";
 
-    Promise.all([getEnvironment(), getTimeline(HOURS_BACK, HORIZONS_H), getSources()])
-      .then(([environmentResponse, timelineResponse, sourcesResponse]) => {
-        if (cancelled) return;
-        setEnvironment(environmentResponse);
-        setTimeline(timelineResponse);
-        setSources(sourcesResponse);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        setError(err instanceof Error ? err.message : "failed to load the environment twin");
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (error) {
-    return (
-      <main className="app app--error">
-        <Header />
-        <p role="alert">Could not load CORDVBA: {error}</p>
-      </main>
-    );
-  }
-
-  if (!environment || !timeline || !sources) {
-    return (
-      <main className="app app--loading">
-        <Header />
-        <p>Loading Córdoba…</p>
-      </main>
-    );
-  }
-
-  const airQualitySeries = timeline.series.find((s) => s.variable === "air_quality_index");
+  const airQualitySeries =
+    timeline.status === "success"
+      ? timeline.data.series.find((s) => s.variable === "air_quality_index")
+      : undefined;
 
   return (
     <div className="app">
-      <Header />
+      <div className="app__stage">
+        {allLoading ? (
+          <Skeleton />
+        ) : environment.status === "success" ? (
+          <MapView environment={environment.data} highlightStationId={highlightStationId} />
+        ) : environment.status === "error" ? (
+          <NetworkErrorPanel reason={environment.message} onRetry={retry} />
+        ) : (
+          <Skeleton />
+        )}
+      </div>
 
-      <MapView environment={environment} highlightStationId={highlightStationId} />
+      {allLoading ? <LoadingStatus label={t.loading.label} /> : null}
 
-      {airQualitySeries ? (
-        <TimelineView
-          points={airQualitySeries.points}
-          now={timeline.now}
-          onSelectPoint={(point) => {
-            setSelectedValue(point);
-            setHighlightStationId(airQualitySeries.entity.id);
-          }}
-        />
-      ) : null}
+      <div className="app__hud">
+        <div className="app__panel app__panel--header">
+          <Header />
+        </div>
 
-      <StatePanel environment={environment} onSelect={setSelectedValue} />
+        {!allLoading ? (
+          <div className="app__panel app__panel--state">
+            {environment.status === "success" ? (
+              <StatePanel environment={environment.data} onSelect={setSelectedValue} />
+            ) : null}
 
-      <ScenarioPanel onSimulate={postSimulate} onSelectValue={setSelectedValue} />
+            <button
+              type="button"
+              className="app__scenario-toggle"
+              aria-expanded={scenarioOpen}
+              onClick={() => setScenarioOpen((open) => !open)}
+            >
+              {t.scenario.ariaLabel}
+            </button>
+            {scenarioOpen ? (
+              <ScenarioPanel onSimulate={postSimulate} onSelectValue={setSelectedValue} />
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="app__panel app__panel--scrubber">
+          {timeline.status === "success" && airQualitySeries ? (
+            <TimelineView
+              points={airQualitySeries.points}
+              now={timeline.data.now}
+              onSelectPoint={(point) => {
+                setSelectedValue(point);
+                setHighlightStationId(airQualitySeries.entity.id);
+              }}
+            />
+          ) : timeline.status === "error" ? (
+            <p className="unavailable-notice">
+              {t.unavailable.timelinePrefix} {timeline.message}
+            </p>
+          ) : null}
+        </div>
+
+        {!allLoading ? (
+          <div className="app__panel app__panel--footer">
+            {sources.status === "success" ? (
+              <Footer sources={sources.data.sources} />
+            ) : sources.status === "error" ? (
+              <p className="unavailable-notice">
+                {t.unavailable.attributionPrefix} {sources.message}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
 
       {selectedValue ? (
-        <div role="dialog" aria-label="Provenance">
-          <button type="button" onClick={() => setSelectedValue(null)}>
-            Close
-          </button>
-          <ProvenancePanel value={selectedValue} />
+        <div className="app__dialog-backdrop">
+          <div role="dialog" aria-label={t.provenance.dialogLabel} className="app__dialog">
+            <button type="button" onClick={() => setSelectedValue(null)}>
+              {t.provenance.close}
+            </button>
+            <ProvenancePanel value={selectedValue} />
+          </div>
         </div>
       ) : null}
-
-      <Footer sources={sources.sources} />
     </div>
   );
 }

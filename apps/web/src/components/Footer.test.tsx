@@ -31,7 +31,10 @@ describe("Footer", () => {
 
     expect(screen.getByText(/NOAA Aviation Weather Center \(public domain\)/)).toBeInTheDocument();
     expect(screen.getByText(/MITECO.*CC BY 4\.0/)).toBeInTheDocument();
-    expect(screen.getByText(/OpenStreetMap contributors/)).toBeInTheDocument();
+    // issue 119: the map moved to MapLibre/OpenFreeMap vector tiles, with
+    // the required attribution "OpenFreeMap © OpenMapTiles Data from
+    // OpenStreetMap" replacing the old bare OSM raster-tile credit.
+    expect(screen.getByText(/OpenFreeMap.*OpenMapTiles.*OpenStreetMap/)).toBeInTheDocument();
   });
 
   it("shows each source's freshness computed from its last_ok timestamp", () => {

@@ -11,7 +11,7 @@ import type { SimulateResponse } from "../types/environment";
 const simulateResponse = simulateResponseFixture as unknown as SimulateResponse;
 
 describe("ScenarioPanel", () => {
-  it("renders sliders bounded to the UI ranges from issue #102", () => {
+  it("renders sliders bounded to the UI ranges from issue 102", () => {
     render(<ScenarioPanel onSimulate={vi.fn()} />);
 
     const temperature = screen.getByRole("slider", { name: /temperature/i });
@@ -55,6 +55,6 @@ describe("ScenarioPanel", () => {
 
     expect(await screen.findByText(/26/)).toBeInTheDocument(); // observed air_temperature
     expect(screen.getByText(/29/)).toBeInTheDocument(); // simulated air_temperature
-    expect(screen.getAllByText(/SIMULATED/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Simulated/).length).toBeGreaterThan(0);
   });
 });

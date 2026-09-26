@@ -31,8 +31,10 @@ describe("ValueTile", () => {
 
     expect(screen.getByText("Temperature")).toBeInTheDocument();
     expect(screen.getByText(/26/)).toBeInTheDocument();
-    expect(screen.getByText(/Cel/)).toBeInTheDocument();
-    expect(screen.getByText(/OBSERVED/)).toBeInTheDocument();
+    // the contract's raw unit code ("Cel") is never shown to a person (issue 119)
+    expect(screen.getByText(/°C/)).toBeInTheDocument();
+    expect(screen.queryByText(/Cel/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Observed/)).toBeInTheDocument();
     expect(screen.getByText(/40 min ago/)).toBeInTheDocument();
   });
 
@@ -49,5 +51,23 @@ describe("ValueTile", () => {
     render(<ValueTile name="City air quality" value={temperature} extra="poor" />);
 
     expect(screen.getByText(/\(poor\)/)).toBeInTheDocument();
+  });
+
+  it("renders displayValue instead of the default formatValue rendering, when given one", () => {
+    const windDirection: Value = { ...temperature, value: 250, unit: "deg" };
+    render(
+      <ValueTile name="Wind direction" value={windDirection} displayValue="WSW 250°" />,
+    );
+
+    expect(screen.getByText("WSW 250°")).toBeInTheDocument();
+    expect(screen.queryByText(/250 deg/)).not.toBeInTheDocument();
+  });
+
+  it("renders an em dash, never the word 'null', for a value the source never reported", () => {
+    const missing: Value = { ...temperature, value: null };
+    render(<ValueTile name="Temperature" value={missing} />);
+
+    expect(screen.getByText("—")).toBeInTheDocument();
+    expect(screen.queryByText(/null/i)).not.toBeInTheDocument();
   });
 });

@@ -1,41 +1,371 @@
-:root {
-  color-scheme: light dark;
-  --focus-ring: 3px solid #1a73e8;
-}
+@import "./styles/tokens.css";
 
+/*
+ * Base reset. `html`, `body` and `#root` all set an explicit, opaque
+ * background and text colour (issue #119): a browser dark/transparent
+ * theme (reported on Firefox) otherwise shows through as the user's
+ * desktop wallpaper, and unstyled text inherits a colour this app never
+ * chose. `color-scheme: dark` (declared once in tokens.css) plus these
+ * three explicit rules is what stops that regardless of the visitor's OS
+ * or browser theme.
+ */
 * {
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+html {
+  min-height: 100%;
+}
+
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
-  line-height: 1.4;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
 }
 
+#root {
+  min-height: 100vh;
+}
+
+a {
+  color: var(--color-accent-strong);
+}
+
+/* --- App shell: full-bleed map + a restrained HUD over it -------------
+ * (issue #119, maintainer review: "the map IS the page"). `.app__stage`
+ * fills the viewport; every `.app__panel` is an opaque token surface
+ * (`--color-bg-elevated` + a subtle border — never glassmorphism/blur
+ * unless recorded here as a decision, and it isn't) positioned as an
+ * overlay above ~48rem (768px) and stacked in normal document flow below
+ * it, per the reviewer's explicit mobile spec ("map on top (~60vh), HUD
+ * and scrubber stacked below").
+ */
 .app {
+  position: relative;
+  min-height: 100vh;
+}
+
+.app__stage {
+  width: 100%;
+  height: 60vh;
+}
+
+.app__stage .map-view,
+.app__stage .map-view__stage,
+.app__stage .skeleton,
+.app__stage .network-error {
+  height: 100%;
+}
+
+.app__hud {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  max-width: 60rem;
-  margin: 0 auto;
-  padding: 1rem;
+  gap: var(--space-3);
+  padding: var(--space-3);
 }
+
+.app__panel {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-panel);
+  padding: var(--space-3) var(--space-4);
+}
+
+.app__panel--header {
+  padding: var(--space-3);
+}
+
+.app__scenario-toggle {
+  width: 100%;
+  margin-top: var(--space-2);
+  background: transparent;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  padding: var(--space-2);
+  cursor: pointer;
+  font: inherit;
+}
+
+.app__scenario-toggle[aria-expanded="true"] {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.app__dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: rgba(6, 8, 12, 0.6);
+}
+
+.app__dialog {
+  max-width: 32rem;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-panel);
+  padding: var(--space-4);
+}
+
+@media (min-width: 48rem) {
+  .app__stage {
+    position: fixed;
+    inset: 0;
+    height: 100vh;
+    z-index: 0;
+  }
+
+  .app__hud {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: block; /* children position themselves */
+    padding: 0;
+    pointer-events: none; /* only individual panels intercept clicks */
+  }
+
+  .app__panel {
+    position: fixed;
+    pointer-events: auto;
+  }
+
+  .app__panel--header {
+    top: var(--space-4);
+    left: var(--space-4);
+    max-width: 26rem;
+  }
+
+  .app__panel--state {
+    top: var(--space-4);
+    right: var(--space-4);
+    width: 19rem;
+    max-height: calc(100vh - 8rem);
+    overflow-y: auto;
+  }
+
+  .app__panel--scrubber {
+    left: var(--space-4);
+    right: var(--space-4);
+    bottom: var(--space-4);
+  }
+
+  .app__panel--footer {
+    left: var(--space-4);
+    bottom: calc(var(--space-4) + 4.5rem);
+    max-width: 22rem;
+  }
+
+  /* The state dock is a fixed 19rem regardless of viewport width, so the
+     2-column .state-panel rule (keyed to viewport width, not this
+     container's width) must not apply inside it — a compact, single-
+     column HUD dock, not a shrunken grid of cards. */
+  .app__panel--state .state-panel {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .app__panel--state .value-tile {
+    padding: var(--space-2);
+  }
+
+  .app__panel--state .value-tile__value {
+    font-size: 0.95rem;
+  }
+}
+
+/* --- Header --------------------------------------------------------- */
 
 .page-header h1 {
-  font-size: 1.4rem;
-  margin-bottom: 0.5rem;
+  font-size: 1.05rem;
+  margin: 0 0 var(--space-2) 0;
+  color: var(--color-text);
 }
 
-.map-view {
-  width: 100%;
-  height: 320px;
+.page-header p {
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-1) 0;
+  font-size: 0.75rem;
 }
+
+/* --- Loading / error states (issue #119) ----------------------------- */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.skeleton__block {
+  border-radius: var(--radius-lg);
+  background: linear-gradient(
+    100deg,
+    var(--color-bg-elevated) 40%,
+    var(--color-border) 50%,
+    var(--color-bg-elevated) 60%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer var(--duration-slow) ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton__block {
+    animation: none;
+    background: var(--color-bg-elevated);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton__block--map {
+  height: 22rem;
+}
+
+.skeleton__block--timeline {
+  height: 3rem;
+}
+
+.skeleton__block--panel {
+  height: 8rem;
+}
+
+.network-error {
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-elevated);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-panel);
+}
+
+.network-error__message {
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin: 0 0 var(--space-2) 0;
+  color: var(--color-text);
+}
+
+.network-error__reason {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-4) 0;
+  word-break: break-word;
+}
+
+.network-error__retry {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.network-error__retry:hover {
+  background: var(--color-accent-strong);
+}
+
+.unavailable-notice {
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+/* --- Map --------------------------------------------------------------
+   `.map-view__stage` is the fixed-size box MapLibre actually measures and
+   paints into. It must have an explicit height: a MapLibre canvas sized
+   from a container with no CSS height (auto/0) renders at a near-empty
+   fallback size — the exact bug this once shipped with — because a plain
+   block-level div does not inherit a parent's height on its own. */
+
+.map-view {
+  position: relative;
+  height: 100%;
+}
+
+.map-view__stage {
+  position: relative;
+  width: 100%;
+  height: 22rem; /* fallback outside the full-bleed .app__stage context */
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--map-bg);
+}
+
+.app__stage .map-view__stage {
+  height: 100%;
+}
+
+.map-view__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* An unobtrusive overlay corner, not layout height: the map fills the
+   frame (issue #119, maintainer review), the honesty note about
+   extrusion heights/no interpolated surface stays legible but small. */
+.map-view__caption {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  z-index: 1;
+  max-width: 16rem;
+  color: var(--color-text-muted);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font-size: 0.65rem;
+  line-height: 1.3;
+}
+
+/* --- Timeline ----------------------------------------------------------- */
 
 .timeline {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--space-2);
   list-style: none;
   padding: 0;
   margin: 0;
@@ -44,14 +374,52 @@ body {
 .timeline li {
   display: flex;
   align-items: center;
+  color: var(--color-text-muted);
 }
+
+.timeline__point {
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+  font: inherit;
+}
+
+.timeline__point--solid {
+  border-style: solid;
+}
+
+.timeline__point--outline {
+  border-style: solid;
+  background: transparent;
+}
+
+.timeline__point--dotted {
+  border-style: dotted;
+  border-width: var(--border-width-md);
+}
+
+.timeline__point--hatched {
+  border-style: dashed;
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--color-bg-elevated),
+    var(--color-bg-elevated) var(--space-1),
+    var(--color-border) var(--space-1),
+    var(--color-border) var(--space-2)
+  );
+}
+
+/* --- State / scenario panels -------------------------------------------- */
 
 .state-panel,
 .scenario-panel__sliders,
 .scenario-panel__result {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 @media (min-width: 36rem) {
@@ -68,35 +436,55 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.25rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #888;
-  border-radius: 0.5rem;
-  background: transparent;
-  color: inherit;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
   cursor: pointer;
   text-align: left;
   width: 100%;
+  font-family: inherit; /* ds-allow-hardcode: a CSS keyword, not a literal font list */
+  font-variant-numeric: tabular-nums;
+}
+
+.value-tile__value {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+}
+
+.value-tile__age {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
 }
 
 .label {
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.03em;
+  color: var(--color-text-muted);
 }
 
 .provenance-panel {
-  border: 1px solid #888;
-  border-radius: 0.5rem;
-  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
 }
 
 .provenance-panel dt {
   font-weight: 600;
+  color: var(--color-text-muted);
 }
 
 .provenance-panel dd {
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 var(--space-2) 0;
+}
+
+.page-footer {
+  color: var(--color-text-muted);
 }
 
 .page-footer ul {
@@ -106,44 +494,247 @@ body {
   font-size: 0.8rem;
 }
 
-.aq-marker {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border: 2px solid #222;
-  border-radius: 0.35rem;
-  background: #fff;
-  font-size: 0.65rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.aq-marker--highlighted {
-  border-width: 4px;
-}
-
-.wind-marker {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  font-size: 0.65rem;
-  text-align: center;
-}
-
-.wind-marker__arrow {
-  font-size: 1.5rem;
-  display: inline-block;
-}
-
 button:focus-visible,
 input:focus-visible,
 a:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
+  outline: var(--border-width-thick) solid var(--color-focus-ring);
+  outline-offset: var(--focus-outline-offset);
+}
+
+/* --- Header / locale switch (issue #124) -------------------------------- */
+
+.page-header__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.locale-switch {
+  display: flex;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.locale-switch__option {
+  background: transparent;
+  color: var(--color-text-muted);
+  border: none;
+  padding: var(--space-1) var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.locale-switch__option[aria-pressed="true"] {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+}
+
+/* --- Beacons (issue #119) -------------------------------------------------
+   A pill, not a fixed small circle (maintainer review: "untruncated
+   labels") — "extremely poor"/"desfavorable" never fits a ~44px circle at
+   a legible size. Category/value are always visible text
+   (`.beacon__index`, `.beacon__category`); the shape
+   (circle/square/triangle/diamond/star, from `categoryShape()`) lives in
+   its own small `.beacon__shape` glyph — the second, colour-independent
+   encoding (AC-2), sized so it reads as an icon, not the text's own
+   silhouette. The glow + pulsing rings are decorative and frozen under
+   prefers-reduced-motion. */
+
+.beacon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: max-content;
+  white-space: nowrap;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-elevated);
+  border: var(--border-width-md) solid var(--color-text-muted);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  line-height: 1.15;
+  padding: 0.3rem 0.6rem;
+  box-shadow: 0 0 0.75rem 0.05rem currentcolor;
+}
+
+.beacon--highlighted {
+  border-width: var(--border-width-thick);
+  box-shadow: 0 0 1.25rem 0.2rem currentcolor;
+}
+
+.beacon__ring {
+  position: absolute;
+  inset: -0.35rem;
+  border: 1px solid currentcolor;
+  border-radius: var(--radius-full);
+  opacity: 0.6;
+  animation: beacon-pulse var(--duration-slow) var(--ease-standard) infinite;
+}
+
+.beacon__ring--outer {
+  inset: -0.6rem;
+  animation-delay: var(--duration-base);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .beacon__ring {
+    animation: none;
+  }
+}
+
+@keyframes beacon-pulse {
+  0% {
+    transform: scale(0.97);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.08);
+    opacity: 0;
+  }
+}
+
+.beacon__core {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.beacon__index {
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.beacon__category {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* The severity icon: a small solid glyph, shape-coded circle -> star. */
+.beacon__shape {
+  flex: 0 0 auto;
+  width: 0.7rem;
+  height: 0.7rem;
+  background: currentcolor;
+}
+.beacon__shape--circle {
+  border-radius: var(--radius-full);
+}
+.beacon__shape--rounded-square {
+  border-radius: var(--radius-sm);
+}
+.beacon__shape--square {
+  border-radius: 1px;
+}
+.beacon__shape--triangle {
+  clip-path: polygon(50% 6%, 96% 94%, 4% 94%);
+}
+.beacon__shape--diamond {
+  clip-path: polygon(50% 2%, 98% 50%, 50% 98%, 2% 50%);
+}
+.beacon__shape--star {
+  clip-path: polygon(
+    50% 0%,
+    61% 35%,
+    98% 35%,
+    68% 57%,
+    79% 91%,
+    50% 70%,
+    21% 91%,
+    32% 57%,
+    2% 35%,
+    39% 35%
+  );
+}
+
+/* Category colour is a hint, never the only signal: shape + text carry the
+   same information (AC-2). */
+.beacon--good {
+  color: var(--color-aq-good);
+}
+.beacon--fair {
+  color: var(--color-aq-fair);
+}
+.beacon--moderate {
+  color: var(--color-aq-moderate);
+}
+.beacon--poor {
+  color: var(--color-aq-poor);
+}
+.beacon--very_poor {
+  color: var(--color-aq-very-poor);
+}
+.beacon--extremely_poor {
+  color: var(--color-aq-extremely-poor);
+}
+
+.beacon--wind {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.beacon__arrow {
+  display: inline-flex;
+  font-size: 0.9rem;
+}
+
+.beacon--edge {
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.35rem;
+}
+
+.beacon__edge-distance {
+  font-size: 0.6rem;
+}
+
+/* --- Wind particles (issue #119) -----------------------------------------
+   An illustrative overlay: pointer-events stay off the canvas so it never
+   blocks map interaction, and the toggle + label are the one interactive,
+   always-legible part of the layer. */
+
+.wind-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.wind-particles__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.wind-particles__controls {
+  position: absolute;
+  left: var(--space-3);
+  bottom: var(--space-3);
+  max-width: calc(100% - 2 * var(--space-3));
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  pointer-events: auto;
+}
+
+.wind-particles__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.wind-particles__label {
+  margin: var(--space-1) 0 0 0;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
 }

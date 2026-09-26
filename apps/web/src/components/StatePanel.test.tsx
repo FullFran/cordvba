@@ -19,8 +19,8 @@ describe("StatePanel", () => {
     expect(screen.getByText(/City air quality/)).toBeInTheDocument();
 
     // temperature is OBSERVED, humidity is INFERRED (contract examples)
-    expect(screen.getAllByText(/OBSERVED/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/INFERRED/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Observed/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Inferred/).length).toBeGreaterThan(0);
   });
 
   it("calls onSelect with the clicked value, so its provenance can be shown", async () => {
@@ -38,5 +38,27 @@ describe("StatePanel", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Temperature/ }));
 
     expect(onSelect).toHaveBeenCalledWith(environment.weather.air_temperature);
+  });
+
+  it("shows wind direction as a cardinal point plus degrees, not a bare 'deg' code (issue 119)", () => {
+    render(<StatePanel environment={environment} now={new Date("2026-09-26T09:40:00Z")} />);
+
+    // contract example: wind_direction.value === 250 -> "WSW 250°"
+    expect(screen.getByText("WSW 250°")).toBeInTheDocument();
+    expect(screen.queryByText(/250 deg/)).not.toBeInTheDocument();
+  });
+
+  it("shows the city air-quality category in words, not the underscore-joined slug", () => {
+    const veryPoorEnvironment: EnvironmentResponse = {
+      ...environment,
+      air_quality: {
+        ...environment.air_quality,
+        city_state: { ...environment.air_quality.city_state, category: "very_poor" },
+      },
+    };
+    render(<StatePanel environment={veryPoorEnvironment} now={new Date("2026-09-26T09:40:00Z")} />);
+
+    expect(screen.getByText(/\(very poor\)/)).toBeInTheDocument();
+    expect(screen.queryByText(/very_poor/)).not.toBeInTheDocument();
   });
 });

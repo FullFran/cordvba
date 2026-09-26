@@ -8,6 +8,24 @@
       name="description"
       content="Experimental digital model of Córdoba: current environmental state, predictions and what-if scenarios."
     />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0a0e14" />
+    <!--
+      This app is always dark, regardless of the visitor's OS or browser
+      theme (issue #119: a transparent/dark Firefox theme otherwise shows
+      through as the desktop wallpaper before styles.css finishes loading).
+      Keep this in sync with --color-bg / --color-text in
+      src/styles/tokens.css; it is a paint-time safety net, not the source
+      of truth.
+    -->
+    <style>
+      html,
+      body,
+      #root {
+        background: #0a0e14;
+        color: #e7ebf3;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

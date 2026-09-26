@@ -1,0 +1,130 @@
+/**
+ * Design tokens for the CORDVBA city-twin redesign (issue #119).
+ * Single source of truth: every colour, spacing, radius, motion and type
+ * value used anywhere in the app is a var() read from here. No component
+ * stylesheet should contain a stray hex/rgb/hsl literal — that is exactly
+ * what the design-gates `lint_hardcodes` check looks for.
+ *
+ * Palette rationale (see apps/web/.agents/DESIGN.md, "Decision log"): a
+ * dark base with a single luminous accent used only for live signals
+ * (beacons, the selected timeline point, focus), never for decoration —
+ * following the "muted city, luminous data" pattern shared by Digital Twin
+ * Victoria, Helsinki 3D, Madrid's gemelo digital and kepler.gl/deck.gl
+ * showcases.
+ */
+:root {
+  /* This UI is always dark: it must never inherit a transparent/light
+     browser theme (issue #119, maintainer report on Firefox with a
+     transparent dark theme). A single value, not `light dark`, tells the
+     browser this page has one appearance and stops it guessing. */
+  color-scheme: dark;
+
+  /* --- Surfaces -----------------------------------------------------
+     Aligned with the host site's (fullfran.com) Tokyo-Night-derived base
+     for visual continuity across www.fullfran.com/cordvba/ (issue #124,
+     DESIGN.md decision log): #1a1b26 is that site's exact background. The
+     accent stays independent (see --color-accent below) so the one hue
+     reserved for live map/timeline signals never collides with the host
+     site's own UI-chrome accent. */
+  --color-bg: #1a1b26; /* page background: always opaque */
+  --color-bg-elevated: #1f2335; /* panels, cards, the provenance dialog */
+  --color-bg-sunken: #13141c; /* map canvas backdrop before tiles paint */
+  --color-border: #2a2e42;
+  --color-border-strong: #3b4261;
+
+  /* --- Text ---------------------------------------------------------
+     Always set explicitly, never `inherit`: a browser dark theme without
+     an explicit colour here is what produced white-on-white markers. */
+  --color-text: #e7ebf3;
+  --color-text-muted: #97a3ba;
+  --color-text-on-accent: #04211d;
+
+  /* --- Accent: the one luminous colour, reserved for live signals --- */
+  --color-accent: #2dd4bf;
+  --color-accent-strong: #5eead4;
+  --color-focus-ring: #7dd3fc;
+
+  /* --- Air-quality categories (MITECO ICA 1-6) -----------------------
+     Colour is never the only encoding (AC-2): every beacon and tile also
+     carries the category as text and the beacon as a distinct shape. */
+  --color-aq-good: #34d399;
+  --color-aq-fair: #a3e635;
+  --color-aq-moderate: #facc15;
+  --color-aq-poor: #fb923c;
+  --color-aq-very-poor: #f87171;
+  --color-aq-extremely-poor: #e879f9;
+
+  /* --- Epistemic-label textures (issue #119: never colour alone) ----
+     SIMULATED is the one label that is never reality, observed or
+     forecast — a counterfactual "what if". It gets the only other accent
+     the app uses (amber, "caution: not real"), reserved exclusively for
+     it so a second hue never competes with the teal live-signal accent. */
+  --texture-observed: var(--color-text);
+  --texture-inferred: var(--color-text-muted);
+  --texture-predicted: var(--color-accent);
+  --texture-simulated: #f5a524;
+
+  /* --- Map ------------------------------------------------------------ */
+  --map-bg: #060a12;
+  --map-water: #0c1c33;
+  --map-park: #0f2418;
+  --map-building-low: #171d2b;
+  --map-building-high: #3a4a63;
+  --map-road: #2a3348;
+  --map-road-major: #4a5670;
+  --map-label-halo: rgba(6, 10, 18, 0.85);
+
+  /* --- Typography -----------------------------------------------------
+     A data-console sans with tabular numerals (issue #119). IBM Plex Sans
+     + IBM Plex Mono is the chosen pairing (SIL OFL 1.1, self-hostable) —
+     named first so a visitor who already has it installed gets it, but we
+     deliberately do not bundle the binaries in this change (see DESIGN.md
+     decision log): `font-variant-numeric: tabular-nums` gives every
+     fallback system font tabular digits without a font download or a
+     third-party request. */
+  --font-sans:
+    "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono:
+    "IBM Plex Mono", ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, monospace;
+
+  /* --- Spacing (4px base scale) --------------------------------------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-8: 3rem;
+
+  /* --- Radius ---------------------------------------------------------- */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-full: 999px;
+
+  /* --- Border width ------------------------------------------------------ */
+  --border-width-thin: 1px;
+  --border-width-md: 2px;
+  --border-width-thick: 3px;
+  --focus-outline-offset: 2px;
+
+  /* --- Motion -----------------------------------------------------------
+     Every animation in the app reads its duration from here, so
+     prefers-reduced-motion (below) can zero every one of them in a single
+     place instead of hunting through components. */
+  --duration-fast: 150ms;
+  --duration-base: 300ms;
+  --duration-slow: 900ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* --- Elevation --------------------------------------------------------- */
+  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+}
