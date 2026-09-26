@@ -26,9 +26,14 @@ const defaultStation = "5402"
 // live gateway, not a climate archive.
 const defaultObservationTTL = 30 * 24 * time.Hour
 
-// fintLayout is the timestamp AEMET writes into every reading. It carries no
-// zone marker and is UTC, per the product's own field dictionary.
+// fintLayout is the timestamp AEMET wrote into every reading: no zone marker,
+// UTC per the product's own field dictionary.
 const fintLayout = "2006-01-02T15:04:05"
+
+// fintOffsetLayout is the form AEMET switched to by September 2026: the same
+// value with a numeric offset ("+0000"), which is not RFC 3339 ("+00:00")
+// and so needs its own layout (#143).
+const fintOffsetLayout = "2006-01-02T15:04:05-0700"
 
 // ObservationProvider reads the hourly output of AEMET automatic stations.
 //
@@ -71,6 +76,11 @@ func (p *ObservationProvider) Poll(ctx context.Context) ([]observation.Record, e
 
 	ttl := p.client.ttl(defaultObservationTTL)
 	records := make([]observation.Record, 0, len(rows))
+	// Readings that name a station but carry a timestamp eye cannot read. If
+	// every reading is like that, the product's format has drifted: report it
+	// as a failed poll so source health shows it, rather than a quiet
+	// success with nothing stored (#143).
+	unreadable, firstUnreadable := 0, ""
 
 	for _, row := range rows {
 		var r reading
@@ -78,6 +88,12 @@ func (p *ObservationProvider) Poll(ctx context.Context) ([]observation.Record, e
 			continue
 		}
 		observedAt, ok := parseFint(r.Fint)
+		if r.Idema != "" && !ok {
+			if unreadable == 0 {
+				firstUnreadable = r.Fint
+			}
+			unreadable++
+		}
 		if r.Idema == "" || !ok {
 			// A reading with no station or no timestamp is not an
 			// observation of anything eye can place in time.
@@ -122,6 +138,10 @@ func (p *ObservationProvider) Poll(ctx context.Context) ([]observation.Record, e
 			continue
 		}
 		records = append(records, rec)
+	}
+	if len(records) == 0 && unreadable > 0 {
+		return nil, fmt.Errorf("%w: %s: %d readings with an unreadable timestamp (first %q)",
+			ErrAEMET, p.client.src.ID, unreadable, firstUnreadable)
 	}
 	return records, nil
 }
@@ -217,6 +237,9 @@ func positionOf(r reading) (observation.Point, bool) {
 // nowhere in the value itself.
 func parseFint(s string) (time.Time, bool) {
 	if t, err := time.Parse(fintLayout, s); err == nil {
+		return t.UTC(), true
+	}
+	if t, err := time.Parse(fintOffsetLayout, s); err == nil {
 		return t.UTC(), true
 	}
 	if t, err := time.Parse(time.RFC3339, s); err == nil {

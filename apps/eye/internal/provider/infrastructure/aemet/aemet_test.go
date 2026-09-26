@@ -505,6 +505,63 @@ func TestObservationDecodesLatin1(t *testing.T) {
 	}
 }
 
+// AEMET started writing fint with a numeric offset ("+0000", not RFC 3339's
+// "+00:00"). Those readings must be stored, and a batch in which every reading
+// has an unreadable timestamp must fail loudly instead of reporting success
+// with zero records (#143).
+func TestObservationTimestampFormats(t *testing.T) {
+	t.Parallel()
+
+	reading := func(fint string) string {
+		return `{"idema":"5402","ubi":"CORDOBA AEROPUERTO","lat":37.8442,"lon":-4.8464,"ta":37.5,"fint":"` + fint + `"}`
+	}
+	cases := []struct {
+		name     string
+		body     string
+		wantErr  bool
+		want     int
+		wantTime time.Time
+	}{
+		{
+			name: "numeric offset", body: `[` + reading("2026-09-26T15:00:00+0000") + `]`, want: 1,
+			wantTime: time.Date(2026, 9, 26, 15, 0, 0, 0, time.UTC),
+		},
+		{
+			name: "legacy layout without zone", body: `[` + reading("2026-09-26T15:00:00") + `]`, want: 1,
+			wantTime: time.Date(2026, 9, 26, 15, 0, 0, 0, time.UTC),
+		},
+		{name: "every timestamp unreadable", body: `[` + reading("26/09/2026 15h") + `,` + reading("") + `]`, wantErr: true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			srv := twoStep(t, fixture(t, "observation_step1.json"), []byte(tc.body), "application/json")
+			got, err := aemet.NewObservation(src(t, "aemet-observation", srv.URL, nil), httpx.New(), "k.k.k").
+				Poll(context.Background())
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("Poll() accepted %d readings with unreadable timestamps silently", len(got))
+				}
+				if !errors.Is(err, aemet.ErrAEMET) {
+					t.Errorf("error = %v, want it wrapped in ErrAEMET", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Poll() = %v", err)
+			}
+			if len(got) != tc.want {
+				t.Fatalf("Poll() = %d records, want %d", len(got), tc.want)
+			}
+			if !got[0].ObservedAt.Equal(tc.wantTime) {
+				t.Errorf("ObservedAt = %v, want %v", got[0].ObservedAt, tc.wantTime)
+			}
+		})
+	}
+}
+
 func TestObservationEmptyAndMalformed(t *testing.T) {
 	t.Parallel()
 
