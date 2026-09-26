@@ -23,6 +23,11 @@ test: ## Run tests for every component
 lint: ## Lint every component
 	$(MAKE) -C apps/eye lint
 
+.PHONY: boundaries
+boundaries: ## Check that nothing outside apps/eye touches eye's store or internals
+	bash infra/ci/check-boundaries_test.sh
+	bash infra/ci/check-boundaries.sh
+
 .PHONY: ci
-ci: ## Run the full local CI pipeline for every component
+ci: boundaries ## Run the full local CI pipeline for every component
 	$(MAKE) -C apps/eye ci-local
