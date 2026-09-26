@@ -29,3 +29,13 @@ make ci      # run the full local CI pipeline for every component
 
 Each component also builds, tests and runs standalone from its own directory
 — see its own README for the details.
+
+## Licence
+
+The code in this repository is released under the [MIT License](./LICENSE).
+
+Data that eye collects keeps the licence of the source that published it (for
+example MITECO's air-quality index under CC BY 4.0, NOAA's METAR reports in the
+public domain). Each source's licence and attribution requirements are recorded
+in [`apps/eye/configs/sources.yaml`](./apps/eye/configs/sources.yaml); anything
+that redistributes eye's data must honour them.
