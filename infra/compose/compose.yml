@@ -21,6 +21,9 @@
 name: cordvba-mvp
 
 services:
+  # Upstreams are addressed by the cordvba-* aliases below, never by bare
+  # service names: with compose.traefik.yml the edge also joins a shared
+  # network where names like `api` or `web` belong to other stacks (#122).
   twin:
     build:
       context: ../..
@@ -30,8 +33,9 @@ services:
       EYE_BASE_URL: ${EYE_BASE_URL:-http://eye-api:8787}
       EYE_API_TOKEN: ${EYE_API_TOKEN:?EYE_API_TOKEN is required — see infra/deployment/README.md}
     networks:
-      - default
-      - eye
+      default:
+        aliases: [cordvba-twin]
+      eye: {}
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8100/health', timeout=3)"]
       interval: 30s
@@ -59,11 +63,12 @@ services:
     environment:
       EYE_BASE_URL: ${EYE_BASE_URL:-http://eye-api:8787}
       EYE_API_TOKEN: ${EYE_API_TOKEN:?EYE_API_TOKEN is required — see infra/deployment/README.md}
-      TWIN_BASE_URL: http://twin:8100
+      TWIN_BASE_URL: http://cordvba-twin:8100
       WEB_ORIGIN: ${PUBLIC_ORIGIN}
     networks:
-      - default
-      - eye
+      default:
+        aliases: [cordvba-api]
+      eye: {}
     depends_on:
       twin:
         condition: service_healthy
@@ -92,7 +97,8 @@ services:
       dockerfile: apps/web/Dockerfile
     restart: unless-stopped
     networks:
-      - default
+      default:
+        aliases: [cordvba-web]
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:80/"]
       interval: 30s
