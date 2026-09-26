@@ -15,6 +15,10 @@ help: ## Show this help message
 eye: ## Build eye (apps/eye)
 	$(MAKE) -C apps/eye build
 
+.PHONY: twin
+twin: ## Run twin's dev server (services/twin), needs EYE_BASE_URL/EYE_API_TOKEN
+	uv run --package twin uvicorn twin.main:app --reload --port 8100
+
 .PHONY: test
 test: ## Run tests for every component
 	$(MAKE) -C apps/eye test

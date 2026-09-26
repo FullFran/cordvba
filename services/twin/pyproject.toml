@@ -1,0 +1,40 @@
+[project]
+name = "twin"
+version = "0.1.0"
+description = "Models what Córdoba's environment may do next: derived state, a persistence forecast, and thermal scenarios."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "eye-client",
+    "fastapi>=0.115",
+    "pydantic>=2.7",
+    "uvicorn>=0.30",
+]
+
+[tool.uv.sources]
+eye-client = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/twin"]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.27",
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+extend = "../../pyproject.toml"
+
+[tool.ruff.lint]
+# B008 (function call in a default argument) is how FastAPI's Depends()
+# is meant to be used; flagging it here would be a permanent false positive.
+extend-ignore = ["B008"]
