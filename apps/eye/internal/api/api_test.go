@@ -281,6 +281,56 @@ func TestSourcesIncludeHeldOnesAndTheirReason(t *testing.T) {
 	}
 }
 
+// #125: a source the operator's overrides restrict must be reported as such,
+// distinct from one the registry itself holds — a deployment reading its own
+// /v1/sources should be able to tell "we chose not to poll this" apart from
+// "the licence is unresolved" without cross-referencing overrides.yaml.
+func TestSourcesReportOperatorDisabled(t *testing.T) {
+	t.Parallel()
+
+	sources := []source.Source{{
+		ID: "diario-cordoba", Authority: "Diario Cordoba", Topic: "press",
+		URL: "https://www.diariocordoba.com/rss/", Format: "rss", License: "unspecified",
+		Access: source.AccessDocumentedAPI, Automation: source.AutomationEnabled, Interval: time.Minute,
+	}, {
+		ID: "saih-guadalquivir", Authority: "CHG", Topic: "hydrology",
+		URL: "https://www.chguadalquivir.es/saih/", Format: "web", License: "unspecified",
+		Access: source.AccessPublicHTML, Automation: source.AutomationReviewTerms,
+		Notes: "Reuse terms unresolved.",
+	}}
+	overrides := source.Overrides{Sources: source.SourceOverrides{Disable: []string{"diario-cordoba"}}}
+
+	srv := httptest.NewServer(api.New(&fakeStore{}, sources, logging.Discard(),
+		api.WithOverrides(overrides)).Handler())
+	t.Cleanup(srv.Close)
+
+	_, body := get(t, srv, "/v1/sources")
+	entries, _ := body["sources"].([]any)
+
+	var sawDisabled, sawHeld bool
+	for _, e := range entries {
+		entry, _ := e.(map[string]any)
+		switch entry["id"] {
+		case "diario-cordoba":
+			sawDisabled = true
+			if entry["pollable"] != false {
+				t.Error("diario-cordoba is reported pollable despite the operator disabling it")
+			}
+			if entry["operator_disabled"] != true {
+				t.Error("diario-cordoba is not reported as operator_disabled")
+			}
+		case "saih-guadalquivir":
+			sawHeld = true
+			if entry["operator_disabled"] == true {
+				t.Error("saih-guadalquivir is held by the registry, not by the operator")
+			}
+		}
+	}
+	if !sawDisabled || !sawHeld {
+		t.Fatalf("sources = %v", body)
+	}
+}
+
 func TestIndexDescribesTheAPI(t *testing.T) {
 	t.Parallel()
 

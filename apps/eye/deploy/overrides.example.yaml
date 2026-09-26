@@ -1,0 +1,43 @@
+# eye — optional per-deployment overrides (#125).
+#
+#   cp deploy/overrides.example.yaml deploy/overrides.yaml   # then edit it
+#
+# This file layers OVER configs/sources.yaml. It can only restrict what the
+# registry already permits: it can narrow which sources are scheduled and how
+# long their records are kept, but it can never enable a source the registry
+# holds — review_terms, manual_link, or an undocumented_personal source
+# without EYE_ALLOW_PERSONAL_SOURCES also set. Missing this file entirely is
+# today's behaviour, unchanged. A present but invalid file fails eye's
+# start-up, naming the entry.
+#
+# Mount it read-only and point eye at it — see docker-compose.yml's commented
+# volume line and .env's EYE_OVERRIDES_FILE.
+#
+# The example below is the profile this project's own VPS runs: keep only
+# what the cordvba v0.1 page reads (METAR, MITECO air quality, AEMET warnings
+# and observations), and drop everything else — the national DGT feeds alone
+# wrote 7,337 records and grew the raw cache by ~200 MB in three hours with
+# no use for this deployment.
+
+sources:
+  # Allow-list: exactly these ids are scheduled. Use "disable" instead for a
+  # deny-list (schedule every enabled source EXCEPT the ones named), or
+  # "topics_only" to narrow by topic instead of by id. only/disable/topics_only
+  # compose together rather than replacing one another, but combining them is
+  # rarely what you want — pick the one shape that matches how you think about
+  # this deployment.
+  only: [metar-cordoba, miteco-ica, aemet-warnings, aemet-observation]
+  # disable: [dgt-vms, dgt-incidents, renfe-delays]
+  # topics_only: [weather, air_quality]
+
+retention:
+  # "historical": no ExpiresAt — an environmental series eye cannot re-fetch
+  # once its own retention window has passed. Reuses the same Retention type
+  # and validation as configs/sources.yaml's own retention field (#73):
+  # historical never carries a TTL.
+  metar-cordoba: historical
+  miteco-ica: historical
+  # A Go duration instead of "historical" pins a source to that TTL,
+  # replacing whatever its adapter would otherwise compute — useful for
+  # trimming a source you kept enabled but don't want to keep for long:
+  # renfe-positions: 24h

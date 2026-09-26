@@ -239,6 +239,64 @@ func TestSourcesCommandJSON(t *testing.T) {
 	}
 }
 
+// #125: a source the operator's overrides.yaml excludes must be reported as
+// its own state, distinct from a registry-held one or one this build simply
+// cannot read — "we won't poll this because you said so" is a different fact
+// from "we can't" or "the licence is unresolved".
+func TestSourcesCommandReportsOperatorDisabled(t *testing.T) {
+	// t.Setenv (EYE_OVERRIDES_FILE) cannot be combined with t.Parallel.
+	registry := setup(t)
+	overridesPath := filepath.Join(t.TempDir(), "overrides.yaml")
+	if err := os.WriteFile(overridesPath, []byte("sources:\n  disable: [test-cameras]\n"), 0o600); err != nil {
+		t.Fatalf("write overrides fixture: %v", err)
+	}
+	t.Setenv("EYE_OVERRIDES_FILE", overridesPath)
+
+	code, stdout, _ := runCmd(t, registry, "sources")
+	if code != 0 {
+		t.Fatalf("exit = %d", code)
+	}
+	if !strings.Contains(stdout, "test-cameras") || !strings.Contains(stdout, "operator") {
+		t.Errorf("output does not report test-cameras as disabled by the operator:\n%s", stdout)
+	}
+
+	_, jsonOut, _ := runCmd(t, registry, "sources", "--json")
+	var got []struct {
+		ID               string `json:"id"`
+		Pollable         bool   `json:"pollable"`
+		OperatorDisabled bool   `json:"operator_disabled"`
+	}
+	if err := json.Unmarshal([]byte(jsonOut), &got); err != nil {
+		t.Fatalf("output is not JSON: %v", err)
+	}
+
+	found := false
+	for _, s := range got {
+		if s.ID != "test-cameras" {
+			continue
+		}
+		found = true
+		if s.Pollable {
+			t.Error("test-cameras is reported pollable despite the operator disabling it")
+		}
+		if !s.OperatorDisabled {
+			t.Error("test-cameras is not reported as operator_disabled")
+		}
+	}
+	if !found {
+		t.Fatal("test-cameras is not in the JSON output at all")
+	}
+
+	// A source the registry itself holds must never be relabelled as an
+	// operator decision — that would bury the more specific, and more
+	// actionable, reason.
+	for _, s := range got {
+		if s.ID == "test-held" && s.OperatorDisabled {
+			t.Error("test-held is held by the registry, not by the operator")
+		}
+	}
+}
+
 func TestNewsCommand(t *testing.T) {
 	t.Parallel()
 

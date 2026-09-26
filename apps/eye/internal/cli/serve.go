@@ -86,6 +86,7 @@ func serveCommand() Command {
 				api.WithToken(token),
 				api.WithCORSOrigin(rt.cfg.CORSOrigin),
 				api.WithPersonalSources(rt.cfg.AllowPersonalSources),
+				api.WithOverrides(rt.overrides),
 			}
 			// The console is compiled into the binary, so serving it costs
 			// nothing to deploy and --no-ui exists for the deployment that

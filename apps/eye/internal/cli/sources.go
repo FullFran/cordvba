@@ -60,9 +60,9 @@ func sourcesCommand() Command {
 			}
 
 			if *asJSON {
-				return writeJSON(stdout, sourceViews(list, states, time.Now().UTC(), rt.cfg.AllowPersonalSources))
+				return writeJSON(stdout, sourceViews(list, states, time.Now().UTC(), rt.cfg.AllowPersonalSources, rt.overrides))
 			}
-			return renderSources(stdout, rt.registryPath, list, states, time.Now().UTC(), rt.cfg.AllowPersonalSources)
+			return renderSources(stdout, rt.registryPath, list, states, time.Now().UTC(), rt.cfg.AllowPersonalSources, rt.overrides)
 		},
 	}
 }
@@ -85,6 +85,12 @@ type sourceView struct {
 	// Health is what earlier runs recorded. It is absent for a source that
 	// has never been polled, which is different from one that failed.
 	Health *sourceHealthView `json:"health,omitempty"`
+
+	// OperatorDisabled is true when the operator's deployment overrides
+	// (#125) are the reason this source is not pollable — never when the
+	// registry or the personal-source opt-in already held it back. See
+	// source/domain.Overrides.DisabledByOperator.
+	OperatorDisabled bool `json:"operator_disabled,omitempty"`
 }
 
 // sourceHealthView is the persisted polling state of one source.
@@ -98,13 +104,11 @@ type sourceHealthView struct {
 }
 
 // pollableNow reports whether the scheduler will actually fetch this source
-// right now, which is the registry's permission and the machine's opt-in taken
-// together rather than the registry's alone.
-func pollableNow(s source.Source, allowPersonal bool) bool {
-	if s.Access.Personal() && !allowPersonal {
-		return false
-	}
-	return s.Automation.Pollable()
+// right now: the registry's permission, the machine's opt-in, and the
+// operator's overrides (#125), composed in that order rather than the
+// registry's permission alone.
+func pollableNow(s source.Source, allowPersonal bool, overrides source.Overrides) bool {
+	return overrides.Schedulable(s, allowPersonal)
 }
 
 // staleAfter is how far past a source's own interval it may fall before eye
@@ -112,21 +116,22 @@ func pollableNow(s source.Source, allowPersonal bool) bool {
 const staleAfter = 3
 
 // sourceViews projects the registry for machine consumption.
-func sourceViews(list []source.Source, states map[string]store.SourceState, now time.Time, allowPersonal bool) []sourceView {
+func sourceViews(list []source.Source, states map[string]store.SourceState, now time.Time, allowPersonal bool, overrides source.Overrides) []sourceView {
 	out := make([]sourceView, 0, len(list))
 	for _, s := range list {
 		v := sourceView{
-			ID:         s.ID,
-			Authority:  s.Authority,
-			Topic:      s.Topic,
-			Format:     s.Format,
-			License:    s.License,
-			Access:     string(s.Access),
-			Automation: string(s.Automation),
-			Pollable:   pollableNow(s, allowPersonal),
-			HasAdapter: providers.Supported(s.Format),
-			URL:        s.URL,
-			Notes:      s.Notes,
+			ID:               s.ID,
+			Authority:        s.Authority,
+			Topic:            s.Topic,
+			Format:           s.Format,
+			License:          s.License,
+			Access:           string(s.Access),
+			Automation:       string(s.Automation),
+			Pollable:         pollableNow(s, allowPersonal, overrides),
+			HasAdapter:       providers.Supported(s.Format),
+			URL:              s.URL,
+			Notes:            s.Notes,
+			OperatorDisabled: overrides.DisabledByOperator(s, allowPersonal),
 		}
 		if s.Interval > 0 {
 			v.Interval = s.Interval.String()
@@ -166,18 +171,20 @@ func healthView(st store.SourceState, s source.Source, now time.Time) *sourceHea
 }
 
 // renderSources writes the human-readable registry table.
-func renderSources(w io.Writer, registryPath string, list []source.Source, states map[string]store.SourceState, now time.Time, allowPersonal bool) error {
+func renderSources(w io.Writer, registryPath string, list []source.Source, states map[string]store.SourceState, now time.Time, allowPersonal bool, overrides source.Overrides) error {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	_, _ = fmt.Fprintln(tw, "SOURCE\tTOPIC\tFORMAT\tSTATE\tLAST OK\tLICENCE\tAUTHORITY")
 
-	var live, held, noAdapter, stale int
+	var live, held, noAdapter, stale, disabledByOperator int
 	for _, s := range list {
-		state, _ := stateOf(s, allowPersonal)
+		state, _ := stateOf(s, allowPersonal, overrides)
 		switch state {
 		case "live":
 			live++
 		case "no adapter":
 			noAdapter++
+		case "disabled (operator)":
+			disabledByOperator++
 		default:
 			held++
 		}
@@ -206,6 +213,9 @@ func renderSources(w io.Writer, registryPath string, list []source.Source, state
 
 	_, _ = fmt.Fprintf(w, "\n%s · %d live · %d held · %d awaiting an adapter\n",
 		plural(len(list), "source", "sources"), live, held, noAdapter)
+	if disabledByOperator > 0 {
+		_, _ = fmt.Fprintf(w, "%d disabled by the operator's overrides file\n", disabledByOperator)
+	}
 	if stale > 0 {
 		_, _ = fmt.Fprintf(w, "%d live source(s) have not answered in a while — shown as stale, never as fresh.\n", stale)
 	}
@@ -215,21 +225,28 @@ func renderSources(w io.Writer, registryPath string, list []source.Source, state
 		_, _ = fmt.Fprintln(w, "\nHeld sources are not a failure. They are sources whose reuse terms")
 		_, _ = fmt.Fprintln(w, "are unresolved, or that publish no documented machine interface.")
 	}
+	if disabledByOperator > 0 {
+		_, _ = fmt.Fprintln(w, "\nA source disabled by the operator is not held for a licence reason: the")
+		_, _ = fmt.Fprintln(w, "registry itself would poll it, but this deployment's overrides file said no.")
+	}
 	return nil
 }
 
 // stateOf describes what eye will actually do with a source.
 //
-// allowPersonal is the machine's opt-in for undocumented personal sources. It
-// has to be part of this answer: a listing that calls a source "live" when the
-// scheduler will not touch it is a listing that lies, which is the one thing
-// this table exists not to do.
-func stateOf(s source.Source, allowPersonal bool) (state string, pollable bool) {
+// allowPersonal is the machine's opt-in for undocumented personal sources, and
+// overrides is the operator's optional per-deployment restriction (#125).
+// Both have to be part of this answer: a listing that calls a source "live"
+// when the scheduler will not touch it is a listing that lies, which is the
+// one thing this table exists not to do.
+func stateOf(s source.Source, allowPersonal bool, overrides source.Overrides) (state string, pollable bool) {
 	switch {
 	case !s.Automation.Pollable():
 		return string(s.Automation), false
 	case !providers.Supported(s.Format):
 		return "no adapter", false
+	case overrides.DisabledByOperator(s, allowPersonal):
+		return "disabled (operator)", false
 	case s.Access.Personal() && !allowPersonal:
 		return "personal, off", false
 	case s.Access.Personal():

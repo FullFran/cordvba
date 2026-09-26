@@ -37,6 +37,58 @@ boundary rules in the root [`AGENTS.md`](../../AGENTS.md)).
   tailnet that will publish this stack (`tailscale up`), with Funnel
   enabled for the tailnet in the admin console.
 
+## What to collect and retain
+
+eye's own registry (`apps/eye/configs/sources.yaml`) ships with every source
+the project knows about, including several this page has no use for.
+Measured on this VPS over about three hours: `dgt-vms` and `dgt-incidents`
+alone wrote 7,337 records and grew the raw cache by roughly 200 MB, while the
+only data the v0.1 page actually reads (METAR and MITECO ICA) is under 200
+records a day.
+
+eye reads an optional per-deployment overrides file
+(`EYE_OVERRIDES_FILE`, see `apps/eye/AGENTS.md` and issue #125) that narrows
+what it collects and how long it keeps it, without forking the registry.
+Overrides can only restrict what the registry already permits: they cannot
+switch on a source held for `review_terms` or `manual_link`, and they cannot
+enable an undocumented personal source without the machine also setting
+`EYE_ALLOW_PERSONAL_SOURCES` — see ADR-0008.
+
+The profile this VPS runs, keeping only what the cordvba v0.1 page uses:
+
+```yaml
+# apps/eye/deploy/overrides.yaml — see apps/eye/deploy/overrides.example.yaml
+sources:
+  only: [metar-cordoba, miteco-ica, aemet-warnings, aemet-observation]
+retention:
+  metar-cordoba: historical
+  miteco-ica: historical
+```
+
+To use it:
+
+1. Copy `apps/eye/deploy/overrides.example.yaml` to
+   `apps/eye/deploy/overrides.yaml` on the host and edit it. It is operator
+   configuration, not registry content, and must never be committed.
+2. Uncomment the bind mount and `EYE_OVERRIDES_FILE` lines in
+   `apps/eye/deploy/docker-compose.yml` and `apps/eye/deploy/.env` (both
+   already carry the commented-out example).
+3. Restart eye:
+
+   ```bash
+   docker compose -p cordvba-eye -f apps/eye/deploy/docker-compose.yml up -d
+   docker compose -p cordvba-eye -f apps/eye/deploy/docker-compose.yml logs eye-daemon
+   ```
+
+   Startup logs one `"effective set"` line naming what was collected, what
+   the overrides disabled, and each collected source's retention. `eye
+   sources` and `/v1/sources` also report an operator-excluded source as
+   `disabled (operator)`, distinct from one the registry itself holds.
+
+Confirm the effect over a day by comparing the daemon's periodic `"retention
+enforced"` log line (`store_bytes`, `raw_cache_bytes`) before and after
+applying the profile, or by diffing two `eye sources --json` runs.
+
 ## First deploy
 
 ```bash
